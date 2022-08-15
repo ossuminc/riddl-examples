@@ -37,11 +37,15 @@ jobs:
 
       - name: Generate HTML From Hugo
         run: cd target/hugo/ReactiveBBQ ; \
-          hugo --minify -D -v --printMemoryUsage
+          /home/runner/actions_hugo/bin/hugo \
+          --minify -v \
+          --baseURL "https://bbq.riddl.tech" \
+          --printMemoryUsage \
+          --noBuildLock
 
       - name: Deploy RIDDL Generated Documentation
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/hugo/public
+          publish_dir: ./target/hugo/ReactiveBBQ/public

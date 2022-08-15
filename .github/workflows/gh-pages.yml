@@ -33,10 +33,11 @@ jobs:
       - name: Show riddlc output
         run: |
           echo "riddlc hugo output tree:"
-          tree target/hugo
+          tree target/hugo/ReactiveBBQ
 
       - name: Generate HTML From Hugo
-        run: cd target/hugo ; hugo --minify -D -v --printMemoryUsage
+        run: cd target/hugo/ReactiveBBQ ; \
+          hugo --minify -D -v --printMemoryUsage
 
       - name: Deploy RIDDL Generated Documentation
         uses: peaceiris/actions-gh-pages@v3

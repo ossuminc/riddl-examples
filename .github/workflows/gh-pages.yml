@@ -36,7 +36,11 @@ jobs:
           extended: true
 
       - name: Generate HTML With Hugo
-        run: cd target/hugo/ReactiveBBQ ; \
+        run: |
+          which hugo
+          ls /home/runner/actions_hugo/bin
+          /home/runner/actions_hugo/bin/hugo version
+          cd target/hugo/ReactiveBBQ ; \
           /home/runner/actions_hugo/bin/hugo \
           --minify -v \
           --baseURL "https://bbq.riddl.tech" \

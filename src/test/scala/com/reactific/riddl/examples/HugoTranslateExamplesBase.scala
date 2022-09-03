@@ -1,7 +1,8 @@
 package com.reactific.riddl.examples
 
 import com.reactific.riddl.language.testkit.ValidatingTest
-import com.reactific.riddl.language.{CommonOptions, SysLogger}
+import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.utils.SysLogger
 import com.reactific.riddl.translator.hugo.{HugoTranslatingOptions, HugoTranslator}
 import org.scalatest.Assertion
 

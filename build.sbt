@@ -18,9 +18,5 @@ lazy val examples = project.in(file(".")).settings(
   Compile / packageDoc / publishArtifact := false,
   Compile / packageSrc / publishArtifact := false,
   publishTo := Option(Resolver.defaultLocal),
-  libraryDependencies ++= Seq(
-    "com.reactific" %% "riddl-language" % "0.10.0" % "test",
-    "com.reactific" %% "riddl-language-testkit" % "0.10.0" % "test",
-    "com.reactific" %% "riddlc" % "0.10.0" % "test"
-  ) ++ Dep.testing
+  libraryDependencies ++= Dep.testing
 )

@@ -1,12 +1,13 @@
 package com.reactific.riddl.examples
 
+import com.reactific.riddl.hugo.{HugoCommand, HugoTranslator}
 import com.reactific.riddl.language.testkit.ValidatingTest
-import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.utils.SysLogger
-import com.reactific.riddl.translator.hugo.{HugoTranslatingOptions, HugoTranslator}
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 abstract class HugoTranslateExamplesBase extends ValidatingTest {
@@ -24,12 +25,13 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     showStyleWarnings = false
   )
 
-  def genHugo(projectName: String, source: String): Seq[Path] = {
+  def genHugo(projectName: String, source: String):
+  Either[Messages.Messages, Unit] = {
     val outDir = Path.of(output).resolve(source)
     val outDirFile = outDir.toFile
     if (!outDirFile.isDirectory) outDirFile.mkdirs()
     val sourcePath = Path.of(directory).resolve(source)
-    val htc = HugoTranslatingOptions(
+    val htc = HugoCommand.Options(
       inputFile = Some(sourcePath),
       outputDir = Some(outDir),
       eraseOutput = true,
@@ -41,7 +43,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
 
   def runHugo(source: String): Assertion = {
     import scala.sys.process._
-    val lineBuffer: ArrayBuffer[String] = ArrayBuffer[String]()
+    val lineBuffer: mutable.ArrayBuffer[String] = ArrayBuffer[String]()
     var hadErrorOutput: Boolean = false
     var hadWarningOutput: Boolean = false
 
@@ -68,7 +70,10 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   }
 
   def checkExamples(name: String, path: String): Assertion = {
-    genHugo(name, path) mustNot be(empty) // translation must have happened
-    runHugo(path)
+    genHugo(name, path) match {
+      case Right(_) =>
+        runHugo(path)
+      case Left(messages) => fail(messages.format)
+    }
   }
 }

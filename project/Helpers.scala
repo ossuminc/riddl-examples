@@ -2,9 +2,9 @@ import sbt._
 
 /** V - Dependency Versions object */
 object V {
-  val riddl = "0.12.0"
+  val riddl = "0.13.+"
   val scalatest = "3.2.9"
-  val scalacheck = "1.15.4"
+  val scalacheck = "1.16.0"
   val testkit = "0.7.1"
 }
 
@@ -15,7 +15,7 @@ object Dep {
   val hugo = "com.reactific" %% "riddl-hugo" % V.riddl
   val testkit = "com.reactific" %% "riddl-testkit" % V.riddl
 
-  val testing = Seq(
+  val testing: Seq[ModuleID] = Seq(
     scalactic % "test",
     scalatest % "test",
     scalacheck % "test",

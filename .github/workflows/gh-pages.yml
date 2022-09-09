@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
 
       - name: Generate Hugo From RIDDL
-        uses: reactific/riddl-actions/riddlc@0.10.0
+        uses: reactific/riddl-actions/riddlc@0.13.1
         with:
           command: from
           opt1: src/riddl/ReactiveBBQ/ReactiveBBQ.conf

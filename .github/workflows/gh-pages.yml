@@ -23,6 +23,7 @@ jobs:
         with:
           command: from
           opt1: src/riddl/ReactiveBBQ/ReactiveBBQ.conf
+          opt2: hugo
 
       - name: Show riddlc output
         run: |

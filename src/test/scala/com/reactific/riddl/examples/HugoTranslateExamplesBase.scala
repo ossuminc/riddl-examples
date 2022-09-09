@@ -1,7 +1,7 @@
 package com.reactific.riddl.examples
 
 import com.reactific.riddl.hugo.{HugoCommand, HugoTranslator}
-import com.reactific.riddl.language.testkit.ValidatingTest
+import com.reactific.riddl.testkit.ValidatingTest
 import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion

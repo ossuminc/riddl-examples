@@ -21,9 +21,11 @@ jobs:
       - name: Generate Hugo From RIDDL
         uses: reactific/riddl-actions/riddlc@0.13.2
         with:
-          command: from
-          opt1: src/riddl/ReactiveBBQ/ReactiveBBQ.conf
-          opt2: hugo
+          command: --suppress-warnings
+          opt1: --suppress-style-warnings
+          opt2: --suppress-missing-warnings
+          opt3: src/riddl/ReactiveBBQ/ReactiveBBQ.conf
+          opt4: hugo
 
       - name: Show riddlc output
         run: |

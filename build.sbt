@@ -12,11 +12,16 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 ThisBuild / versionScheme := Option("semver-spec")
 ThisBuild / dynverVTagPrefix := false
 
-lazy val examples = project.in(file(".")).settings(
-  name := "riddl-examples",
-  Compile / packageBin / publishArtifact := false,
-  Compile / packageDoc / publishArtifact := false,
-  Compile / packageSrc / publishArtifact := false,
-  publishTo := Option(Resolver.defaultLocal),
-  libraryDependencies ++= Dep.testing
-)
+lazy val examples = project.in(file("."))
+  .enablePlugins(RiddlSbtPlugin)
+  .settings(
+    name := "riddl-examples",
+    riddlcOptions := Seq("--verbose",
+      "from", "src/riddl/ReactiveBBQ/ReactiveBBQ.conf", "hugo"),
+    riddlcMinVersion := "0.14.0",
+    Compile / packageBin / publishArtifact := false,
+    Compile / packageDoc / publishArtifact := false,
+    Compile / packageSrc / publishArtifact := false,
+    publishTo := Option(Resolver.defaultLocal),
+    libraryDependencies ++= Dep.testing
+  )

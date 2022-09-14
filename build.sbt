@@ -18,7 +18,6 @@ lazy val examples = project.in(file("."))
     name := "riddl-examples",
     riddlcOptions := Seq("--verbose",
       "from", "src/riddl/ReactiveBBQ/ReactiveBBQ.conf", "hugo"),
-    riddlcMinVersion := "0.14.0",
     Compile / packageBin / publishArtifact := false,
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := false,

@@ -2,12 +2,14 @@ context Menu is {
   type MenuItemRef = reference to MenuItem
   entity MenuItem {
     state MenuItemState = {
-      corporateId: CorporateItemId,
-      name: String,
-      description: String,
-      price: Amount
+      fields {
+        corporateId: CorporateItemId,
+        name: String,
+        description: String,
+        price: Amount
+      }
+      handler MenuItemHandler is { ??? }
     }
-    handler MenuItemHandler is { ??? }
   }
 
   type AddItem = command { item: MenuItemRef }
@@ -19,8 +21,8 @@ context Menu is {
     type CorporateItemId = Pattern("")
 
     state MenuState is {
-      items: many MenuItemRef
+      fields { items: many MenuItemRef }
+      handler MenuHandler is { ??? }
     }
-    handler MenuHandler is { ??? }
   }
 }

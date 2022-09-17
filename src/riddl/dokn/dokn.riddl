@@ -35,16 +35,18 @@ domain dokn is {
             type CompanyEvent is one of { type CompanyAdded }
 
             state CompanyBase is {
+              fields {
                 companyId: CompanyId,
                 mailingAddress: Address,
                 primaryContactName: String,
                 primaryContactPhone: MobileNumber,
                 primaryContactEmail: EmailAddress
-            }
-            handler CompanyBaseHandler is {
-                on command AddCompany {
-                    then publish event CompanyAdded() to dokn.CompanyPlant.CompanyEvents
-                }
+              }
+              handler CompanyBaseHandler is {
+                  on command AddCompany {
+                      then publish event CompanyAdded() to dokn.CompanyPlant.CompanyEvents
+                  }
+              }
             }
         }
     }

@@ -51,20 +51,24 @@ context Loyalty is {
 
   entity LoyaltyAccount is {
     state InitialState is {
-      id is LoyaltyId
+      fields { id is LoyaltyId }
+      handler foo is { ??? }
     } explained as {
     |This state type contains the state values associated with the loyalty
     |account when it is first created. It only contains the `LoyaltyId` value
     |that uniquely identifies the account.
     }
     state ActiveState is {
-      id is LoyaltyId,
-      customer is CustomerId,
-      points is Number,
-      accrualRate is Real,
-      redemptionRate is Real
+      fields {
+        id is LoyaltyId,
+        customer is CustomerId,
+        points is Number,
+        accrualRate is Real,
+        redemptionRate is Real
+      }
+      handler foo { ??? }
     } explained as {
-    |This state type used when a loyalty account is active
+      |This state type used when a loyalty account is active
     }
     handler Inputs is {
       ???

@@ -19,13 +19,15 @@ context Payment is {
   entity Payment is {
     option is aggregate
     state PaymentState is {
-      orderId is OrderId,
-      orderAmount is Number,
-      tipAmount is Number?,
-      cardToken is String?,
-      customerId is CustomerId?
+      fields {
+          orderId is OrderId,
+          orderAmount is Number,
+          tipAmount is Number?,
+          cardToken is String?,
+          customerId is CustomerId?
+      }
+      handler foo is { ??? }
     }
-    handler foo is { ??? }
   }
 } explained as {
 | The Payment bounded context deals with receiving payments from customers for their orders.

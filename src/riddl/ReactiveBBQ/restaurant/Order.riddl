@@ -2,10 +2,11 @@ context Order is {
   entity Order is {
     option is aggregate
     state OrderState is {
-      orderId is OrderId,
-      customerId is CustomerId
+      fields { orderId is OrderId,
+        customerId is CustomerId
+      }
+      handler foo  is { ??? }
     }
-    handler foo  is { ??? }
   }
 } explained as {
 | This bounded context defines the handling of restaurant orders.

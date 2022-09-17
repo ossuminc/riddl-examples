@@ -5,9 +5,11 @@ context Kitchen is {
   }
   type OrderViewType is any of { List, Simple, Detailed }
   entity OrderViewer is {
-   option is kind("device")
-   state OrderViewerState is { viewType: OrderViewType }
-   handler input is {}
+    option is kind("device")
+    state OrderViewerState is {
+      fields { viewType: OrderViewType }
+      handler input is {}
+    }
   } explained as {
     |## Brief
     |This is an OrderViewer

@@ -12,42 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Set Up JDK 17
-      uses: actions/setup-java@v2
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - name: Validate ReactiveBBQ
-      uses: reactific/riddl-actions/riddlc@main
-      with:
-        command: "from"
-        opt1: "src/riddl/ReactiveBBQ/ReactiveBBQ.conf"
-        opt2: "validate"
-    - name: Validate DokN
-      uses: reactific/riddl-actions/riddlc@main
-      with:
-        command: "from"
-        opt1: "src/riddl/dokn/dokn.conf"
-        opt2: "validate"
-        
-    - name: Validate FooBarSameDomain
-      uses: reactific/riddl-actions/riddlc@main
-      with:
-        command: "from"
-        opt1: "src/riddl/FooBarSameDomain/FooBar.conf"
-        opt2: "validate"
-
-    - name: Validate FooBarSuccess
-      uses: reactific/riddl-actions/riddlc@main
-      with:
-        command: "from"
-        opt1: "src/riddl/FooBarSuccess/FooBar.conf"
-        opt2: "validate"
-
-    - name: Validate FooBarTwoDomains
-      uses: reactific/riddl-actions/riddlc@main
-      with:
-        command: "from"
-        opt1: "src/riddl/FooBarTwoDomains/FooBar.conf"
-        opt2: "validate"
-
+    - uses: reactific/riddl/actions/get-riddlc@main
+    - name: Validate Examples
+    - run: |
+        riddlc from "src/riddl/ReactiveBBQ/ReactiveBBQ.conf" validate
+        riddlc from "src/riddl/FooBarSameDomain/FooBar.conf" validate
+        riddlc from "src/riddl/FooBarSuccess/FooBar.conf" validate
+        riddlc from "src/riddl/ReactiveBBQ/FooBar.conf" validate
+        riddlc from "src/riddl/dokn/dokn.conf" validate
+      

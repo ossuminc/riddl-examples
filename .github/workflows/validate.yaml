@@ -1,0 +1,25 @@
+name: Validate RIDDL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out examples
+      uses: actions/checkout@v2
+    - name: Download riddlc
+      uses: reactific/riddl/actions/get-riddlc@main
+    - name: Validate Examples
+      run: |
+        riddlc from "src/riddl/ReactiveBBQ/ReactiveBBQ.conf" validate
+        riddlc from "src/riddl/FooBarSameDomain/FooBar.conf" validate
+        riddlc from "src/riddl/FooBarSuccess/FooBar.conf" validate
+        riddlc from "src/riddl/ReactiveBBQ/FooBar.conf" validate
+        riddlc from "src/riddl/dokn/dokn.conf" validate
+      shell: bash

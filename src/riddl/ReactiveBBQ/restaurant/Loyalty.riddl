@@ -1,8 +1,8 @@
 // #Loyalty
 context Loyalty is {
-  adaptor FromPayment for context Restaurant.Payment is {
-    adapt name is {
-      from event Restaurant.Payment.Paid to command AccruePoints as {
+  adaptor FromPayment from context Restaurant.Payment is {
+    handler payments is {
+      on event Restaurant.Payment.Paid  {
         example CustomerPaysBill is {
           when "event Paid from Payment context occurs"
           and "customer is known in the Paid event"

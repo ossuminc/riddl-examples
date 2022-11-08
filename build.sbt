@@ -1,6 +1,6 @@
 import sbt._
 
-ThisBuild / scalaVersion := "2.13.8"
+ThisBuild / scalaVersion := "2.13.10"
 ThisBuild / organization := "com.reactific"
 ThisBuild / organizationHomepage := Some(new URL("https://reactific.com/"))
 ThisBuild / organizationName := "Ossum Inc."
@@ -16,6 +16,7 @@ lazy val examples = project.in(file("."))
   .enablePlugins(RiddlSbtPlugin)
   .settings(
     name := "riddl-examples",
+    riddlcMinVersion := "0.17.1",
     riddlcOptions := Seq("--verbose",
       "from", "src/riddl/ReactiveBBQ/ReactiveBBQ.conf", "hugo"),
     Compile / packageBin / publishArtifact := false,

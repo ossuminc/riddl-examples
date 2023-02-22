@@ -8,7 +8,10 @@ class CheckExamplesSpec extends HugoTranslateExamplesBase {
 
   val output = "target/hugo/"
   val roots: Map[String, String] =
-    Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
+    Map(
+      "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl",
+      "DokN" -> "dokn/dokn.conf"
+    )
 
   "Examples" should {
     Process("riddlc version")

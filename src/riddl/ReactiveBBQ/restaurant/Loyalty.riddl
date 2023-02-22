@@ -1,8 +1,8 @@
 // #Loyalty
 context Loyalty is {
-  adaptor FromPayment for context Restaurant.Payment is {
-    adapt name is {
-      from event Restaurant.Payment.Paid to command AccruePoints as {
+  adaptor FromPayment from context Restaurant.Payment is {
+    handler adaptation is {
+      on event Restaurant.Payment.Paid {
         example CustomerPaysBill is {
           when "event Paid from Payment context occurs"
           and "customer is known in the Paid event"
@@ -50,22 +50,22 @@ context Loyalty is {
   }
 
   entity LoyaltyAccount is {
-    state InitialState is {
-      fields { id is LoyaltyId }
+    type InitialStateData is { id is LoyaltyId }
+    state InitialState of ^InitialStateData is {
       handler foo is { ??? }
     } explained as {
     |This state type contains the state values associated with the loyalty
     |account when it is first created. It only contains the `LoyaltyId` value
     |that uniquely identifies the account.
     }
-    state ActiveState is {
-      fields {
-        id is LoyaltyId,
-        customer is CustomerId,
-        points is Number,
-        accrualRate is Real,
-        redemptionRate is Real
-      }
+    record ActiveStateData is {
+      id is LoyaltyId,
+      customer is CustomerId,
+      points is Number,
+      accrualRate is Real,
+      redemptionRate is Real
+    }
+    state ActiveState of ^ActiveStateData is {
       handler foo { ??? }
     } explained as {
       |This state type used when a loyalty account is active

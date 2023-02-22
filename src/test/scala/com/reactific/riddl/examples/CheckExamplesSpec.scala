@@ -1,6 +1,7 @@
 package com.reactific.riddl.examples
 
 import java.nio.file.Files
+import scala.sys.process.Process
 
 /** Unit Tests To Check Documentation Examples */
 class CheckExamplesSpec extends HugoTranslateExamplesBase {
@@ -10,6 +11,7 @@ class CheckExamplesSpec extends HugoTranslateExamplesBase {
     Map("Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl")
 
   "Examples" should {
+    Process("riddlc version")
     for { (name, path) <- roots } {
       s"parse, validate, and generate $name" in {
         checkExamples(name, path)

@@ -1,0 +1,12 @@
+type ToDoContent is {
+  itemId: Id(ToDoList.ToDoItem)
+  itemDescription: String
+  expectedCompletion: TimeStamp?
+}
+
+application ToDoList is {
+  options are technology("react.js")
+  view ListOfToDoItems is type ToDoContent*
+  form EnterToDoItem is type ToDoItem
+  action MarkItemDone is
+}

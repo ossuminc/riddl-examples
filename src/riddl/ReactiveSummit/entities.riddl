@@ -1,0 +1,36 @@
+context ToDoList is {
+
+  command AddItem is { content: ReactiveSummit.ToDoContent }
+  event ItemAdded is { content: ReactiveSummit.ToDoContent }
+  event ItemRejected is { id: Id(ToDoItem), message: String }
+  command CompleteItem is {id: Id(ToDoItem) }
+  event ItemCompleted  is {id: Id(ToDoItem) }
+
+  entity ToDoItem is {
+    state Active is {
+      fields are {
+        content: ReactiveSummit.ToDoContent
+        createdAt: TimeStamp
+      }
+      handler is {
+        on command ToDoList.AddItem {
+          example add_item is {
+            when "id of content does not exist"
+            then "create new ToDoItem from content"
+            else ""
+        }
+      }
+
+    }
+    state Completed is {
+      content: ReactiveSummit.ToDoContent
+      createdAt: TimeStamp
+      completedAt: TimeStamp
+    }
+
+  }
+
+  projection ToDoItems is {
+    ???
+  }
+}

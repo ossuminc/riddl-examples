@@ -1,10 +1,11 @@
 context Order is {
   entity Order is {
     option is aggregate
-    state OrderState is {
-      fields { orderId is OrderId,
-        customerId is CustomerId
-      }
+    record OrderStateData is {
+      orderId is OrderId,
+      customerId is CustomerId
+    }
+    state OrderState of record ^OrderStateData is {
       handler foo  is { ??? }
     }
   }

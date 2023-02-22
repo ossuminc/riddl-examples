@@ -1,6 +1,7 @@
 context Customer is {
   entity Customer is {
-    state main is { ??? }
+    type mainType is Nothing
+    state main of mainType is { ??? }
     handler input is { ??? }
   } explained as {
   | An entity for customers that tracks the state changes of the entity.

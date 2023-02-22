@@ -1,6 +1,7 @@
 context Table {
   entity Table {
-    state TableState is { ??? }
+    type TableStateData is Nothing
+    state TableState of ^TableStateData is { ??? }
     handler TableHandler is { ??? }
   }
 }

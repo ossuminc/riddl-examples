@@ -1,0 +1,12 @@
+actor John is "list keeper"
+
+story foo is {
+  actor John wants to "add a ToDo item" so that
+    "he can keep track of his work list"
+
+  case Typical is {
+    actor John displays view ListOfToDoItems,
+    actor John submits form EnterToDoItem,
+    entity ToDoItem "creates new"
+  }
+}

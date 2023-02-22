@@ -18,14 +18,14 @@ context Payment is {
 
   entity Payment is {
     option is aggregate
-    state PaymentState is {
-      fields {
-          orderId is OrderId,
-          orderAmount is Number,
-          tipAmount is Number?,
-          cardToken is String?,
-          customerId is CustomerId?
-      }
+    type PaymentStateValue is {
+        orderId is OrderId,
+        orderAmount is Number,
+        tipAmount is Number?,
+        cardToken is String?,
+        customerId is CustomerId?
+    }
+    state PaymentState of type ^PaymentStateValue is {
       handler foo is { ??? }
     }
   }

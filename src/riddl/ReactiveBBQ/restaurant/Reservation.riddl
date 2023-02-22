@@ -1,5 +1,5 @@
 context Reservation is {
-  type ReservationValue is {
+  record ReservationValue is {
     partyName is String,
     phoneNumber is String,
     location is Id(Location),
@@ -8,8 +8,7 @@ context Reservation is {
   }
   entity Reservation is {
    options ( aggregate )
-   state reservation is {
-     fields { value : ReservationValue }
+   state reservation of record ^^.ReservationValue is {
      handler ofInputs is {}
    }
   }

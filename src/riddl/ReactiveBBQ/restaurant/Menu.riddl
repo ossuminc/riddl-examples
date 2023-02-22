@@ -1,13 +1,13 @@
 context Menu is {
   type MenuItemRef = reference to MenuItem
   entity MenuItem {
-    state MenuItemState = {
-      fields {
-        corporateId: CorporateItemId,
-        name: String,
-        description: String,
-        price: Amount
-      }
+    record MenuItemStateData is {
+      corporateId: CorporateItemId,
+      name: String,
+      description: String,
+      price: Amount
+    }
+    state MenuItemState of MenuItemStateData = {
       handler MenuItemHandler is { ??? }
     }
   }
@@ -20,8 +20,8 @@ context Menu is {
     type Amount = range(0,1000)
     type CorporateItemId = Pattern("")
 
-    state MenuState is {
-      fields { items: many MenuItemRef }
+    record MenuStateData is  { items: many MenuItemRef }
+    state MenuState of ^MenuStateData is {
       handler MenuHandler is { ??? }
     }
   }

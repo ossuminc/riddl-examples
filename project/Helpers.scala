@@ -2,7 +2,7 @@ import sbt._
 
 /** V - Dependency Versions object */
 object V {
-  val riddl = "0.13.+"
+  val riddl = "0.19.+"
   val scalatest = "3.2.9"
   val scalacheck = "1.16.0"
   val testkit = "0.7.1"

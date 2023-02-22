@@ -1,0 +1,8 @@
+domain ReactiveSummit is {
+
+include "application"
+include "stories"
+include "entities"
+
+} briefly "An example domain for Reactive Summit"
+explained in file "ReactiveSummit.md"

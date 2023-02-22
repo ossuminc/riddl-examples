@@ -10,11 +10,10 @@ class CheckExamplesSpec extends HugoTranslateExamplesBase {
   val roots: Map[String, String] =
     Map(
       "Reactive BBQ" -> "ReactiveBBQ/ReactiveBBQ.riddl",
-      "DokN" -> "dokn/dokn.conf"
+      "DokN" -> "dokn/dokn.riddl"
     )
 
   "Examples" should {
-    Process("riddlc version")
     for { (name, path) <- roots } {
       s"parse, validate, and generate $name" in {
         checkExamples(name, path)

@@ -2,6 +2,6 @@ type Info is {
 	text: String
 }
 
-type Foo {
+type foo {
   info: Foo.Info
 }

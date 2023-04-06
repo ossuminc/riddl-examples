@@ -7,7 +7,7 @@ context Menu is {
       description: String,
       price: Amount
     }
-    state MenuItemState of MenuItemStateData = {
+    state MenuItemState of MenuItem.MenuItemStateData = {
       handler MenuItemHandler is { ??? }
     }
   }

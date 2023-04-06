@@ -1,7 +1,7 @@
 context Location is {
   entity Location is {
     record LocationData is { name: String }
-    state LocationState of ^LocationData is {
+    state LocationState of Location.LocationData is {
       handler LocationHandler is { ??? }
     }
   } explained as {

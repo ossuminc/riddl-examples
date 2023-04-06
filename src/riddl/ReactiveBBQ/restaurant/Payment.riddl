@@ -25,7 +25,7 @@ context Payment is {
         cardToken is String?,
         customerId is CustomerId?
     }
-    state PaymentState of type ^PaymentStateValue is {
+    state PaymentState of type Payment.PaymentStateValue is {
       handler foo is { ??? }
     }
   }

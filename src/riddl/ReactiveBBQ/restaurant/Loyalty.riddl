@@ -51,7 +51,7 @@ context Loyalty is {
 
   entity LoyaltyAccount is {
     type InitialStateData is { id is LoyaltyId }
-    state InitialState of ^InitialStateData is {
+    state InitialState of LoyaltyAccount.InitialStateData is {
       handler foo is { ??? }
     } explained as {
     |This state type contains the state values associated with the loyalty

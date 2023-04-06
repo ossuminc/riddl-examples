@@ -1,14 +1,14 @@
 context Reservation is {
-  record ReservationValue is {
-    partyName is String,
-    phoneNumber is String,
-    location is Id(Location),
-    time is Time,
-    date is Date
-  }
   entity Reservation is {
    options ( aggregate )
-   state reservation of record ^^.ReservationValue is {
+   record ReservationValue is {
+     partyName is String,
+     phoneNumber is String,
+     location is Id(Location),
+     time is Time,
+     date is Date
+   }
+   state reservation of record Reservation.ReservationValue is {
      handler ofInputs is {}
    }
   }

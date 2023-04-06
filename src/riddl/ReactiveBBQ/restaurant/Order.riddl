@@ -5,7 +5,7 @@ context Order is {
       orderId is OrderId,
       customerId is CustomerId
     }
-    state OrderState of record ^OrderStateData is {
+    state OrderState of record Order.OrderStateData is {
       handler foo  is { ??? }
     }
   }

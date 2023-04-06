@@ -21,7 +21,7 @@ context Menu is {
     type CorporateItemId = Pattern("")
 
     record MenuStateData is  { items: many MenuItemRef }
-    state MenuState of ^MenuStateData is {
+    state MenuState of Menu.MenuStateData is {
       handler MenuHandler is { ??? }
     }
   }

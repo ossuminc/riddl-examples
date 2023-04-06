@@ -8,7 +8,7 @@ type OrderViewerId is Id(Kitchen.OrderViewer)
 type ReservationId is Id(Reservation.Reservation)
 type PaymentId is Id(Payment.Payment)
 type ServerId is Id(Server.Server)
-type TableId is Id(Table)
+type TableId is Id(Table.Table)
 
 include "Customer"
 include "Kitchen"

@@ -16,7 +16,7 @@ lazy val examples = project.in(file("."))
   .enablePlugins(RiddlSbtPlugin)
   .settings(
     name := "riddl-examples",
-    riddlcMinVersion := "0.20.5",
+    riddlcMinVersion := "0.21.0",
     riddlcOptions := Seq("--verbose",
       "from", "src/riddl/ReactiveBBQ/ReactiveBBQ.conf", "hugo"),
     Compile / packageBin / publishArtifact := false,

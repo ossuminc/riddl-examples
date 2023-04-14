@@ -1,5 +1,5 @@
-plant MenuPlant is {
+connector MenuPlant is {
   ???
 } explained as {
-|This plant is used to deliver menu item changes to restaurants.
+|This connector is used to deliver menu item changes to restaurants.
 }

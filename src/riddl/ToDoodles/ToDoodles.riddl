@@ -1,0 +1,11 @@
+domain ToDoodles {
+
+  include "DoodleContext/doodle"
+  include "ListContext/list"
+  include "Application/todoodles"
+  include "Epics/epics"
+
+} briefly "An application for creating a list of artistic doodles"
+described as {
+| TBD
+}

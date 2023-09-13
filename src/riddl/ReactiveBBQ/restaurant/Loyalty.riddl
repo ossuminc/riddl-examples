@@ -3,12 +3,10 @@ context Loyalty is {
   adaptor FromPayment from context Restaurant.Payment is {
     handler payments is {
       on event Restaurant.Payment.Paid  {
-        example CustomerPaysBill is {
-          when "event Paid from Payment context occurs"
-          and "customer is known in the Paid event"
-          and "customer has a loyalty account"
-          then "send AccruePoints command to Loyalty entity"
-        }
+        |when "event Paid from Payment context occurs"
+        |and "customer is known in the Paid event"
+        |and "customer has a loyalty account"
+        |then "send AccruePoints command to Loyalty entity"
       }
     }
   } described as "Adapts loyalty rewards from payments"

@@ -1,5 +1,1 @@
-connector MenuPlant is {
-  ???
-} explained as {
-|This connector is used to deliver menu item changes to restaurants.
-}
+type Foo = Integer

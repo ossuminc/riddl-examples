@@ -3,5 +3,5 @@ type Info is {
 }
 
 type Foo {
-  info: Info
+  info: Foo.Info
 }

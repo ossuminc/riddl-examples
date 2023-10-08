@@ -11,14 +11,16 @@ domain dokn is {
     }
     type MobileNumber = Pattern("\\(([0-9]{3})\\)([0-9]{3})-([0-9]{4})")
     //https:emailregex.com RFC 5322 Official Standard
-    type EmailAddress = Pattern("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-](?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-])|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])\")@(?:(?:[a-z0-9](?:[a-z0-9-][a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-][a-z0-9])?|[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])")
+    type EmailAddress = Pattern(
+       "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
+    )
     type LoadingMethod = any of { dock, tailgate, forklift, none }
-    type CompanyId = Id(Company.Company)
+    type CompanyId = Id(dokn.Company.Company)
     type DriverId = MobileNumber
-    type NoteId = Id(Note.Note)
-    type MediaId is Id(Media.Media)
-    type LocationId is Id(Location.Location)
-    type NoteList is reference to Note.Note*
+    type NoteId = Id(dokn.Note.Note)
+    type MediaId is Id(dokn.Media.Media)
+    type LocationId is Id(dokn.Location.Location)
+    type NoteList is reference to dokn.Note.Note*
 
     context Company is {
         connector CompanyEvents is {
@@ -41,10 +43,10 @@ domain dokn is {
               primaryContactPhone: MobileNumber,
               primaryContactEmail: EmailAddress
             }
-            state CompanyBase of ^fields is {
+            state CompanyBase of Company.fields is {
               handler CompanyBaseHandler is {
                   on command AddCompany {
-                      then send event CompanyAdded() to outlet CompanyEvents_out
+                      send event CompanyAdded to outlet CompanyEvents_out
                   }
               }
             }
@@ -78,20 +80,13 @@ domain dokn is {
               onDutyTime: TimeStamp,
               companyId: CompanyId
             }
-            state DriverBase of ^fields is {
+            state DriverBase of Driver.fields is {
               handler DriverBaseHandler is {
                   on command AddDriverToCompany {
-                    then send event DriverAddedToCompany (
-                      name = @AddDriverToCompany.name,
-                      mobile = @AddDriverToCompany.mobile,
-                      companyId = @AddDriverToCompany.companyId
-                    ) to inlet Driver_out
+                    send event DriverAddedToCompany to inlet Driver_out
                   }
                   on command RemoveDriverFromCompany {
-                    then send event DriverRemovedFromCompany(
-                      mobile = @RemoveDriverFromCompany.mobile,
-                      companyId = @RemoveDriverFromCompany.companyId
-                    ) to inlet Driver_out
+                    send event DriverRemovedFromCompany to inlet Driver_out
                   }
               }
             }
@@ -110,7 +105,7 @@ domain dokn is {
               downvoteCount: Integer,
               approved: Boolean
             }
-            state NoteBase of ^fields is {
+            state NoteBase of Note.fields is {
               handler NoteBaseHandler is { ??? }
             }
         }
@@ -124,7 +119,7 @@ domain dokn is {
               path: String,
               companyId: CompanyId
             }
-            state MediaBase of ^fields is {
+            state MediaBase of Media.fields is {
               handler MediaBaseHandler is { ??? }
             }
         }
@@ -137,20 +132,20 @@ domain dokn is {
             type AddDeliveryLocation is command  {
               geohash: Location, label: String
             }
-            type DeliveryLocationAdded is event  { }
+            type DeliveryLocationAdded is event  { ??? }
 
             type ChangeLocationName is command { newName: String }
             type LocationNameChanged is event { newName: String }
 
-            type ReportTicketReceived is command {}
-            type TicketReportedAtLocation is event {}
+            type ReportTicketReceived is command { ??? }
+            type TicketReportedAtLocation is event { ??? }
 
             type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
             type NotesForLocationModified is event { note: String }
 
             type LocationAddressReceived is event { newAddress: dokn.Address }
 
-            type getLocationDetails is query  {}
+            type getLocationDetails is query  { ??? }
             type LocationDetails is result  { ??? }
 
             type getLocationNotes is query { cid: CompanyId }
@@ -165,36 +160,28 @@ domain dokn is {
               ticketCount: Integer,
               loadingMethod: LoadingMethod
             }
-            state LocationBase of ^fields is {
+            state LocationBase of Location.fields is {
               handler Base is {
-                  on command AddDeliveryLocation {
-                     then send event DeliveryLocationAdded() to
-                       inlet CompanyEvents_in
+                  on command Location.AddDeliveryLocation {
+                    send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
                   }
                   on command ChangeLocationName {
-                      then send event LocationNameChanged(
-                          newName = @ChangeLocationName.newName
-                      ) to inlet CompanyEvents_in
+                    send event Location.LocationNameChanged to inlet CompanyEvents_in
                   }
-                  on command ReportTicketReceived { then
-                   send event TicketReportedAtLocation() to inlet
-                   CompanyEvents_in }
+                  on command ReportTicketReceived {
+                    send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
+                  }
                   on command ModifyNotesAtLocation {
-                      then send event NotesForLocationModified(
-                          note = @ModifyNotesAtLocation.newNote
-                      ) to inlet CompanyEvents_in
+                    send event Location.NotesForLocationModified to inlet CompanyEvents_in
                   }
-                  on event LocationAddressReceived {
-                      then set LocationBase.address to
-                      @^^^LocationAddressReceived.newAddress
+                  on event Location.LocationAddressReceived {
+                    set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
                   }
-                  on query getLocationDetails {
-                    then send result LocationDetails() to
-                       inlet Driver_in
-                    }
-                  on query getLocationNotes {
-                    then send result LocationNotes(notes=empty()) to outlet
-                    Driver_out
+                  on query Location.getLocationDetails {
+                    send result Location.LocationDetails to inlet Driver_in
+                  }
+                  on query Location.getLocationNotes {
+                    send result Location.LocationNotes to outlet Driver_out
                   }
               }
             }

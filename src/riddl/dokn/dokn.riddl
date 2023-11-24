@@ -152,7 +152,7 @@ domain dokn is {
             type LocationNotes is result { notes: NoteList }
 
             record fields is {
-              locationId: LocationId,
+              locationId: type LocationId,
               geohash: Location,
               label: String ,
               address: Address,

@@ -1,8 +1,9 @@
 package com.reactific.riddl.examples
 
-import com.reactific.riddl.hugo.{HugoCommand, HugoTranslator}
+import com.reactific.riddl.hugo.{HugoCommand, HugoPass}
 import com.reactific.riddl.testkit.ValidatingTest
-import com.reactific.riddl.language.{CommonOptions, Messages, TranslationResult}
+import com.reactific.riddl.language.{CommonOptions, Messages}
+import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
 
@@ -26,7 +27,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
   )
 
   def genHugo(projectName: String, source: String):
-  Either[Messages.Messages, TranslationResult] = {
+  Either[Messages.Messages, PassesResult] = {
     val outDir = Path.of(output).resolve(source)
     val outDirFile = outDir.toFile
     if (!outDirFile.isDirectory) outDirFile.mkdirs()
@@ -37,7 +38,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
       eraseOutput = true,
       projectName = Some(projectName)
     )
-    val ht = HugoTranslator
+    val ht = HugoPass(input, state)
     ht.parseValidateTranslate(SysLogger(), commonOptions, htc)
   }
 

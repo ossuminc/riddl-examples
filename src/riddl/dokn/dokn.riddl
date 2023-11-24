@@ -98,8 +98,8 @@ domain dokn is {
             options(event-sourced, available)
             record fields is {
               noteId: NoteId,
-              locationId: LocationId,
-              companyId: CompanyId,
+              locationId: type LocationId,
+              companyId: type CompanyId,
               text: String,
               upvoteCount: Integer,
               downvoteCount: Integer,

@@ -26,15 +26,15 @@ domain dokn is {
         connector CompanyEvents is {
           from outlet CompanyEvents_out to inlet CompanyEvents_in
         }
-        outlet CompanyEvents_out is event dokn.Company.Company.CompanyEvent
-        inlet CompanyEvents_in is event dokn.Company.Company.CompanyEvent
+        outlet CompanyEvents_out is type dokn.Company.Company.CompanyEvent
+        inlet CompanyEvents_in is type dokn.Company.Company.CompanyEvent
 
         entity Company is {
             options(event-sourced, available)
 
             type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
-            type CompanyAdded is event { ??? }
-            type CompanyEvent is one of { type CompanyAdded }
+            event CompanyAdded is { ??? }
+            type CompanyEvent is one of { event CompanyAdded }
 
             record fields is {
               companyId: CompanyId,

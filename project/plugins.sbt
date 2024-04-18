@@ -1,5 +1,2 @@
-addSbtPlugin("com.reactific" % "sbt-riddl" % "0.27.1")
-addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.5.0")
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.4")
-addSbtPlugin("com.dwijnand" % "sbt-dynver" % "4.0.0")
-addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.2")
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.9.5")
+addSbtPlugin("com.ossuminc" % "sbt-riddl" % "0.42.0")

@@ -1,6 +1,6 @@
 context Reservation is {
   entity Reservation is {
-   options ( aggregate )
+   option aggregate 
    record ReservationValue is {
      partyName is String,
      phoneNumber is String,

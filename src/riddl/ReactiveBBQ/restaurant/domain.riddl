@@ -1,14 +1,14 @@
 domain Restaurant is {
 
-type CustomerId is Id(Customer.Customer) explained as "Unique identifier for a customer"
-type OrderId is Id(Order.Order) described as "Unique identifier for a customer's order"
-type LocationId is Id(Location.Location)
-type LoyaltyId is Id(Loyalty.LoyaltyAccount)
-type OrderViewerId is Id(Kitchen.OrderViewer)
-type ReservationId is Id(Reservation.Reservation)
-type PaymentId is Id(Payment.Payment)
-type ServerId is Id(Server.Server)
-type TableId is Id(Table.Table)
+type CustomerId is Id(Restaurant.Customer.Customer) explained as "Unique identifier for a customer"
+type OrderId is Id(Restaurant.Order.Order) described as "Unique identifier for a customer's order"
+type LocationId is Id(Restaurant.Location.Location)
+type LoyaltyId is Id(Restaurant.Loyalty.LoyaltyAccount)
+type OrderViewerId is Id(Restaurant.Kitchen.OrderViewer)
+type ReservationId is Id(Restaurant.Reservation.Reservation)
+type PaymentId is Id(Restaurant.Payment.Payment)
+type ServerId is Id(Restaurant.Server.Server)
+type TableId is Id(Restaurant.Table.Table)
 
 include "Customer"
 include "Kitchen"

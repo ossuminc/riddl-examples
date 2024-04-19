@@ -1,7 +1,7 @@
 context Table {
   entity Table {
-    type TableStateData is Nothing
-    state TableState of TableStateData.TableStateData is { ??? }
+    record TableStateData is { ??? }
+    state TableState of Table.TableStateData is { ??? }
     handler TableHandler is { ??? }
   }
 }

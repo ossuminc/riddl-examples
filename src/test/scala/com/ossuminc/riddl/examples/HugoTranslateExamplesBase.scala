@@ -23,13 +23,13 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     showStyleWarnings = false
   )
 
-  def makeSrcDir(testName: String): Path = Path.of(directory).resolve(testName)
+  private def makeSrcDir(testName: String): Path = Path.of(directory).resolve(testName)
 
   def makeOutDir(testName: String): Path = Path.of(output).resolve(testName)
 
-  def makeConfFile(testName: String, confFile: String): Path = makeSrcDir(testName).resolve(confFile)
+  private def makeConfFile(testName: String, confFile: String): Path = makeSrcDir(testName).resolve(confFile)
 
-  def genHugo(testName: String, confFile: String): Unit = {
+  private def genHugo(testName: String, confFile: String): Unit = {
     val outDir = makeOutDir(testName)
     val sourcePath = makeSrcDir(testName)
     if !Files.isDirectory(outDir) then
@@ -40,7 +40,7 @@ abstract class HugoTranslateExamplesBase extends ValidatingTest {
     CommandPlugin.runMain(options, SysLogger())
   }
 
-  def runHugo(testName: String): Assertion = {
+  private def runHugo(testName: String): Assertion = {
     import scala.sys.process._
     val lineBuffer: mutable.ArrayBuffer[String] = ArrayBuffer[String]()
     var hadErrorOutput: Boolean = false

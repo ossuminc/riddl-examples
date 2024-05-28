@@ -3,3 +3,5 @@
 /project/target/
 /project/project/
 /src/riddl/ReactiveBBQ/static/images/logo.png
+.DS_Store
+*/.DS_Store

@@ -1,5 +1,5 @@
 context Menu is {
-  type MenuItemRef = reference to MenuItem
+  type MenuItemRef = reference to entity MenuItem
   entity MenuItem {
     record MenuItemStateData is {
       corporateId: CorporateItemId,

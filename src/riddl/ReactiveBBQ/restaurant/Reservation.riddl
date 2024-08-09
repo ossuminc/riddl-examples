@@ -8,9 +8,8 @@ context Reservation is {
      time is Time,
      date is Date
    }
-   state reservation of record Restaurant.Reservation.Reservation.ReservationValue is {
-     handler ofInputs is {}
-   }
+   state reservation of record Restaurant.Reservation.Reservation.ReservationValue
+   handler ofInputs is {}
   }
 }
 // #Reservation

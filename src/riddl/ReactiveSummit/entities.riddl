@@ -7,27 +7,26 @@ context ToDoList is {
   event ItemCompleted  is {id: Id(ToDoItem) }
 
   entity ToDoItem is {
-    state Active is {
-      fields are {
-        content: ReactiveSummit.ToDoContent
-        createdAt: TimeStamp
-      }
-      handler is {
-        on command ToDoList.AddItem {
-          example add_item is {
-            when "id of content does not exist"
-            then "create new ToDoItem from content"
-            else ""
-        }
-      }
-
+    record ActiveState is {
+      content: ReactiveSummit.ToDoContent
+      createdAt: TimeStamp
     }
-    state Completed is {
+    state Active is record ActiveState
+    handler is {
+      on command ToDoList.AddItem {
+        example add_item is {
+          when "id of content does not exist"
+          then "create new ToDoItem from content"
+          else ""
+      }
+    }
+
+    record CompletedState is {
       content: ReactiveSummit.ToDoContent
       createdAt: TimeStamp
       completedAt: TimeStamp
     }
-
+    state Completed is record CompletedState
   }
 
   projection ToDoItems is {

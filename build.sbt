@@ -17,8 +17,8 @@ lazy val examples = Root(
   )
 ).configure(With.typical)
   .configure(With.noPublishing)
+  .configure(With.scala3)
   .settings(
-    scalaVersion := "3.4.1",
     libraryDependencies ++= Dep.testing ++ Dep.riddl
     // riddlcMinVersion := "0.43.0",
     // riddlcOptions := Seq("--show-times"),

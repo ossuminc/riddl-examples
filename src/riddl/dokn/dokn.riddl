@@ -10,7 +10,7 @@ domain dokn is {
         postalCode: String
     }
     type MobileNumber = Pattern("\\(([0-9]{3})\\)([0-9]{3})-([0-9]{4})")
-    //https:emailregex.com RFC 5322 Official Standard
+
     type EmailAddress = Pattern(
        "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
     )
@@ -20,20 +20,27 @@ domain dokn is {
     type NoteId = Id(dokn.Note.Note)
     type MediaId is Id(dokn.Media.Media)
     type LocationId is Id(dokn.Location.Location)
-    type NoteList is reference to entity dokn.Note.Note*
+    type NoteList is reference to entity dokn.Note.Note
 
     context Company is {
+        flow events is {
+          inlet CompanyEvents_in is event dokn.Company.Company.CompanyEvent
+          outlet CompanyEvents_out is event dokn.Company.Company.CompanyEvent
+        }
         connector CompanyEvents is {
           from outlet CompanyEvents_out to inlet CompanyEvents_in
         }
-        outlet CompanyEvents_out is type dokn.Company.Company.CompanyEvent
-        inlet CompanyEvents_in is type dokn.Company.Company.CompanyEvent
 
         entity Company is {
             option event-sourced option available
 
-            type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
-            event CompanyAdded is { ??? }
+            type AddCompany is command {
+              mailingAddress: Address,
+              primaryContactName: String,
+              primaryContactPhone: MobileNumber,
+              primaryContactEmail: EmailAddress
+            }
+            event CompanyAdded is { when: TimeStamp }
             type CompanyEvent is one of { event CompanyAdded }
 
             record fields is {
@@ -53,8 +60,10 @@ domain dokn is {
     }
 
     context Driver is {
-        inlet Driver_in is type DriverCommands
-        outlet Driver_out is type DriverEvents
+        flow DriverMessages is {
+          inlet Driver_in is type DriverCommands
+          outlet Driver_out is type DriverEvents
+        }
 
         entity Driver is {
             option event-sourced option available
@@ -149,41 +158,40 @@ domain dokn is {
 
             record fields is {
               locationId: type LocationId,
-              geohash: Location,
+              geohash:  Location,
               label: String ,
-              address: Address,
-              notes: NoteList,
+              address: type Address,
+              notes: type NoteList,
               ticketCount: Integer,
-              loadingMethod: LoadingMethod
+              loadingMethod: type LoadingMethod
             }
             state LocationBase of Location.fields
             handler Base is {
-                on command Location.AddDeliveryLocation {
-                  send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
-                }
-                on command ChangeLocationName {
-                  send event Location.LocationNameChanged to inlet CompanyEvents_in
-                }
-                on command ReportTicketReceived {
-                  send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
-                }
-                on command ModifyNotesAtLocation {
-                  send event Location.NotesForLocationModified to inlet CompanyEvents_in
-                }
-                on event Location.LocationAddressReceived {
-                  set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
-                }
-                on query Location.getLocationDetails {
-                  send result Location.LocationDetails to inlet Driver_in
-                }
-                on query Location.getLocationNotes {
-                  send result Location.LocationNotes to outlet Driver_out
-                }
+              on command Location.AddDeliveryLocation {
+                send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
+              }
+              on command ChangeLocationName {
+                send event Location.LocationNameChanged to inlet CompanyEvents_in
+              }
+              on command ReportTicketReceived {
+                send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
+              }
+              on command ModifyNotesAtLocation {
+                send event Location.NotesForLocationModified to inlet CompanyEvents_in
+              }
+              on event Location.LocationAddressReceived {
+                set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
+              }
+              on query Location.getLocationDetails {
+                send result Location.LocationDetails to inlet Driver_in
+              }
+              on query Location.getLocationNotes {
+                send result Location.LocationNotes to outlet Driver_out
+              }
             }
         }
     }
-
-} explained as {
+  explained as {
     |The dokn domain is the starting point for a simple application which allows
     |delivery drivers to capture notes about delivery locations to create
     |efficiency for future deliveries. The main Entities within this domain are:
@@ -192,4 +200,5 @@ domain dokn is {
     |*Location - A specific geographic location to which a driver delivers to.
     |*Note - Drivers capture notes about delivering to a specific location.
     |i.e. Accepts deliveries at loading dock C. Ask for Mike (555-123-4567)
+  }
 }

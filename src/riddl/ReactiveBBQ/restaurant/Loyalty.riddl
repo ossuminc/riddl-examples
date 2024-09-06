@@ -69,6 +69,7 @@ context Loyalty is {
       explained as {
         |This state type used when a loyalty account is active
       }
+    }
 
     handler Inputs is {
       ???

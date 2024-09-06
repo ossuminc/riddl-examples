@@ -9,7 +9,7 @@ context Kitchen is {
     type OrderViewData is { viewType: OrderViewType }
     state OrderViewerState of OrderViewData
     handler input is { ??? }
-  } explained as {
+  } with { explained as {
     |## Brief
     |This is an OrderViewer
     |## Details
@@ -17,9 +17,9 @@ context Kitchen is {
     |that the cooks use to view the sequence of orders to cook.
     |# See
     |* "http://foo.com/"
-  }
+  }}
 
-} explained as {
+} with { explained as {
   |> The kitchen is where food is prepared"
   |The kitchen bounded context provides the ability for the kitchen staff
   |to interact with orders they are preparing. The kitchen is a client of
@@ -33,4 +33,4 @@ context Kitchen is {
   |1. Order sends order status changes to Kitchen
   |1. Kitchen ignores drink items on order
   |1.
-}
+}}

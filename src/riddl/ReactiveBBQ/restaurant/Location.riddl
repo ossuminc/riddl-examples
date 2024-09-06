@@ -3,7 +3,5 @@ context Location is {
     record LocationData is { name: String }
     state LocationState of Location.LocationData
     handler LocationHandler is { ??? }
-  } explained as {
-    "This is a retail store Location"
-  }
+  } with { explained as "This is a retail store Location" }
 }

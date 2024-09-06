@@ -3,9 +3,9 @@ context Customer is {
     type mainType is Nothing
     state main of mainType
     handler input is { ??? }
-  } explained as {
+  } with { explained as {
   | An entity for customers that tracks the state changes of the entity.
-  }
-} explained as {
+  }}
+} with { explained as {
 | Customer context represents the customer of the Reactive BBQ.
-}
+}}

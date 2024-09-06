@@ -8,6 +8,6 @@ context Order is {
     state OrderState of record Order.OrderStateData
     handler foo  is { ??? }
   }
-} explained as {
+} with { explained as {
 | This bounded context defines the handling of restaurant orders.
-}
+}}

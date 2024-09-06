@@ -28,6 +28,6 @@ context Payment is {
     state PaymentState of type Payment.PaymentStateValue
     handler foo is { ??? }
   }
-} explained as {
+} with { explained as {
 | The Payment bounded context deals with receiving payments from customers for their orders.
-}
+}}

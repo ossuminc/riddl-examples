@@ -12,7 +12,7 @@ include "restaurant/domain"
 include "backoffice/domain"
 include "corporate/domain"
 
-} explained as {
+} with { explained as {
 |{{< figure src="/images/RBBQ.png" >}}
 |A domain to encapsulate the entire enterprise named Reactive BBQ.
 |It is divided into three subdomains:
@@ -25,4 +25,4 @@ include "corporate/domain"
 |Reactive BBQ employees and customers to define the requirements. This domain
 |specification is a possible result of analyzing that domain: the Reactive BBQ
 |restaurant.
-}
+}}

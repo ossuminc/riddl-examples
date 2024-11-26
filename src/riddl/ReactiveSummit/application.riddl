@@ -4,7 +4,7 @@ type ToDoContent is {
   expectedCompletion: TimeStamp?
 }
 
-application ToDoList is {
+context ToDoList is {
   options are technology("react.js")
   view ListOfToDoItems is type ToDoContent*
   form EnterToDoItem is type ToDoItem

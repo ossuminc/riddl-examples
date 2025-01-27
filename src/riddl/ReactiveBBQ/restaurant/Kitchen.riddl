@@ -5,11 +5,11 @@ context Kitchen is {
   }
   type OrderViewType is any of { List, Simple, Detailed }
   entity OrderViewer is {
-    option is kind("device")
     type OrderViewData is { viewType: OrderViewType }
     state OrderViewerState of OrderViewData
     handler input is { ??? }
-  } with { explained as {
+  } with {
+    explained as {
     |## Brief
     |This is an OrderViewer
     |## Details
@@ -17,7 +17,9 @@ context Kitchen is {
     |that the cooks use to view the sequence of orders to cook.
     |# See
     |* "http://foo.com/"
-  }}
+    }
+    option is kind("device")
+  }
 
 } with { explained as {
   |> The kitchen is where food is prepared"

@@ -17,7 +17,6 @@ context Payment is {
     }
 
   entity Payment is {
-    option is aggregate
     type PaymentStateValue is {
         orderId is OrderId,
         orderAmount is Number,
@@ -28,6 +27,9 @@ context Payment is {
     state PaymentState of type Payment.PaymentStateValue
     handler foo is { ??? }
   }
-} with { explained as {
-| The Payment bounded context deals with receiving payments from customers for their orders.
-}}
+} with {
+  option is aggregate
+  explained as {
+    | The Payment bounded context deals with receiving payments from customers for their orders.
+  }
+}

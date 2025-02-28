@@ -1,0 +1,1543 @@
+domain ShopifyCart is {
+  author Claude is {
+    name is "Anthropic Claude"
+    email is "support@anthropic.com"
+  }
+
+  // Define Boolean type for UI components
+  type Bool is Boolean with {
+    briefly as "Boolean type for UI components"
+    described by {
+      | A wrapper for the predefined Boolean type, used in UI components.
+    }
+  }
+
+  type CartId is UUID  with {
+    briefly as "Unique identifier for shopping carts"
+    described by {
+      | A UUID used to uniquely identify each shopping cart in the system.
+      | This identifier persists throughout the shopping and checkout process.
+    }
+  }
+
+  type InventoryStatus is any of {
+    InStock
+    LowStock
+    OutOfStock
+    Discontinued
+  }  with {
+    briefly as "Possible states of product inventory"
+    described by {
+      | Defines the possible states for product inventory:
+      | - InStock: Product is available with adequate inventory
+      | - LowStock: Product is available but inventory is running low
+      | - OutOfStock: Product is temporarily unavailable
+      | - Discontinued: Product is permanently unavailable
+    }
+  }
+
+  type ProductId is UUID  with {
+    briefly as "Unique identifier for products"
+    described by {
+      | A UUID used to uniquely identify each product in the catalog.
+    }
+  }
+
+  type SKU is Pattern("^[A-Z0-9]{6,10}$")  with {
+    briefly as "Stock Keeping Unit identifier"
+    described by {
+      | Alphanumeric identifier consisting of 6-10 characters that uniquely
+      | identifies a product variant in the inventory system.
+    }
+  }
+
+  type Price is Decimal(10, 2)
+  with {
+    briefly as "Monetary value with two decimal places"
+    described by {
+      | Represents monetary amounts with up to 10 digits before the decimal point
+      | and exactly 2 digits after. Supports values from $0.00 to $9,999,999,999.99.
+    }
+  }
+
+  type Quantity is Integer
+  with {
+    briefly as "Count of items"
+    described by {
+      | Represents a non-negative whole number quantity of items.
+    }
+  }
+
+  type Email is Pattern("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+  with {
+    briefly as "Email address format"
+    described by {
+      | Represents an email address in standard format, used for customer identification
+      | and communications.
+    }
+  }
+
+  type Name is String(1, 100)  with {
+    briefly as "Person or product name"
+    described by {
+      | A string between 1 and 100 characters representing a name.
+      | Used for product names and customer names.
+    }
+  }
+
+  type Address is {
+    street1 is String
+    street2 is String
+    city is String
+    state is String
+    zipCode is String
+    country is String
+  }
+  with {
+    briefly as "Physical mailing address"
+    described by {
+      | Represents a physical address with standard components
+      | used for shipping and billing purposes.
+    }
+  }
+
+  context ShoppingContext is {
+    // Product Record Type for State
+    type ProductRecord is {
+      productId is ProductId
+      sku is SKU
+      name is Name
+      description is String
+      price is Price
+      inventory is {
+        quantity is Quantity with {
+          briefly as "Product inventory count"
+          described by {
+            | The number of units available in inventory for the product.
+          }
+        }
+        status is InventoryStatus with {
+          briefly as "Current inventory status"
+          described by {
+            | The availability status of the product based on quantity thresholds.
+          }
+        }
+      }
+    }
+    with {
+      briefly as "Record type containing product data"
+      described by {
+        | Defines the structure of product data including identification, pricing,
+        | and inventory information.
+      }
+    }
+
+    // Product Entity
+    entity Product is {
+
+      state ProductData of ProductRecord with {
+        briefly as "Product state containing all product information"
+        described by {
+          | Contains the complete product information including identification,
+          | pricing, and inventory status. This state is modified by price updates
+          | and inventory changes.
+        }
+      }
+
+      // Commands
+      command UpdateProductPrice is {
+        productId is ProductId
+        newPrice is Price
+      }
+      with {
+        briefly as "Command to change a product's price"
+        described by {
+          | Updates the price of a specific product identified by productId.
+          | The new price must be a positive value.
+        }
+      }
+
+      command UpdateInventory is {
+        productId is ProductId
+        newQuantity is Quantity
+      }
+      with {
+        briefly as "Command to update product inventory quantity"
+        described by {
+          | Updates the available quantity of a specific product.
+          | Also automatically updates the inventory status based on quantity thresholds.
+        }
+      }
+
+      // Events
+      event ProductPriceUpdated is {
+        productId is ProductId
+        oldPrice is Price
+        newPrice is Price
+      }
+      with {
+        briefly as "Event indicating a product price change"
+        described by {
+          | Emitted when a product's price is successfully updated.
+          | Contains both old and new prices for auditing and UI updates.
+        }
+      }
+
+      event InventoryUpdated is {
+        productId is ProductId
+        oldQuantity is Quantity
+        newQuantity is Quantity
+        newStatus is InventoryStatus
+      }
+      with {
+        briefly as "Event indicating inventory quantity and status changes"
+        described by {
+          | Emitted when a product's inventory level changes.
+          | Includes both the quantity change and the resulting inventory status.
+        }
+      }
+
+      // Handler for processing commands
+      handler ProductCommandHandler is {
+        // FIXED: Ambiguous reference by using fully qualified path
+        on command ShopifyCart.ShoppingContext.Product.UpdateProductPrice is {
+          // Validate the price change
+          if "newPrice > 0" then {
+            // Update the product price in the ProductData state
+            morph entity Product to state ProductData with command ShopifyCart.ShoppingContext.Product.UpdateProductPrice
+
+            // Emit event
+            tell event ProductPriceUpdated to entity Product
+          } else {
+            error "Price must be greater than zero"
+          } end
+        }
+
+        // FIXED: Ambiguous reference by using fully qualified path
+        on command ShopifyCart.ShoppingContext.Product.UpdateInventory is {
+          // Determine new inventory status
+          set field newStatus to "InStock" // Default status
+          if "command.newQuantity <= 0" then {
+            set field newStatus to "OutOfStock"
+          } else if "command.newQuantity < 10" then {
+            set field newStatus to "LowStock"
+          } end
+
+          // Update product with new inventory data
+          // FIXED: Ambiguous reference in morph statement
+          morph entity Product to state ProductData with command ShopifyCart.ShoppingContext.Product.UpdateInventory
+
+          // Emit event
+          tell event InventoryUpdated to entity Product
+        }
+      }
+      with {
+        briefly as "Processes commands for product management"
+        described by {
+          | Handles commands related to product information and inventory management.
+          | Validates input data, updates product state, and emits relevant events.
+        }
+      }
+    }
+    with {
+      briefly as "Represents a purchasable item in the store"
+      described by {
+        | The Product entity represents items that can be purchased in the store.
+        | It contains all product attributes such as name, price, and SKU,
+        | as well as inventory information. Products respond to commands for
+        | updating price and inventory levels.
+      }
+    }
+
+    // Cart Item Record
+    type CartItem is {
+      productId is ProductId
+      sku is SKU
+      name is Name
+      price is Price
+      quantity is Quantity
+      totalPrice is Price
+    }
+    with {
+      briefly as "Record type for items in a cart"
+      described by {
+        | Defines the structure of an item in a shopping cart, including
+        | product details, quantity, and calculated price.
+      }
+    }
+
+    // Cart Record
+    type CartRecord is {
+      cartId is CartId
+      items is many CartItem
+      subtotal is Price
+      taxes is Price
+      shipping is Price
+      discount is Price
+      total is Price
+    }
+    with {
+      briefly as "Record type containing cart data"
+      described by {
+        | Defines the complete structure of a shopping cart including
+        | all items and calculated totals.
+      }
+    }
+
+    // Cart Entity
+    entity Cart is {
+      state CartData of CartRecord with {
+        briefly as "Shopping cart state containing all cart information"
+        described by {
+          | Contains the complete shopping cart information including all items,
+          | quantities, and calculated totals. This state is modified whenever
+          | items are added, removed, or quantities are changed.
+        }
+      }
+
+      // Helper functions for cart operations
+      function appendItemToCart is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+          quantity is Quantity
+        }
+        returns {
+          items is many CartItem
+        }
+
+        // Logic to add item to cart or update quantity if already exists
+        "var existingItemIndex = items.findIndex(item => item.productId == productId);
+         if (existingItemIndex >= 0) {
+           items[existingItemIndex].quantity += quantity;
+           items[existingItemIndex].totalPrice = items[existingItemIndex].price * items[existingItemIndex].quantity;
+         } else {
+           var product = getProductDetails(productId);
+           items.push({
+             productId: productId,
+             sku: product.sku,
+             name: product.name,
+             price: product.price,
+             quantity: quantity,
+             totalPrice: product.price * quantity
+           });
+         }
+         return items;"
+      } with {
+        briefly as "Adds a product to cart or updates quantity if already present"
+        described by {
+          | Adds the specified product and quantity to the cart. If the product
+          | already exists in the cart, its quantity is increased. Also updates
+          | the total price of the item based on the new quantity.
+        }
+      }
+
+      function calculateSubtotal is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+          quantity is Quantity
+        }
+        returns {
+          price: Price
+        }
+
+        // Logic to calculate cart subtotal
+        "var subtotal = 0;
+         for (var i = 0; i < items.length; i++) {
+           subtotal += items[i].totalPrice;
+         }
+
+         // If adding new item or updating quantity
+         if (productId && quantity) {
+           var productPrice = getProductPrice(productId);
+           var existingItem = items.find(item => item.productId == productId);
+           if (existingItem) {
+             // Adjust for updated quantity
+             subtotal = subtotal - existingItem.totalPrice + (productPrice * quantity);
+           } else {
+             // Add new item
+             subtotal += productPrice * quantity;
+           }
+         }
+
+         return subtotal;"
+      } with {
+        briefly as "Calculates the cart subtotal based on all items"
+        described by {
+          | Calculates the total price of all items in the cart before taxes,
+          | shipping, or discounts. If productId and quantity are provided,
+          | it calculates what the subtotal would be after adding or updating
+          | the specified product.
+        }
+      }
+
+      function calculateTaxes is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+          quantity is Quantity
+        }
+        returns {
+          price: Price
+        }
+
+        // Logic to calculate taxes based on subtotal and tax rules
+        "var subtotal = calculateSubtotal(items, productId, quantity);
+         // Apply standard tax rate of 8.5%
+         return subtotal * 0.085;"
+      } with {
+        briefly as "Calculates taxes based on cart subtotal"
+        described by {
+          | Calculates the taxes for the cart based on the current subtotal and
+          | applicable tax rules. The default tax rate is 8.5% but can be adjusted
+          | based on location and product types.
+        }
+      }
+
+      function calculateTotal is {
+        requires {
+          subtotal is Price
+          taxes is Price
+          shipping is Price
+          discount is Price
+        }
+        returns {
+          price: Price
+        }
+
+        // Add subtotal, taxes, shipping and subtract discount
+        "return subtotal + taxes + shipping - discount;"
+      } with {
+        briefly as "Calculates the final cart total"
+        described by {
+          | Calculates the final amount by adding subtotal, taxes, and shipping,
+          | then subtracting any discounts. This is the final amount the customer
+          | will pay at checkout.
+        }
+      }
+
+      function removeItemFromCart is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+        }
+        returns {
+          items: many CartItem
+        }
+
+        // Logic to remove an item from cart items
+        "return items.filter(item => item.productId != productId);"
+      } with {
+        briefly as "Removes a product from the cart"
+        described by {
+          | Removes the specified product completely from the cart regardless of
+          | its quantity. Returns a new collection of items without the specified product.
+        }
+      }
+
+      function updateItemQuantity is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+          quantity is Quantity
+        }
+        returns {
+          items:  many CartItem
+        }
+
+        // Logic to update quantity of an item in cart
+        "var updatedItems = items.map(item => {
+           if (item.productId == productId) {
+             item.quantity = quantity;
+             item.totalPrice = item.price * quantity;
+           }
+           return item;
+         });
+         return updatedItems;"
+      } with {
+        briefly as "Updates the quantity of a product in the cart"
+        described by {
+          | Updates the quantity of the specified product in the cart to the provided value.
+          | Also recalculates the total price of the item based on the new quantity.
+        }
+      }
+
+      function calculateSubtotalAfterRemoval is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+        }
+        returns {
+          price:  Price
+        }
+
+        // Logic to calculate subtotal after removing an item
+        "var subtotal = 0;
+         for (var i = 0; i < items.length; i++) {
+           if (items[i].productId != productId) {
+             subtotal += items[i].totalPrice;
+           }
+         }
+         return subtotal;"
+      } with {
+        briefly as "Calculates cart subtotal after removing a product"
+        described by {
+          | Calculates what the cart subtotal would be after removing the specified
+          | product completely. This helps preview the updated cart total before
+          | actually modifying the cart.
+        }
+
+      }
+
+      function calculateTaxesAfterRemoval is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+        }
+        returns {
+          price: Price
+        }
+
+        // Logic to calculate taxes after removing an item
+        "var subtotal = calculateSubtotalAfterRemoval(items, productId);
+         // Apply standard tax rate of 8.5%
+         return subtotal * 0.085;"
+      } with {
+        briefly as "Calculates taxes after removing a product"
+        described by {
+          | Calculates what the cart taxes would be after removing the specified
+          | product. This helps preview the updated tax amount before actually
+          | modifying the cart.
+        }
+
+      }
+
+      function calculateSubtotalAfterUpdate is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+          quantity is Quantity
+        }
+        returns {
+          price: Price
+        }
+
+        // Logic to calculate subtotal after updating quantity
+        "var subtotal = 0;
+         for (var i = 0; i < items.length; i++) {
+           if (items[i].productId == productId) {
+             subtotal += items[i].price * quantity;
+           } else {
+             subtotal += items[i].totalPrice;
+           }
+         }
+         return subtotal;"
+      } with {
+        briefly as "Calculates cart subtotal after updating product quantity"
+        described by {
+          | Calculates what the cart subtotal would be after updating the quantity
+          | of the specified product. This helps preview the updated cart total
+          | before actually modifying the cart.
+        }
+
+      }
+
+      function calculateTaxesAfterUpdate is {
+        requires {
+          items is many CartItem
+          productId is ProductId
+          quantity is Quantity
+        }
+        returns {
+          price: Price
+        }
+
+        // Logic to calculate taxes after updating quantity
+        "var subtotal = calculateSubtotalAfterUpdate(items, productId, quantity);
+         // Apply standard tax rate of 8.5%
+         return subtotal * 0.085;"
+      } with {
+        briefly as "Calculates taxes after updating product quantity"
+        described by {
+          | Calculates what the cart taxes would be after updating the quantity
+          | of the specified product. This helps preview the updated tax amount
+          | before actually modifying the cart.
+        }
+
+      }
+
+      // Commands
+      command CreateCart is {
+        // No parameters, just creates a new empty cart
+      }
+      with {
+        briefly as "Command to create a new shopping cart"
+        described by {
+          | Initializes a new empty shopping cart with a unique identifier.
+          | All monetary values are initialized to zero.
+        }
+      }
+
+      command AddToCart is {
+        cartId is CartId
+        productId is ProductId
+        quantity is Quantity
+      }
+      with {
+        briefly as "Command to add a product to the cart"
+        described by {
+          | Adds a specified quantity of a product to a cart.
+          | Validates that the product exists and is in stock.
+          | Recalculates cart totals after adding the item.
+        }
+      }
+
+      command RemoveFromCart is {
+        cartId is CartId
+        productId is ProductId
+      }
+      with {
+        briefly as "Command to remove a product from the cart"
+        described by {
+          | Removes all instances of a specified product from the cart.
+          | Recalculates cart totals after removal.
+        }
+      }
+
+      command UpdateQuantity is {
+        cartId is CartId
+        productId is ProductId
+        quantity is Quantity
+      }
+      with {
+        briefly as "Command to update product quantity in the cart"
+        described by {
+          | Changes the quantity of a specific product in the cart.
+          | If quantity is zero, the item is removed completely.
+          | Recalculates cart totals after the update.
+        }
+      }
+
+      command ApplyDiscount is {
+        cartId is CartId
+        discountCode is String
+        discountAmount is Price
+      }
+      with {
+        briefly as "Command to apply a discount to the cart"
+        described by {
+          | Applies a discount to the cart total using a discount code.
+          | Validates that the discount code is valid before applying.
+          | Recalculates cart total after applying the discount.
+        }
+      }
+
+      // Events
+      event CartCreated is {
+        cartId is CartId
+      }
+      with {
+        briefly as "Event indicating a new cart was created"
+        described by {
+          | Emitted when a new shopping cart is successfully created.
+          | Contains the new cart's identifier for reference.
+        }
+      }
+
+      event ItemAddedToCart is {
+        cartId is CartId
+        productId is ProductId
+        quantity is Quantity
+        name is Name
+        price is Price
+      }
+      with {
+        briefly as "Event indicating a product was added to the cart"
+        described by {
+          | Emitted when a product is successfully added to a cart.
+          | Contains product details and quantity for UI updates.
+        }
+      }
+
+      event ItemRemovedFromCart is {
+        cartId is CartId
+        productId is ProductId
+      }
+      with {
+        briefly as "Event indicating a product was removed from the cart"
+        described by {
+          | Emitted when a product is successfully removed from a cart.
+          | Identifies the product that was removed.
+        }
+      }
+
+      event CartQuantityUpdated is {
+        cartId is CartId
+        productId is ProductId
+        oldQuantity is Quantity
+        newQuantity is Quantity
+      }
+      with {
+        briefly as "Event indicating a product quantity change in the cart"
+        described by {
+          | Emitted when the quantity of a product in the cart is changed.
+          | Contains both old and new quantities for reference.
+        }
+      }
+
+      event DiscountApplied is {
+        cartId is CartId
+        discountCode is String
+        discountAmount is Price
+      }
+      with {
+        briefly as "Event indicating a discount was applied to the cart"
+        described by {
+          | Emitted when a discount is successfully applied to a cart.
+          | Contains the discount code and amount for reference.
+        }
+      }
+
+      // Handler for processing commands
+      handler CartCommandHandler is {
+        on command CreateCart is {
+          // Create a new cart with an ID and initialized values
+          morph entity Cart to state CartData with command CreateCart
+
+          // Emit event
+          tell event CartCreated to entity Cart
+        }
+
+        on command AddToCart is {
+          // Check if product exists and is in stock
+          if "productExists(command.productId) && isInStock(command.productId)" then {
+            // Get product details and calculate new cart state
+            // FIXED: Use arbitrary statement instead of setting a field
+            "CartRecord(Cart.id, appendItemToCart(Cart.items, command.productId, command.quantity), calculateSubtotal(Cart.items, command.productId, command.quantity), calculateTaxes(Cart.items, command.productId, command.quantity), Cart.shipping, Cart.discount, calculateTotal())"
+
+            // Update cart state
+            morph entity Cart to state CartData with command AddToCart
+
+            // Emit event
+            tell event ItemAddedToCart to entity Cart
+          } else {
+            error "Product is not available"
+          } end
+        }
+
+        on command RemoveFromCart is {
+          // FIXED: Use arbitrary statement instead of setting undefined field
+          "CartRecord(Cart.id, removeItemFromCart(Cart.items, command.productId), calculateSubtotalAfterRemoval(Cart.items, command.productId), calculateTaxesAfterRemoval(Cart.items, command.productId), Cart.shipping, Cart.discount, calculateTotal())"
+
+          // Update cart state
+          morph entity Cart to state CartData with command RemoveFromCart
+
+          // Emit event
+          tell event ItemRemovedFromCart to entity Cart
+        }
+
+        // FIXED: Ambiguous reference by using fully qualified path
+        on command ShopifyCart.ShoppingContext.Cart.UpdateQuantity is {
+          // Validate new quantity
+          if "command.quantity > 0" then {
+            // FIXED: Use arbitrary statement instead of setting undefined field
+            "CartRecord(Cart.id, updateItemQuantity(Cart.items, command.productId, command.quantity), calculateSubtotalAfterUpdate(Cart.items, command.productId, command.quantity), calculateTaxesAfterUpdate(Cart.items, command.productId, command.quantity), Cart.shipping, Cart.discount, calculateTotal())"
+
+            // Update cart state
+            morph entity Cart to state CartData with command ShopifyCart.ShoppingContext.Cart.UpdateQuantity
+
+            // Emit event
+            tell event CartQuantityUpdated to entity Cart
+          } else {
+            if "command.quantity == 0" then {
+            // Remove item if quantity is zero
+            tell command RemoveFromCart to entity Cart
+            } else
+              error "Quantity must be zero or positive"
+            end
+          } end
+        }
+
+        on command ApplyDiscount is {
+          // Validate discount code
+          if "isValidDiscountCode(command.discountCode)" then {
+            // FIXED: Use arbitrary statement instead of setting undefined field
+            "CartRecord(Cart.id, Cart.items, Cart.subtotal, Cart.taxes, Cart.shipping, command.discountAmount, calculateTotal())"
+
+            // Update cart state
+            morph entity Cart to state CartData with command ApplyDiscount
+
+            // Emit event
+            tell event DiscountApplied to entity Cart
+          } else {
+            error "Invalid discount code"
+          } end
+        }
+      }
+      with {
+        briefly as "Processes commands for cart management"
+        described by {
+          | Handles all shopping cart operations including creation, adding items,
+          | removing items, updating quantities, and applying discounts.
+          | Validates input data, maintains cart state, and emits relevant events.
+        }
+      }
+    }
+    with {
+      briefly as "Represents a customer's shopping cart"
+      described by {
+        | The Cart entity represents a customer's shopping session and contains
+        | all selected products and their quantities. It maintains running totals
+        | for subtotal, taxes, shipping, discounts, and the final amount.
+        | The cart responds to commands for adding, removing, and updating items.
+      }
+    }
+
+    // Customer Information Record
+    type CustomerInfo is {
+      email is Email
+      name is Name
+      shippingAddress is Address
+      billingAddress is Address
+    }
+    with {
+      briefly as "Record type for customer details"
+      described by {
+        | Contains customer identification and address information
+        | needed for order processing and fulfillment.
+      }
+    }
+
+    // Payment Method Record
+    type PaymentMethod is {
+      type is String
+      details is String // Tokenized payment details
+    }
+    with {
+      briefly as "Record type for payment information"
+      described by {
+        | Contains tokenized payment details and payment type.
+        | Actual sensitive payment data is not stored directly.
+      }
+    }
+
+    // Checkout Record
+    type CheckoutRecord is {
+      cartId is CartId
+      customer is CustomerInfo
+      paymentMethod is PaymentMethod
+    }
+    with {
+      briefly as "Record type containing checkout data"
+      described by {
+        | Defines the complete structure of checkout data including
+        | cart reference, customer information, and payment details.
+      }
+    }
+
+    // Checkout Process
+    entity Checkout is {
+
+
+      state CheckoutData of CheckoutRecord with {
+        briefly as "Checkout state containing cart and customer data"
+        described by {
+          | Contains all the information needed to complete a purchase, including
+          | cart identifier, customer information, and payment details.
+        }
+
+      }
+
+      // Commands
+      command InitiateCheckout is {
+        cartId is CartId
+        customerEmail is Email
+        customerName is Name
+        shippingAddress is Address
+        billingAddress is Address
+      }
+      with {
+        briefly as "Command to begin the checkout process"
+        described by {
+          | Starts the checkout process for a specific cart.
+          | Collects customer information and addresses needed for shipping and billing.
+        }
+      }
+
+      command SelectPaymentMethod is {
+        cartId is CartId
+        paymentType is String
+        paymentDetails is String
+      }
+      with {
+        briefly as "Command to select and save payment method"
+        described by {
+          | Associates a payment method with an ongoing checkout.
+          | Payment details are tokenized for security.
+        }
+      }
+
+      command CompleteCheckout is {
+        cartId is CartId
+      }
+      with {
+        briefly as "Command to finalize the purchase"
+        described by {
+          | Completes the checkout process by processing payment, creating an order,
+          | and clearing the cart. Requires that a valid cart with items exists and
+          | that a payment method has been selected.
+        }
+      }
+
+      // Events
+      event CheckoutInitiated is {
+        cartId is CartId
+        customerEmail is Email
+      }
+      with {
+        briefly as "Event indicating checkout has begun"
+        described by {
+          | Emitted when the checkout process is successfully initiated.
+          | Contains customer identification for reference.
+        }
+      }
+
+      event PaymentMethodSelected is {
+        cartId is CartId
+        paymentType is String
+      }
+      with {
+        briefly as "Event indicating payment method was selected"
+        described by {
+          | Emitted when a payment method is successfully associated with a checkout.
+          | Contains the type of payment selected (e.g., credit card, PayPal).
+        }
+      }
+
+      event CheckoutCompleted is {
+        cartId is CartId
+        orderId is UUID
+      }
+      with {
+        briefly as "Event indicating checkout was successful"
+        described by {
+          | Emitted when the checkout process completes successfully.
+          | Contains the newly created order identifier.
+        }
+      }
+
+      // Handler for processing commands
+      handler CheckoutCommandHandler is {
+        // FIXED: Ambiguous reference by using fully qualified path
+        on command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout is {
+          // Initialize checkout with customer information
+          // FIXED: Ambiguous references by using fully qualified paths
+          morph entity ShopifyCart.ShoppingContext.Checkout to state CheckoutData with command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout
+
+          // Emit event
+          // FIXED: Ambiguous reference by using fully qualified path
+          tell event CheckoutInitiated to entity ShopifyCart.ShoppingContext.Checkout
+        }
+
+        on command SelectPaymentMethod is {
+          // Update checkout with payment method
+          // FIXED: Ambiguous reference by using fully qualified path
+          morph entity ShopifyCart.ShoppingContext.Checkout to state CheckoutData with command SelectPaymentMethod
+
+          // Emit event
+          // FIXED: Ambiguous reference by using fully qualified path
+          tell event PaymentMethodSelected to entity ShopifyCart.ShoppingContext.Checkout
+        }
+
+        on command CompleteCheckout is {
+          // Validate cart and payment information
+          if "isValidCart(command.cartId) && hasPaymentMethod()" then {
+            // Process payment
+            // Create order
+            // Clear cart
+
+            // Generate a new order ID
+            "var orderId = generateUUID()"
+
+            // Emit event with new order ID
+            // FIXED: Ambiguous reference by using fully qualified path
+            tell event CheckoutCompleted to entity ShopifyCart.ShoppingContext.Checkout
+          } else {
+            error "Cannot complete checkout"
+          } end
+        }
+      }
+      with {
+        briefly as "Processes commands for checkout flow"
+        described by {
+          | Handles the multi-step checkout process including collecting customer information,
+          | selecting payment methods, and finalizing purchases. Validates checkout state
+          | at each step and emits appropriate events.
+        }
+      }
+    }
+    with {
+      briefly as "Manages the purchase completion process"
+      described by {
+        | The Checkout entity manages the process of converting a shopping cart
+        | into a completed order. It collects customer information, shipping and
+        | billing addresses, and payment details. The checkout process consists
+        | of several steps that must be completed in sequence.
+      }
+    }
+
+    // Repository for Cart data
+    repository CartRepository is {
+
+      schema CartData is relational of
+        cart as Cart
+        link cartItems as field Cart.items.id to field Product.id
+
+      // Message handlers
+      handler CartRepositoryHandler is {
+        on event CartCreated is {
+          write "Create new cart record" to Cart
+        }
+
+        on event ItemAddedToCart is {
+          write "Add item to cart" to Cart
+        }
+
+        on event ItemRemovedFromCart is {
+          write "Remove item from cart" to Cart
+        }
+
+        on event CartQuantityUpdated is {
+          write "Update item quantity" to Cart
+        }
+
+        on event DiscountApplied is {
+          write "Apply discount to cart" to Cart
+        }
+      }
+      with {
+        briefly as "Handles persistence of cart events"
+        described by {
+          | Handles all event-driven persistence operations related to shopping carts.
+          | Responds to cart events by updating the persistent state of carts and their items.
+        }
+      }
+    }
+    with {
+      briefly as "Persistent storage for shopping cart data"
+      described by {
+        | The CartRepository provides persistent storage for shopping cart data,
+        | including the cart itself and all items within it. It uses a flat schema
+        | with links between cart items and product records.
+      }
+    }
+
+    // Repository for Product data
+    repository ProductRepository is {
+
+      schema ProductData is flat of
+        product as Product
+
+      handler ProductRepositoryHandler is {
+        on event ProductPriceUpdated is {
+          write "Update product price" to Product
+        }
+
+        on event InventoryUpdated is {
+          write "Update product inventory" to Product
+        }
+      }
+      with {
+        briefly as "Handles persistence of product events"
+        described by {
+          | Handles event-driven persistence operations related to products.
+          | Responds to product events by updating the persistent state of product records.
+        }
+      }
+    }
+    with {
+      briefly as "Persistent storage for product data"
+      described by {
+        | The ProductRepository provides persistent storage for product data,
+        | including details like name, price, and inventory status.
+        | It uses a flat schema for simplicity.
+      }
+    }
+
+    // Saga for the checkout process
+    saga CheckoutProcess is {
+
+      requires {
+        cartId is CartId
+        customerInfo is {
+          email is Email
+          name is Name
+          shippingAddress is Address
+          billingAddress is Address
+        }
+        paymentInfo is {
+          type is String
+          details is String
+        }
+      }
+
+      returns {
+        // FIXED: Using defined Bool type instead of Boolean
+        success is Bool
+        orderId is UUID
+        message is String
+      }
+
+      step ValidateCart is {
+
+        // Check if cart exists and has items
+        if "cartRepository.exists(cartId) && cartRepository.hasItems(cartId)" then {
+          // Continue to next step
+        } else {
+          error "Cart is empty or does not exist"
+        } end
+      } reverted by {
+        // Nothing to undo
+      }
+      with {
+        briefly as "Validates cart exists and contains items"
+        described by {
+          | First step in the checkout process that confirms the cart
+          | exists and contains at least one item.
+        }
+      }
+
+      step ValidateInventory is {
+
+        // Check inventory for all items in cart
+        foreach field Cart.items do {
+          if "!productRepository.hasInventory(item.productId, item.quantity)" then
+            error "Insufficient inventory for product"
+          else
+            "nothing"
+          end
+        } end
+      } reverted by {
+        // Nothing to undo
+      }
+      with {
+        briefly as "Confirms sufficient inventory for all items"
+        described by {
+          | Validates that all items in the cart have sufficient inventory
+          | before proceeding with the checkout.
+        }
+      }
+
+      step ProcessPayment is {
+
+        // Process payment with payment provider
+        if "paymentService.process(cartId, paymentInfo)" then {
+          // Payment successful
+        } else {
+          error "Payment failed"
+        } end
+      } reverted by {
+        // Refund payment if necessary
+        if "paymentWasProcessed" then
+          "paymentService.refund(cartId)"
+        else
+          "nothing"
+        end
+      }
+      with {
+        briefly as "Processes payment for the order"
+        described by {
+          | Attempts to process payment using the provided payment details.
+          | If payment fails, the checkout process is aborted.
+          | If later steps fail, payment is refunded as part of compensation.
+        }
+      }
+
+      step CreateOrder is {
+
+        // Create order from cart
+        "orderService.createFromCart(cartId, customerInfo)"
+      } reverted by {
+        // Cancel order if created
+        if "orderWasCreated" then {
+          "orderService.cancel(orderId)"
+        } else {
+          "nothing"
+        } end
+      }
+      with {
+        briefly as "Creates an order record from the cart"
+        described by {
+          | Creates a new order record based on the contents of the cart
+          | and the customer information. If later steps fail,
+          | the order is canceled as part of compensation.
+        }
+      }
+
+      step UpdateInventoryLevels is {
+        // Reduce inventory for all purchased items
+        foreach field Cart.items do {
+          "inventoryService.reduce(item.productId, item.quantity)"
+        } end
+      } reverted by {
+        // Restore inventory levels
+        foreach field Cart.items do {
+          "inventoryService.increase(item.productId, item.quantity)"
+        } end
+      } with {
+        briefly as "Reduces inventory levels for purchased items"
+        described by {
+          | Updates inventory quantities to reflect items that have been purchased.
+          | If later steps fail, inventory levels are restored as part of compensation.
+        }
+      }
+
+      step SendConfirmation is {
+
+        // Send confirmation email
+        "emailService.sendOrderConfirmation(customerInfo.email, orderId)"
+      } reverted by {
+        // Nothing to undo for email
+      } with {
+        briefly as "Sends order confirmation to customer"
+        described by {
+          | Sends an email confirmation to the customer with order details.
+          | There is no compensation action since emails cannot be unsent.
+        }
+      }
+    }
+    with {
+      briefly as "Orchestrates the checkout process steps"
+      described by {
+        | This saga orchestrates the multi-step process of completing a checkout,
+        | including validating the cart and inventory, processing payment,
+        | creating an order, updating inventory, and sending confirmation.
+        |
+        | It includes compensation actions (reversion steps) for each stage to ensure
+        | consistency if a later stage fails. This provides transactional integrity
+        | across multiple services.
+      }
+    }
+  }
+  with {
+    briefly as "Main shopping context containing all commerce entities"
+    described by {
+      | The ShoppingContext is the primary bounded context for the shopping cart system.
+      | It contains all entities, repositories, and processes related to the shopping
+      | experience, including products, carts, and checkout processes.
+    }
+  }
+
+  // User definitions for epics
+  user Customer is "A shopper who wants to purchase items from the store"
+  with {
+
+    briefly as "Primary user who shops and makes purchases"
+    described by {
+      | The Customer represents the primary user of the shopping system.
+      | Customers browse products, add items to carts, and complete purchases.
+    }
+  }
+
+  user StoreAdmin is "Admin user who manages products and inventory"
+  with {
+
+    briefly as "Administrative user who manages store content"
+    described by {
+      | The StoreAdmin is responsible for maintaining the store,
+      | including managing product information and inventory levels.
+    }
+  }
+
+
+  record PaymentDetails is { ??? }
+  record InventoryUpdateDetails is { ??? }
+  record ProductPriceDetails is { ??? }
+
+  context UserInterface is {
+    page ProductDetails is { ??? } with {
+      briefly as "Page showing product information"
+      described by {
+        | Displays detailed information about a product including name,
+        | description, price, and images. Allows customers to add products to cart.
+      }
+    }
+
+    page ShoppingCart is {
+      // FIXED: Using defined Bool type instead of Boolean
+      // FIXED: Renamed to avoid ambiguity
+      button CheckoutBtn activates type Bool
+    } with {
+      briefly as "Page showing cart contents"
+      described by {
+        | Displays all items added to the cart with quantities and prices.
+        | Allows customers to update quantities, remove items, and proceed to checkout.
+      }
+    }
+
+
+    // FIXED: Renamed to avoid ambiguity
+    page CheckoutPage is { ??? } with {
+      briefly as "Page for entering checkout information"
+      described by {
+        | Allows customers to enter shipping information, billing details,
+        | and proceed to payment processing. First step in the checkout flow.
+      }
+    }
+
+    page Payment is {
+      // FIXED: Added missing form - matches the reference in epics
+      form PaymentDetailsEntry submits type PaymentDetails with {
+        briefly as "Form for entering payment information"
+        described by {
+          | Collects payment method and details from the customer.
+          | Payment information is tokenized for security before processing.
+        }
+      }
+    } with {
+      briefly as "Page for payment processing"
+      described by {
+        | Allows customers to enter and submit payment information.
+        | Second step in the checkout flow after customer information is collected.
+      }
+    }
+
+    // FIXED: Renamed to avoid ambiguity
+    page CheckoutCompletedPage is { ??? } with {
+      briefly as "Order confirmation page"
+      described by {
+        | Displays order confirmation and details after a successful checkout.
+        | Shows order number, items purchased, and estimated delivery information.
+      }
+
+    }
+
+    page ProductManagement is {
+      form InventoryQuantity submits type InventoryUpdateDetails with {
+        briefly as "Form for updating product inventory"
+        described by {
+          | Allows store administrators to update the quantity of products in inventory.
+          | Automatically updates the inventory status based on the new quantity.
+        }
+      }
+      item ProductPrice submits type ProductPriceDetails with {
+        briefly as "Form field for updating product price"
+        described by {
+          | Allows store administrators to modify the price of products.
+          | Validates that prices are positive values before saving.
+        }
+
+      }
+    } with {
+      briefly as "Admin page for product management"
+      described by {
+        | Provides administrative interface for managing product information,
+        | including updating prices and inventory levels.
+      }
+    }
+  } with {
+    briefly as "User interface components for shopping cart system"
+    described by {
+      | Contains all UI components used in the shopping cart system including
+      | product details, shopping cart, checkout flow, and admin pages.
+    }
+  }
+
+  epic ShoppingCartEpic is {
+    user Customer wants to
+      "add items to a shopping cart"
+    so that
+      "they can purchase multiple items at once"
+
+    case AddingToCart is {
+
+      user Customer wants to "add products to cart" so that "they can purchase them later"
+
+      step from user Customer "views" page UserInterface.ProductDetails
+      step send command AddToCart from user Customer to entity Cart
+      step from entity Cart "updates" to page UserInterface.ShoppingCart
+      step focus user Customer on page UserInterface.ShoppingCart
+    } with {
+      briefly as "Adding products to the shopping cart"
+      described by {
+        | This use case describes the process of a customer adding a product
+        | to their shopping cart from a product detail page.
+      }
+    }
+
+    // FIXED: Renamed to avoid ambiguity
+    case CartQuantityUpdate is {
+
+      user Customer wants to
+        "update the quantity of items in cart"
+      so that
+        "they can adjust their purchase"
+
+      step from user Customer "views" page UserInterface.ShoppingCart
+      // FIXED: Ambiguous reference by using fully qualified path
+      step send command ShopifyCart.ShoppingContext.Cart.UpdateQuantity from user Customer to entity Cart
+      step from entity Cart "updates" to page UserInterface.ShoppingCart
+      step focus user Customer on page UserInterface.ShoppingCart
+    } with {
+      briefly as "Changing item quantities in the cart"
+      described by {
+        | This use case describes the process of a customer changing
+        | the quantity of an item already in their shopping cart.
+      }
+    }
+
+    case RemoveItems is {
+
+      user Customer wants to "remove items from cart"
+       so that "they can change their mind about purchases"
+
+      step from user Customer "views" page UserInterface.ShoppingCart
+      step send command RemoveFromCart from user Customer to entity Cart
+      step from entity Cart "updates" to page UserInterface.ShoppingCart
+      step focus user Customer on page UserInterface.ShoppingCart
+    } with {
+      briefly as "Removing items from the shopping cart"
+      described by {
+        | This use case describes the process of a customer removing
+        | an item entirely from their shopping cart.
+      }
+    }
+  } with {
+    briefly as "User stories related to shopping cart management"
+    described by {
+      | This epic covers the core shopping cart functionality including
+      | adding items to carts, updating quantities, and removing items.
+      | These features enable customers to collect multiple items before checkout.
+    }
+  }
+
+
+
+  // Epic for checkout process
+  epic CheckoutEpic is {
+    user Customer wants to "complete their purchase" so that "they can receive their ordered items"
+
+    // FIXED: Renamed to avoid ambiguity
+    case CheckoutStart is {
+      user Customer wants to "begin the checkout process" so that
+        "they can provide shipping and payment information"
+
+      step from user Customer "views" page UserInterface.ShoppingCart
+      // FIXED: Ambiguous reference by using renamed UI component
+      step from user Customer "clicks" button UserInterface.ShoppingCart.CheckoutBtn
+      // FIXED: Ambiguous references by using fully qualified paths
+      step send command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout from user Customer to entity ShopifyCart.ShoppingContext.Checkout
+      // FIXED: Ambiguous references by using fully qualified paths and renamed UI component
+      step from entity ShopifyCart.ShoppingContext.Checkout "processes" to page UserInterface.CheckoutPage
+      // FIXED: Ambiguous reference by using renamed UI component
+      step focus user Customer on page UserInterface.CheckoutPage
+    } with {
+      briefly as "Starting the checkout process"
+      described by {
+        | This use case describes the process of a customer initiating
+        | the checkout process from their shopping cart and providing
+        | their shipping and billing information.
+      }
+    }
+
+    case CompletePayment is {
+      user Customer wants to "pay for their items" so that "they can complete their order"
+
+      step from user Customer "views" page UserInterface.Payment
+      step from user Customer "enters" form UserInterface.Payment.PaymentDetailsEntry
+      step send command SelectPaymentMethod from form
+        UserInterface.Payment.PaymentDetailsEntry to entity ShopifyCart.ShoppingContext.Checkout
+      step from entity ShopifyCart.ShoppingContext.Checkout "validates" to entity ShopifyCart.ShoppingContext.Checkout
+      step from user Customer "confirms" page UserInterface.Payment
+      step send command CompleteCheckout from user Customer to entity ShopifyCart.ShoppingContext.Checkout
+      step from entity ShopifyCart.ShoppingContext.Checkout "processes" to saga CheckoutProcess
+      step focus user Customer on page UserInterface.CheckoutCompletedPage
+    }
+    with {
+      briefly as "Providing payment and completing purchase"
+      described by {
+        | This use case describes the process of a customer providing
+        | payment information and finalizing their purchase, which
+        | results in an order being created.
+      }
+    }
+  } with {
+    briefly as "User stories related to the checkout process"
+    described by {
+      | This epic covers the checkout process including initiating checkout,
+      | providing customer and shipping information, selecting payment methods,
+      | and completing purchases. These features enable customers to finalize
+      | their shopping experience and place orders.
+    }
+  }
+
+
+  // Epic for inventory management
+  epic InventoryEpic is {
+    user StoreAdmin wants to "manage product inventory" so that "accurate stock levels are maintained"
+
+    case UpdateProductInventory is {
+      user StoreAdmin wants to "update product inventory levels" so that
+        "stock is accurately reflected"
+
+      step from user StoreAdmin "views" page UserInterface.ProductManagement
+      step from user StoreAdmin "updates" form InventoryQuantity
+      step send command ShopifyCart.ShoppingContext.Product.UpdateInventory from user StoreAdmin to entity Product
+      step from entity Product "processes" to entity Product
+      step focus user StoreAdmin on page UserInterface.ProductManagement
+    }
+    with {
+      briefly as "Updating product inventory quantities"
+      described by {
+        | This use case describes the process of a store administrator
+        | updating the inventory quantity for a product, which may also
+        | affect its inventory status.
+      }
+    }
+
+    // FIXED: Renamed to avoid ambiguity
+    case ProductPriceUpdate is {
+      user StoreAdmin wants to "update product prices" so that "they can adjust for market conditions"
+
+      step from user StoreAdmin "views" page UserInterface.ProductManagement
+      step from user StoreAdmin "updates" item ProductPrice
+      step send command ShopifyCart.ShoppingContext.Product.UpdateProductPrice from user StoreAdmin to entity Product
+      step from entity Product "processes" to entity Product
+      step focus user StoreAdmin on page UserInterface.ProductManagement
+    }
+    with {
+      briefly as "Changing product pricing"
+      described by {
+        | This use case describes the process of a store administrator
+        | updating the price of a product to reflect market changes,
+        | sales, or other pricing adjustments.
+      }
+    }
+  } with {
+    briefly as "User stories related to inventory management"
+    described by {
+      | This epic covers inventory management functionality, including
+      | updating product inventory levels and prices. These features
+      | enable store administrators to maintain accurate product information.
+    }
+  }
+} with {
+  briefly as "Shopify shopping cart domain model"
+  described by {
+    | This domain model represents a simplified Shopify shopping cart system.
+    | It includes the core entities, commands, events, and processes required for
+    | managing products, shopping carts, and the checkout process.
+    |
+    | The model demonstrates the reactive nature of the system through command
+    | and event handlers, as well as sagas for managing complex workflows
+    | like the checkout process.
+    |
+    | Key features include:
+    | - Product and inventory management
+    | - Shopping cart operations (add, remove, update)
+    | - Multi-step checkout process with compensation
+    | - Event-driven persistence through repositories
+    | - Clearly defined user stories and interaction patterns
+  }
+}

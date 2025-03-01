@@ -1,8 +1,8 @@
 // #Loyalty
 context Loyalty is {
-  adaptor FromPayment from context Restaurant.Payment is {
+  adaptor FromPayment from context Restaurant.Payments is {
     handler payments is {
-      on event Restaurant.Payment.Paid  {
+      on event Restaurant.Payments.Paid  {
         "when event Paid from Payment context occurs"
         "and customer is known in the Paid event"
         "and customer has a loyalty account"
@@ -24,7 +24,7 @@ context Loyalty is {
   }}
   type PointsAccrued is event {
     when is TimeStamp,
-    who is LoyaltyId,
+    loyaltyId is LoyaltyId,
     pointsAccrued is Number
   } with { explained as {
     |An event that is issued whenever points are accrued.
@@ -38,7 +38,7 @@ context Loyalty is {
 
   type PointsRedeemed is event {
     when is TimeStamp,
-    who is CustomerId,
+    customerId is CustomerId,
     pointsAwarded is Number,
     toOrder is OrderId
   } with { explained as {

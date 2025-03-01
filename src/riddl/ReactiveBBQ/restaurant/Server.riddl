@@ -1,4 +1,4 @@
-context Server {
+context Servers {
   entity Server {
     type ServerStateData is Nothing
     state ServerState of type Server.ServerStateData

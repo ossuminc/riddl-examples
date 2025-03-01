@@ -1,4 +1,4 @@
-context Customer is {
+context Customers is {
   entity Customer is {
     type mainType is Nothing
     state main of mainType

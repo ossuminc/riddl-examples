@@ -1,4 +1,4 @@
-context Table {
+context Tables {
   entity Table {
     record TableStateData is { ??? }
     state TableState of Table.TableStateData

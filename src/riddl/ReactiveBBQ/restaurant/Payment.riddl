@@ -1,4 +1,4 @@
-context Payment is {
+context Payments is {
     type PaymentKind = any of { CreditCard, DebitCard, Cash, BitCoin, Hours }
 
     type Pay = command {
@@ -22,7 +22,7 @@ context Payment is {
         orderAmount is Number,
         tipAmount is Number?,
         cardToken is String?,
-        customerId is CustomerId?
+        customerIds is CustomerId?
     }
     state PaymentState of type Payment.PaymentStateValue
     handler foo is { ??? }

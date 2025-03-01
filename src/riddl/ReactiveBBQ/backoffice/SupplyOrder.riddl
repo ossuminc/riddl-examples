@@ -1,4 +1,4 @@
-context Order is {
+context SupplyOrder is {
   ???
 } with {
   explained as {

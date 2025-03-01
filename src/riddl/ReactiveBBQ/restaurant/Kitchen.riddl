@@ -1,5 +1,5 @@
 context Kitchen is {
-  adaptor FromOrder to context Restaurant.Order is { ???  }
+  adaptor FromOrder to context Restaurant.Orders is { ???  }
   type ReceiveOrder is {
     items: MenuItemRef+
   }

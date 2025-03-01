@@ -1,4 +1,4 @@
-context Menu is {
+context Menus is {
   type MenuItemRef = reference to entity MenuItem
   entity MenuItem {
     record MenuItemStateData is {

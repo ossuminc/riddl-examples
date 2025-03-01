@@ -1,6 +1,6 @@
 domain ReactiveBBQ is {
 
-author is {
+author Reid is {
   name: "Reid Spencer"
   email: "reid@reactific.com"
   organization: "Reactific Software LLC"

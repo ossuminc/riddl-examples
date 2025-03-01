@@ -1,4 +1,4 @@
-context Location is {
+context Locations is {
   entity Location is {
     record LocationData is { name: String }
     state LocationState of Location.LocationData

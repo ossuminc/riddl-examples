@@ -1,13 +1,13 @@
-context Reservation is {
+context Reservations is {
   entity Reservation is {
     record ReservationValue is {
       partyName is String,
       phoneNumber is String,
-      location is Id(Restaurant.Location.Location),
+      location is Id(Restaurant.Locations.Location),
       time is Time,
       date is Date
     }
-    state reservation of record Restaurant.Reservation.Reservation.ReservationValue
+    state reservation of record Restaurant.Reservations.Reservation.ReservationValue
     handler ofInputs is {}
   } with {
    option aggregate

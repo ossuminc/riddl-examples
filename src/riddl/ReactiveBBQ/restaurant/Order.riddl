@@ -1,4 +1,4 @@
-context Order is {
+context Orders is {
   entity Order is {
     record OrderStateData is {
       orderId is OrderId,

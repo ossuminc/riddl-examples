@@ -2,12 +2,12 @@
 context Loyalty is {
   adaptor FromPayment from context Restaurant.Payments is {
     handler payments is {
-      on event Restaurant.Payments.Paid  {
-        "when event Paid from Payment context occurs"
-        "and customer is known in the Paid event"
-        "and customer has a loyalty account"
-        "then"
-          tell command AccruePoints to entity Loyalty
+      on event Restaurant.Payments.Paid is {
+        // when event Paid from Payment context occurs
+        // and customer is known in the Paid event
+        // and customer has a loyalty account
+        // then accrue points
+        tell command AccruePoints to entity LoyaltyAccount
       }
     }
   } with { described as "Adapts loyalty rewards from payments" }

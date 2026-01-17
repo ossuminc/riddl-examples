@@ -1,0 +1,11 @@
+// Stub file for stories
+user Attendee is "A conference attendee"
+
+epic Stories is {
+  user Attendee wants to "manage their to-do items" so that "they can track tasks"
+
+  case ManageTasks is {
+    user Attendee wants to "add a task" so that "they can remember what to do"
+    ???
+  }
+}

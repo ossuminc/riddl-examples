@@ -4,5 +4,7 @@ include "application"
 include "stories"
 include "entities"
 
-} briefly "An example domain for Reactive Summit"
-explained in file "ReactiveSummit.md"
+} with {
+  briefly as "An example domain for Reactive Summit"
+  described in file "ReactiveSummit.md"
+}

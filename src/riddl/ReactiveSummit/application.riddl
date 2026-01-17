@@ -1,13 +1,20 @@
 type ToDoContent is {
-  itemId: Id(ToDoList.ToDoItem)
-  itemDescription: String
-  expectedCompletion: TimeStamp?
+  itemId is Id(ToDoList.ToDoItem),
+  itemDescription is String,
+  expectedCompletion is TimeStamp?
 }
 
-context ToDoList is {
-  view ListOfToDoItems is type ToDoContent*
-  form EnterToDoItem is type ToDoItem
-  action MarkItemDone is
+type ToDoItemInput is {
+  content is ToDoContent
+}
+
+context ToDoListUI is {
+  // UI elements using valid group syntax
+  page MainPage is {
+    list ListOfToDoItems shows type ToDoContent
+    form EnterToDoItem acquires type ToDoItemInput
+    button MarkItemDone activates type ToDoContent
+  }
 } with {
-  options are technology("react.js")
+  option is technology("react.js")
 }

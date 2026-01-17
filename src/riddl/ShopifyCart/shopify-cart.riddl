@@ -108,7 +108,7 @@ domain ShopifyCart is {
       sku is SKU
       name is Name
       description is String
-      price is Price
+      price: Price
       inventory is {
         quantity is Quantity with {
           briefly as "Product inventory count"
@@ -202,31 +202,22 @@ domain ShopifyCart is {
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Product.UpdateProductPrice is {
           // Validate the price change
-          if "newPrice > 0" then {
+          when "newPrice > 0" then
             // Update the product price in the ProductData state
             morph entity Product to state ProductData with command ShopifyCart.ShoppingContext.Product.UpdateProductPrice
-
             // Emit event
             tell event ProductPriceUpdated to entity Product
-          } else {
+          end
+          when "newPrice <= 0" then
             error "Price must be greater than zero"
-          } end
+          end
         }
 
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Product.UpdateInventory is {
-          // Determine new inventory status
-          set field newStatus to "InStock" // Default status
-          if "command.newQuantity <= 0" then {
-            set field newStatus to "OutOfStock"
-          } else if "command.newQuantity < 10" then {
-            set field newStatus to "LowStock"
-          } end
-
+          // Determine new inventory status based on quantity
           // Update product with new inventory data
-          // FIXED: Ambiguous reference in morph statement
           morph entity Product to state ProductData with command ShopifyCart.ShoppingContext.Product.UpdateInventory
-
           // Emit event
           tell event InventoryUpdated to entity Product
         }
@@ -254,7 +245,7 @@ domain ShopifyCart is {
       productId is ProductId
       sku is SKU
       name is Name
-      price is Price
+      price: Price
       quantity is Quantity
       totalPrice is Price
     }
@@ -305,24 +296,7 @@ domain ShopifyCart is {
         returns {
           items is many CartItem
         }
-
-        // Logic to add item to cart or update quantity if already exists
-        "var existingItemIndex = items.findIndex(item => item.productId == productId);
-         if (existingItemIndex >= 0) {
-           items[existingItemIndex].quantity += quantity;
-           items[existingItemIndex].totalPrice = items[existingItemIndex].price * items[existingItemIndex].quantity;
-         } else {
-           var product = getProductDetails(productId);
-           items.push({
-             productId: productId,
-             sku: product.sku,
-             name: product.name,
-             price: product.price,
-             quantity: quantity,
-             totalPrice: product.price * quantity
-           });
-         }
-         return items;"
+        prompt "Add item to cart or update quantity if already exists"
       } with {
         briefly as "Adds a product to cart or updates quantity if already present"
         described by {
@@ -341,27 +315,7 @@ domain ShopifyCart is {
         returns {
           price: Price
         }
-
-        // Logic to calculate cart subtotal
-        "var subtotal = 0;
-         for (var i = 0; i < items.length; i++) {
-           subtotal += items[i].totalPrice;
-         }
-
-         // If adding new item or updating quantity
-         if (productId && quantity) {
-           var productPrice = getProductPrice(productId);
-           var existingItem = items.find(item => item.productId == productId);
-           if (existingItem) {
-             // Adjust for updated quantity
-             subtotal = subtotal - existingItem.totalPrice + (productPrice * quantity);
-           } else {
-             // Add new item
-             subtotal += productPrice * quantity;
-           }
-         }
-
-         return subtotal;"
+        prompt "Calculate cart subtotal from all items"
       } with {
         briefly as "Calculates the cart subtotal based on all items"
         described by {
@@ -381,11 +335,7 @@ domain ShopifyCart is {
         returns {
           price: Price
         }
-
-        // Logic to calculate taxes based on subtotal and tax rules
-        "var subtotal = calculateSubtotal(items, productId, quantity);
-         // Apply standard tax rate of 8.5%
-         return subtotal * 0.085;"
+        prompt "Calculate taxes based on subtotal and tax rules"
       } with {
         briefly as "Calculates taxes based on cart subtotal"
         described by {
@@ -405,9 +355,7 @@ domain ShopifyCart is {
         returns {
           price: Price
         }
-
-        // Add subtotal, taxes, shipping and subtract discount
-        "return subtotal + taxes + shipping - discount;"
+        prompt "Add subtotal, taxes, shipping and subtract discount"
       } with {
         briefly as "Calculates the final cart total"
         described by {
@@ -423,11 +371,9 @@ domain ShopifyCart is {
           productId is ProductId
         }
         returns {
-          items: many CartItem
+          items is many CartItem
         }
-
-        // Logic to remove an item from cart items
-        "return items.filter(item => item.productId != productId);"
+        prompt "Remove item from cart items by productId"
       } with {
         briefly as "Removes a product from the cart"
         described by {
@@ -443,18 +389,9 @@ domain ShopifyCart is {
           quantity is Quantity
         }
         returns {
-          items:  many CartItem
+          items is many CartItem
         }
-
-        // Logic to update quantity of an item in cart
-        "var updatedItems = items.map(item => {
-           if (item.productId == productId) {
-             item.quantity = quantity;
-             item.totalPrice = item.price * quantity;
-           }
-           return item;
-         });
-         return updatedItems;"
+        prompt "Update quantity of an item in cart"
       } with {
         briefly as "Updates the quantity of a product in the cart"
         described by {
@@ -469,17 +406,9 @@ domain ShopifyCart is {
           productId is ProductId
         }
         returns {
-          price:  Price
+          price: Price
         }
-
-        // Logic to calculate subtotal after removing an item
-        "var subtotal = 0;
-         for (var i = 0; i < items.length; i++) {
-           if (items[i].productId != productId) {
-             subtotal += items[i].totalPrice;
-           }
-         }
-         return subtotal;"
+        prompt "Calculate subtotal after removing an item"
       } with {
         briefly as "Calculates cart subtotal after removing a product"
         described by {
@@ -498,11 +427,7 @@ domain ShopifyCart is {
         returns {
           price: Price
         }
-
-        // Logic to calculate taxes after removing an item
-        "var subtotal = calculateSubtotalAfterRemoval(items, productId);
-         // Apply standard tax rate of 8.5%
-         return subtotal * 0.085;"
+        prompt "Calculate taxes after removing an item"
       } with {
         briefly as "Calculates taxes after removing a product"
         described by {
@@ -522,17 +447,7 @@ domain ShopifyCart is {
         returns {
           price: Price
         }
-
-        // Logic to calculate subtotal after updating quantity
-        "var subtotal = 0;
-         for (var i = 0; i < items.length; i++) {
-           if (items[i].productId == productId) {
-             subtotal += items[i].price * quantity;
-           } else {
-             subtotal += items[i].totalPrice;
-           }
-         }
-         return subtotal;"
+        prompt "Calculate subtotal after updating quantity"
       } with {
         briefly as "Calculates cart subtotal after updating product quantity"
         described by {
@@ -552,11 +467,7 @@ domain ShopifyCart is {
         returns {
           price: Price
         }
-
-        // Logic to calculate taxes after updating quantity
-        "var subtotal = calculateSubtotalAfterUpdate(items, productId, quantity);
-         // Apply standard tax rate of 8.5%
-         return subtotal * 0.085;"
+        prompt "Calculate taxes after updating quantity"
       } with {
         briefly as "Calculates taxes after updating product quantity"
         described by {
@@ -650,7 +561,7 @@ domain ShopifyCart is {
         productId is ProductId
         quantity is Quantity
         name is Name
-        price is Price
+        price: Price
       }
       with {
         briefly as "Event indicating a product was added to the cart"
@@ -711,28 +622,21 @@ domain ShopifyCart is {
 
         on command AddToCart is {
           // Check if product exists and is in stock
-          if "productExists(command.productId) && isInStock(command.productId)" then {
+          when "productExists(command.productId) && isInStock(command.productId)" then
             // Get product details and calculate new cart state
-            // FIXED: Use arbitrary statement instead of setting a field
-            "CartRecord(Cart.id, appendItemToCart(Cart.items, command.productId, command.quantity), calculateSubtotal(Cart.items, command.productId, command.quantity), calculateTaxes(Cart.items, command.productId, command.quantity), Cart.shipping, Cart.discount, calculateTotal())"
-
             // Update cart state
             morph entity Cart to state CartData with command AddToCart
-
             // Emit event
             tell event ItemAddedToCart to entity Cart
-          } else {
+          end
+          when "!productExists(command.productId) || !isInStock(command.productId)" then
             error "Product is not available"
-          } end
+          end
         }
 
         on command RemoveFromCart is {
-          // FIXED: Use arbitrary statement instead of setting undefined field
-          "CartRecord(Cart.id, removeItemFromCart(Cart.items, command.productId), calculateSubtotalAfterRemoval(Cart.items, command.productId), calculateTaxesAfterRemoval(Cart.items, command.productId), Cart.shipping, Cart.discount, calculateTotal())"
-
           // Update cart state
           morph entity Cart to state CartData with command RemoveFromCart
-
           // Emit event
           tell event ItemRemovedFromCart to entity Cart
         }
@@ -740,39 +644,32 @@ domain ShopifyCart is {
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Cart.UpdateQuantity is {
           // Validate new quantity
-          if "command.quantity > 0" then {
-            // FIXED: Use arbitrary statement instead of setting undefined field
-            "CartRecord(Cart.id, updateItemQuantity(Cart.items, command.productId, command.quantity), calculateSubtotalAfterUpdate(Cart.items, command.productId, command.quantity), calculateTaxesAfterUpdate(Cart.items, command.productId, command.quantity), Cart.shipping, Cart.discount, calculateTotal())"
-
+          when "command.quantity > 0" then
             // Update cart state
             morph entity Cart to state CartData with command ShopifyCart.ShoppingContext.Cart.UpdateQuantity
-
             // Emit event
             tell event CartQuantityUpdated to entity Cart
-          } else {
-            if "command.quantity == 0" then {
+          end
+          when "command.quantity == 0" then
             // Remove item if quantity is zero
             tell command RemoveFromCart to entity Cart
-            } else
-              error "Quantity must be zero or positive"
-            end
-          } end
+          end
+          when "command.quantity < 0" then
+            error "Quantity must be zero or positive"
+          end
         }
 
         on command ApplyDiscount is {
           // Validate discount code
-          if "isValidDiscountCode(command.discountCode)" then {
-            // FIXED: Use arbitrary statement instead of setting undefined field
-            "CartRecord(Cart.id, Cart.items, Cart.subtotal, Cart.taxes, Cart.shipping, command.discountAmount, calculateTotal())"
-
+          when "isValidDiscountCode(command.discountCode)" then
             // Update cart state
             morph entity Cart to state CartData with command ApplyDiscount
-
             // Emit event
             tell event DiscountApplied to entity Cart
-          } else {
+          end
+          when "!isValidDiscountCode(command.discountCode)" then
             error "Invalid discount code"
-          } end
+          end
         }
       }
       with {
@@ -952,20 +849,14 @@ domain ShopifyCart is {
 
         on command CompleteCheckout is {
           // Validate cart and payment information
-          if "isValidCart(command.cartId) && hasPaymentMethod()" then {
-            // Process payment
-            // Create order
-            // Clear cart
-
-            // Generate a new order ID
-            "var orderId = generateUUID()"
-
+          when "isValidCart(command.cartId) && hasPaymentMethod()" then
+            // Process payment, Create order, Clear cart
             // Emit event with new order ID
-            // FIXED: Ambiguous reference by using fully qualified path
             tell event CheckoutCompleted to entity ShopifyCart.ShoppingContext.Checkout
-          } else {
+          end
+          when "!isValidCart(command.cartId) || !hasPaymentMethod()" then
             error "Cannot complete checkout"
-          } end
+          end
         }
       }
       with {
@@ -997,23 +888,23 @@ domain ShopifyCart is {
       // Message handlers
       handler CartRepositoryHandler is {
         on event CartCreated is {
-          write "Create new cart record" to Cart
+          prompt "Create new cart record in Cart repository"
         }
 
         on event ItemAddedToCart is {
-          write "Add item to cart" to Cart
+          prompt "Add item to cart in Cart repository"
         }
 
         on event ItemRemovedFromCart is {
-          write "Remove item from cart" to Cart
+          prompt "Remove item from cart in Cart repository"
         }
 
         on event CartQuantityUpdated is {
-          write "Update item quantity" to Cart
+          prompt "Update item quantity in Cart repository"
         }
 
         on event DiscountApplied is {
-          write "Apply discount to cart" to Cart
+          prompt "Apply discount to cart in Cart repository"
         }
       }
       with {
@@ -1041,11 +932,11 @@ domain ShopifyCart is {
 
       handler ProductRepositoryHandler is {
         on event ProductPriceUpdated is {
-          write "Update product price" to Product
+          prompt "Update product price in Product repository"
         }
 
         on event InventoryUpdated is {
-          write "Update product inventory" to Product
+          prompt "Update product inventory in Product repository"
         }
       }
       with {
@@ -1090,15 +981,15 @@ domain ShopifyCart is {
       }
 
       step ValidateCart is {
-
         // Check if cart exists and has items
-        if "cartRepository.exists(cartId) && cartRepository.hasItems(cartId)" then {
-          // Continue to next step
-        } else {
+        when "cartRepository.exists(cartId) && cartRepository.hasItems(cartId)" then
+          prompt "Continue to next step after cart validation"
+        end
+        when "!cartRepository.exists(cartId) || !cartRepository.hasItems(cartId)" then
           error "Cart is empty or does not exist"
-        } end
+        end
       } reverted by {
-        // Nothing to undo
+        prompt "No action needed for cart validation revert"
       }
       with {
         briefly as "Validates cart exists and contains items"
@@ -1109,17 +1000,15 @@ domain ShopifyCart is {
       }
 
       step ValidateInventory is {
-
         // Check inventory for all items in cart
-        foreach field Cart.items do {
-          if "!productRepository.hasInventory(item.productId, item.quantity)" then
-            error "Insufficient inventory for product"
-          else
-            "nothing"
-          end
-        } end
+        when "allItemsHaveInventory(Cart.items)" then
+          prompt "Inventory validated for all items"
+        end
+        when "!allItemsHaveInventory(Cart.items)" then
+          error "Insufficient inventory for product"
+        end
       } reverted by {
-        // Nothing to undo
+        prompt "No action needed for inventory validation revert"
       }
       with {
         briefly as "Confirms sufficient inventory for all items"
@@ -1130,19 +1019,17 @@ domain ShopifyCart is {
       }
 
       step ProcessPayment is {
-
         // Process payment with payment provider
-        if "paymentService.process(cartId, paymentInfo)" then {
-          // Payment successful
-        } else {
+        when "paymentService.process(cartId, paymentInfo)" then
+          prompt "Payment processed successfully"
+        end
+        when "!paymentService.process(cartId, paymentInfo)" then
           error "Payment failed"
-        } end
+        end
       } reverted by {
         // Refund payment if necessary
-        if "paymentWasProcessed" then
-          "paymentService.refund(cartId)"
-        else
-          "nothing"
+        when "paymentWasProcessed" then
+          prompt "Refund payment via paymentService"
         end
       }
       with {
@@ -1155,16 +1042,12 @@ domain ShopifyCart is {
       }
 
       step CreateOrder is {
-
-        // Create order from cart
-        "orderService.createFromCart(cartId, customerInfo)"
+        prompt "Create order from cart using orderService"
       } reverted by {
         // Cancel order if created
-        if "orderWasCreated" then {
-          "orderService.cancel(orderId)"
-        } else {
-          "nothing"
-        } end
+        when "orderWasCreated" then
+          prompt "Cancel order via orderService"
+        end
       }
       with {
         briefly as "Creates an order record from the cart"
@@ -1176,15 +1059,9 @@ domain ShopifyCart is {
       }
 
       step UpdateInventoryLevels is {
-        // Reduce inventory for all purchased items
-        foreach field Cart.items do {
-          "inventoryService.reduce(item.productId, item.quantity)"
-        } end
+        prompt "Reduce inventory for all purchased items via inventoryService"
       } reverted by {
-        // Restore inventory levels
-        foreach field Cart.items do {
-          "inventoryService.increase(item.productId, item.quantity)"
-        } end
+        prompt "Restore inventory levels for all items via inventoryService"
       } with {
         briefly as "Reduces inventory levels for purchased items"
         described by {
@@ -1194,11 +1071,9 @@ domain ShopifyCart is {
       }
 
       step SendConfirmation is {
-
-        // Send confirmation email
-        "emailService.sendOrderConfirmation(customerInfo.email, orderId)"
+        prompt "Send order confirmation email to customer"
       } reverted by {
-        // Nothing to undo for email
+        prompt "No action needed for email revert"
       } with {
         briefly as "Sends order confirmation to customer"
         described by {

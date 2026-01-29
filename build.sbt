@@ -17,8 +17,8 @@ lazy val examples = Root(
   )
 ).configure(With.typical)
   .configure(With.noPublishing)
-  .configure(With.scala3)
-  .configure(With.Riddl(version = "1.0.2"))
+  .configure(With.Scala3)
+  .configure(With.Riddl.library(version = "1.1.2", nonJVMDependency = false))
   .settings(
     libraryDependencies ++= Dep.testing
   )

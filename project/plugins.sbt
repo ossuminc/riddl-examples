@@ -1,4 +1,4 @@
 // GitHub Packages resolver for sbt-ossuminc
 resolvers += "GitHub Packages" at "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"
 
-addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "1.1.0")
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "1.2.5")

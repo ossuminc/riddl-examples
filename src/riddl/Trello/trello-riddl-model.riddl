@@ -1,926 +1,10 @@
-            morph entity Card to state CardData with command AddChecklist
-            
-            // Emit event
-            tell event CardChecklistAdded to entity Card
-          } else {
-            error "Card does not exist"
-          } end
-        }
-
-        on command UpdateChecklist is {
-          // Validate card has the checklist
-          if "cardExists(command.cardId) && cardHasChecklist(command.cardId, command.checklistId)" then {
-            // Update checklist
-            morph entity Card to state CardData with command UpdateChecklist
-            
-            // Emit event
-            tell event CardChecklistUpdated to entity Card
-          } else {
-            error "Card does not exist or does not have the checklist"
-          } end
-        }
-
-        on command RemoveChecklist is {
-          // Validate card has the checklist
-          if "cardExists(command.cardId) && cardHasChecklist(command.cardId, command.checklistId)" then {
-            // Remove checklist
-            morph entity Card to state CardData with command RemoveChecklist
-            
-            // Emit event
-            tell event CardChecklistRemoved to entity Card
-          } else {
-            error "Card does not exist or does not have the checklist"
-          } end
-        }
-
-        on command AddChecklistItem is {
-          // Validate card has the checklist
-          if "cardExists(command.cardId) && cardHasChecklist(command.cardId, command.checklistId)" then {
-            // Generate a new item ID
-            "const itemId = generateUUID()"
-            
-            // Add item to checklist
-            morph entity Card to state CardData with command AddChecklistItem
-            
-            // Emit event
-            tell event CardChecklistItemAdded to entity Card
-          } else {
-            error "Card does not exist or does not have the checklist"
-          } end
-        }
-
-        on command UpdateChecklistItem is {
-          // Validate card has the checklist item
-          if "cardExists(command.cardId) && cardHasChecklistItem(command.cardId, command.checklistId, command.itemId)" then {
-            // Update checklist item
-            morph entity Card to state CardData with command UpdateChecklistItem
-            
-            // Emit event
-            tell event CardChecklistItemUpdated to entity Card
-          } else {
-            error "Card does not exist or does not have the checklist item"
-          } end
-        }
-
-        on command RemoveChecklistItem is {
-          // Validate card has the checklist item
-          if "cardExists(command.cardId) && cardHasChecklistItem(command.cardId, command.checklistId, command.itemId)" then {
-            // Remove checklist item
-            morph entity Card to state CardData with command RemoveChecklistItem
-            
-            // Emit event
-            tell event CardChecklistItemRemoved to entity Card
-          } else {
-            error "Card does not exist or does not have the checklist item"
-          } end
-        }
-
-        on command ArchiveCard is {
-          // Validate card exists
-          if "cardExists(command.cardId)" then {
-            // Archive or restore card
-            morph entity Card to state CardData with command ArchiveCard
-            
-            // Emit event
-            tell event CardArchived to entity Card
-          } else {
-            error "Card does not exist"
-          } end
-        }
-      } with {
-        briefly as "Processes commands for card management"
-        described by {
-          | Handles commands related to card creation and management.
-          | Validates input data, updates card state, and emits relevant events.
-        }
-      }
-    } with {
-      briefly as "Represents a Trello card"
-      described by {
-        | The Card entity represents a task or item on a Trello board.
-        | It contains details such as title, description, due date, comments,
-        | checklists, attachments, and member assignments. Cards can be
-        | moved between lists and have their properties modified.
-      }
-    }
-
-    // Board repository
-    repository BoardRepository is {
-      schema BoardData is relational of
-        board as Board
-        boardMembership as BoardMembershipRecord
-        link members as field Board.members to field User.userId
-        link workspace as field Board.workspaceId to field Workspace.workspaceId
-        link lists as field Board.lists to field List.listId
-
-      handler BoardRepositoryHandler is {
-        on event BoardCreated is {
-          write "Create new board record" to board
-          write "Create initial admin membership" to boardMembership
-        }
-
-        on event BoardUpdated is {
-          write "Update board details" to board
-        }
-
-        on event BoardStarred is {
-          write "Update board starred status" to board
-        }
-
-        on event BoardClosed is {
-          write "Update board closed status" to board
-        }
-
-        on event BoardMemberAdded is {
-          write "Add member to board" to boardMembership
-          write "Update board members list" to board
-        }
-
-        on event BoardMemberRemoved is {
-          write "Remove member from board" to boardMembership
-          write "Update board members list" to board
-        }
-
-        on event BoardMemberRoleUpdated is {
-          write "Update member role on board" to boardMembership
-        }
-
-        on event LabelCreated is {
-          write "Add label to board" to board
-        }
-
-        on event LabelUpdated is {
-          write "Update label on board" to board
-        }
-
-        on event LabelDeleted is {
-          write "Remove label from board" to board
-        }
-      } with {
-        briefly as "Handles persistence of board events"
-        described by {
-          | Handles all event-driven persistence operations related to boards.
-          | Responds to board events by updating the persistent state of board records.
-        }
-      }
-    } with {
-      briefly as "Persistent storage for board data"
-      described by {
-        | The BoardRepository provides persistent storage for board data,
-        | including board details, memberships, and relationships to users and lists.
-      }
-    }
-
-    // List and Card repositories
-    repository ListRepository is {
-      schema ListData is relational of
-        list as List
-        link board as field List.boardId to field Board.boardId
-        link cards as field Card.listId to field List.listId
-
-      handler ListRepositoryHandler is {
-        on event ListCreated is {
-          write "Create new list record" to list
-          write "Update board lists" to board
-        }
-
-        on event ListUpdated is {
-          write "Update list name" to list
-        }
-
-        on event ListMoved is {
-          write "Update list position" to list
-        }
-
-        on event ListArchived is {
-          write "Update list archived status" to list
-        }
-      } with {
-        briefly as "Handles persistence of list events"
-        described by {
-          | Handles all event-driven persistence operations related to lists.
-          | Responds to list events by updating the persistent state of list records.
-        }
-      }
-    } with {
-      briefly as "Persistent storage for list data"
-      described by {
-        | The ListRepository provides persistent storage for list data,
-        | including list details and relationships to boards and cards.
-      }
-    }
-
-    repository CardRepository is {
-      schema CardData is relational of
-        card as Card
-        link list as field Card.listId to field List.listId
-        link members as field Card.members to field User.userId
-        link labels as field Card.labels to field Label.labelId
-
-      handler CardRepositoryHandler is {
-        on event CardCreated is {
-          write "Create new card record" to card
-        }
-
-        on event CardDetailsUpdated is {
-          write "Update card details" to card
-        }
-
-        on event CardMoved is {
-          write "Update card list and position" to card
-        }
-
-        on event CardLabelAdded is {
-          write "Add label to card" to card
-        }
-
-        on event CardLabelRemoved is {
-          write "Remove label from card" to card
-        }
-
-        on event CardMemberAssigned is {
-          write "Assign member to card" to card
-        }
-
-        on event CardMemberUnassigned is {
-          write "Unassign member from card" to card
-        }
-
-        on event CardDueDateSet is {
-          write "Update card due date" to card
-        }
-
-        on event CardCommentAdded is {
-          write "Add comment to card" to card
-        }
-
-        on event CardCommentUpdated is {
-          write "Update card comment" to card
-        }
-
-        on event CardCommentDeleted is {
-          write "Delete comment from card" to card
-        }
-
-        on event CardAttachmentAdded is {
-          write "Add attachment to card" to card
-        }
-
-        on event CardAttachmentRemoved is {
-          write "Remove attachment from card" to card
-        }
-
-        on event CardChecklistAdded is {
-          write "Add checklist to card" to card
-        }
-
-        on event CardChecklistUpdated is {
-          write "Update card checklist" to card
-        }
-
-        on event CardChecklistRemoved is {
-          write "Remove checklist from card" to card
-        }
-
-        on event CardChecklistItemAdded is {
-          write "Add item to checklist" to card
-        }
-
-        on event CardChecklistItemUpdated is {
-          write "Update checklist item" to card
-        }
-
-        on event CardChecklistItemRemoved is {
-          write "Remove item from checklist" to card
-        }
-
-        on event CardArchived is {
-          write "Update card archived status" to card
-        }
-      } with {
-        briefly as "Handles persistence of card events"
-        described by {
-          | Handles all event-driven persistence operations related to cards.
-          | Responds to card events by updating the persistent state of card records.
-        }
-      }
-    } with {
-      briefly as "Persistent storage for card data"
-      described by {
-        | The CardRepository provides persistent storage for card data,
-        | including card details, comments, attachments, checklists, and
-        | relationships to lists, labels, and members.
-      }
-    }
-    
-    // Activity tracking system
-    type ActivityRecord is {
-      activityId is UUID
-      entityType is String  // "board", "list", "card", etc.
-      entityId is UUID
-      action is String      // "created", "moved", "commented", etc.
-      details is String
-      userId is UUID        // User who performed the action
-      createdAt is Timestamp
-    } with {
-      briefly as "Record type for activity tracking"
-      described by {
-        | Defines the structure of an activity log entry, including the entity affected,
-        | the action performed, additional details, and who performed it.
-      }
-    }
-    
-    entity Activity is {
-      state ActivityData of ActivityRecord with {
-        briefly as "Activity state containing all activity information"
-        described by {
-          | Contains complete activity information including the entity affected,
-          | the action performed, additional details, and who performed it.
-        }
-      }
-      
-      // Commands
-      command LogActivity is {
-        entityType is String
-        entityId is UUID
-        action is String
-        details is String
-        userId is UUID
-      } with {
-        briefly as "Command to log an activity"
-        described by {
-          | Records an activity performed by a user on an entity.
-        }
-      }
-      
-      // Events
-      event ActivityLogged is {
-        activityId is UUID
-        entityType is String
-        entityId is UUID
-        action is String
-        userId is UUID
-      } with {
-        briefly as "Event indicating an activity was logged"
-        described by {
-          | Emitted when an activity is successfully logged.
-          | Contains the basic activity details.
-        }
-      }
-      
-      // Handler for processing commands
-      handler ActivityCommandHandler is {
-        on command LogActivity is {
-          // Generate a new activity ID
-          "const activityId = generateUUID()"
-          
-          // Log the activity
-          morph entity Activity to state ActivityData with command LogActivity
-          
-          // Emit event
-          tell event ActivityLogged to entity Activity
-        }
-      } with {
-        briefly as "Processes commands for activity logging"
-        described by {
-          | Handles commands related to activity tracking.
-          | Validates input data, updates activity state, and emits relevant events.
-        }
-      }
-    } with {
-      briefly as "Represents an activity log entry"
-      described by {
-        | The Activity entity represents a record of an action performed by a user
-        | on a board, list, card, or other entity. Activities are used to provide
-        | a history of changes and to generate notifications.
-      }
-    }
-    
-    repository ActivityRepository is {
-      schema ActivityData is relational of
-        activity as Activity
-        link user as field Activity.userId to field User.userId
-        
-      handler ActivityRepositoryHandler is {
-        on event ActivityLogged is {
-          write "Create new activity record" to activity
-        }
-      } with {
-        briefly as "Handles persistence of activity events"
-        described by {
-          | Handles all event-driven persistence operations related to activities.
-          | Responds to activity events by updating the persistent state of activity records.
-        }
-      }
-    } with {
-      briefly as "Persistent storage for activity data"
-      described by {
-        | The ActivityRepository provides persistent storage for activity data,
-        | including activity details and relationships to users and entities.
-      }
-    }
-    
-    // Define a saga for card movement with notifications
-    saga CardMovementProcess is {
-      requires {
-        cardId is UUID
-        fromListId is UUID
-        toListId is UUID
-        position is Position
-        userId is UUID  // User performing the action
-      }
-      
-      returns {
-        success is Bool
-        message is String
-      }
-      
-      step MoveCard is {
-        // Send command to move the card
-        tell command MoveCard to entity Card
-      } reverted by {
-        // Move card back to original list if later steps fail
-        tell command MoveCard to entity Card
-      } with {
-        briefly as "Moves a card to a different list"
-        described by {
-          | Sends the command to move a card from one list to another.
-          | This is the primary action of the saga.
-        }
-      }
-      
-      step LogActivity is {
-        // Log the card movement as an activity
-        tell command LogActivity to entity Activity
-      } reverted by {
-        // Nothing to revert for logging
-      } with {
-        briefly as "Logs the card movement activity"
-        described by {
-          | Records the action of moving a card in the activity history.
-        }
-      }
-      
-      step NotifyAssignedMembers is {
-        // Get all members assigned to the card
-        foreach field Card.members do {
-          // Create notification for each assigned member
-          tell command CreateNotification to entity Notification
-        } end
-      } reverted by {
-        // Nothing to revert for notifications
-      } with {
-        briefly as "Notifies all members assigned to the card"
-        described by {
-          | Creates notifications for all users assigned to the card
-          | to inform them about the card movement.
-        }
-      }
-    } with {
-      briefly as "Orchestrates the process of moving a card"
-      described by {
-        | This saga coordinates the multi-step process of moving a card from one list
-        | to another, including updating the card's position, logging the activity,
-        | and notifying relevant users. It includes compensation actions to ensure
-        | consistency if later steps fail.
-      }
-    }
-  } with {
-    briefly as "Board management context"
-    described by {
-      | The BoardManagement context handles the creation and management of boards,
-      | lists, cards, and their components. It includes entities for tracking board
-      | membership, list ordering, card details, comments, attachments, labels,
-      | and activity history.
-    }
-  }
-  
-  context UserInterface is {
-    // Common UI components
-    type ActionResult is {
-      success is Bool
-      message is String
-    } with {
-      briefly as "Result of UI actions"
-      described by {
-        | Standard response type for UI actions, indicating success
-        | or failure and providing a message.
-      }
-    }
-    
-    // UI Components for Workspaces
-    page WorkspacesList is { ??? } with {
-      briefly as "Page showing all workspaces"
-      described by {
-        | Displays all workspaces the user is a member of, with options
-        | to create new workspaces or open existing ones.
-      }
-    }
-    
-    page WorkspaceSettings is { ??? } with {
-      briefly as "Page for managing workspace settings"
-      described by {
-        | Allows users to update workspace details, manage members,
-        | and configure workspace-level settings.
-      }
-    }
-    
-    // UI Components for Boards
-    page BoardsList is { ??? } with {
-      briefly as "Page showing all boards in a workspace"
-      described by {
-        | Displays all boards within a workspace, with options to
-        | create new boards or open existing ones.
-      }
-    }
-    
-    page BoardView is {
-      button AddList activates type Bool with {
-        briefly as "Button to add a new list"
-        described by {
-          | Button that opens a form to create a new list on the board.
-        }
-      }
-      
-      form NewList submits type Title with {
-        briefly as "Form for creating a new list"
-        described by {
-          | Collects the name for a new list to be created on the board.
-        }
-      }
-      
-      button AddCard activates type Bool with {
-        briefly as "Button to add a new card"
-        described by {
-          | Button that opens a form to create a new card in a list.
-        }
-      }
-      
-      form NewCard submits type Title with {
-        briefly as "Form for creating a new card"
-        described by {
-          | Collects the title for a new card to be created in a list.
-        }
-      }
-    } with {
-      briefly as "Main board view with lists and cards"
-      described by {
-        | The primary interface for interacting with a board, showing all lists
-        | and cards horizontally. Allows for creating, moving, and managing lists and cards.
-      }
-    }
-    
-    page BoardSettings is { ??? } with {
-      briefly as "Page for managing board settings"
-      described by {
-        | Allows users to update board details, manage members and labels,
-        | and configure board-level settings.
-      }
-    }
-    
-    // UI Components for Cards
-    page CardDetail is {
-      form CardTitleDescription submits type {
-        title is Title
-        description is Description
-      } with {
-        briefly as "Form for editing card title and description"
-        described by {
-          | Allows editing the basic details of a card.
-        }
-      }
-      
-      button AddMember activates type Bool with {
-        briefly as "Button to add members to a card"
-        described by {
-          | Opens a member selection interface to assign users to the card.
-        }
-      }
-      
-      button AddLabel activates type Bool with {
-        briefly as "Button to add labels to a card"
-        described by {
-          | Opens a label selection interface to tag the card with labels.
-        }
-      }
-      
-      button AddChecklist activates type Bool with {
-        briefly as "Button to add a checklist to a card"
-        described by {
-          | Opens a form to create a new checklist on the card.
-        }
-      }
-      
-      form NewComment submits type String with {
-        briefly as "Form for adding a comment to a card"
-        described by {
-          | Collects text for a new comment to be added to the card.
-        }
-      }
-      
-      form DueDate submits type Timestamp with {
-        briefly as "Form for setting a due date"
-        described by {
-          | Allows setting or updating the due date for a card.
-        }
-      }
-      
-      button AttachFile activates type Bool with {
-        briefly as "Button to attach a file"
-        described by {
-          | Opens a file selector to attach files to the card.
-        }
-      }
-      
-      button MoveCard activates type Bool with {
-        briefly as "Button to move a card"
-        described by {
-          | Opens an interface to select a new list for the card.
-        }
-      }
-      
-      button ArchiveCard activates type Bool with {
-        briefly as "Button to archive a card"
-        described by {
-          | Archives the current card, removing it from the board view.
-        }
-      }
-    } with {
-      briefly as "Detailed card view"
-      described by {
-        | Modal interface showing all details of a card and providing
-        | options to edit, move, and manage the card and its components.
-      }
-    }
-    
-    // UI Components for User
-    page UserProfile is { ??? } with {
-      briefly as "User profile page"
-      described by {
-        | Displays and allows editing of user profile information,
-        | preferences, and settings.
-      }
-    }
-    
-    page Notifications is { ??? } with {
-      briefly as "Notifications page"
-      described by {
-        | Shows all notifications for the user, with options to
-        | mark them as read or navigate to the related content.
-      }
-    }
-    
-  } with {
-    briefly as "User interface components for the Trello system"
-    described by {
-      | Contains all UI components used in the Trello system, including
-      | workspace management, board views, card details, and user interfaces.
-    }
-  }
-  
-  // Epics for user stories
-  epic BoardManagementEpic is {
-    user Member wants to "create and manage boards" so that "they can organize their work"
-    
-    case CreateBoard is {
-      user Member wants to "create a new board" so that "they can start organizing tasks"
-      
-      step from user Member "views" page UserInterface.WorkspacesList
-      step from user Member "clicks" button Create
-      step send command CreateBoard from user Member to entity Board
-      step from entity Board "processes" to page UserInterface.BoardView
-      step focus user Member on page UserInterface.BoardView
-    } with {
-      briefly as "Creating a new board"
-      described by {
-        | This use case describes the process of a member creating a new board
-        | within a workspace, which they can then populate with lists and cards.
-      }
-    }
-    
-    case AddList is {
-      user Member wants to "add a list to a board" so that "they can organize cards by category"
-      
-      step from user Member "views" page UserInterface.BoardView
-      step from user Member "clicks" button UserInterface.BoardView.AddList
-      step from user Member "submits" form UserInterface.BoardView.NewList
-      step send command CreateList from form UserInterface.BoardView.NewList to entity List
-      step from entity List "updates" to page UserInterface.BoardView
-      step focus user Member on page UserInterface.BoardView
-    } with {
-      briefly as "Adding a new list to a board"
-      described by {
-        | This use case describes the process of a member adding a new list
-        | to an existing board to organize cards into categories.
-      }
-    }
-    
-    case AddCard is {
-      user Member wants to "add a card to a list" so that "they can track a specific task"
-      
-      step from user Member "views" page UserInterface.BoardView
-      step from user Member "clicks" button UserInterface.BoardView.AddCard
-      step from user Member "submits" form UserInterface.BoardView.NewCard
-      step send command CreateCard from form UserInterface.BoardView.NewCard to entity Card
-      step from entity Card "updates" to page UserInterface.BoardView
-      step focus user Member on page UserInterface.BoardView
-    } with {
-      briefly as "Adding a new card to a list"
-      described by {
-        | This use case describes the process of a member adding a new card
-        | to a list to represent a task or item to be tracked.
-      }
-    }
-    
-    case MoveCard is {
-      user Member wants to "move a card to a different list" so that "they can update its status"
-      
-      step from user Member "views" page UserInterface.BoardView
-      step from user Member "drags" card
-      step from user Member "drops" card on list
-      step send command MoveCard from user Member to entity Card
-      step from entity Card "processes" to saga CardMovementProcess
-      step from saga CardMovementProcess "updates" to page UserInterface.BoardView
-      step focus user Member on page UserInterface.BoardView
-    } with {
-      briefly as "Moving a card between lists"
-      described by {
-        | This use case describes the process of a member moving a card
-        | from one list to another, typically to update its status.
-      }
-    }
-  } with {
-    briefly as "User stories related to board management"
-    described by {
-      | This epic covers the core board management functionality, including
-      | creating boards, adding lists and cards, and moving cards between lists.
-      | These features enable users to organize and track their work.
-    }
-  }
-  
-  epic CardDetailEpic is {
-    user Member wants to "manage card details" so that "they can track task information"
-    
-    case EditCardDetails is {
-      user Member wants to "edit card details" so that "they can provide more information"
-      
-      step from user Member "views" page UserInterface.BoardView
-      step from user Member "clicks" on card
-      step focus user Member on page UserInterface.CardDetail
-      step from user Member "edits" form UserInterface.CardDetail.CardTitleDescription
-      step send command UpdateCardDetails from form UserInterface.CardDetail.CardTitleDescription to entity Card
-      step from entity Card "updates" to page UserInterface.CardDetail
-      step focus user Member on page UserInterface.CardDetail
-    } with {
-      briefly as "Editing card details"
-      described by {
-        | This use case describes the process of a member editing the
-        | title and description of a card to provide more information.
-      }
-    }
-    
-    case AddComment is {
-      user Member wants to "add a comment to a card" so that "they can provide updates or feedback"
-      
-      step from user Member "views" page UserInterface.CardDetail
-      step from user Member "submits" form UserInterface.CardDetail.NewComment
-      step send command AddComment from form UserInterface.CardDetail.NewComment to entity Card
-      step from entity Card "updates" to page UserInterface.CardDetail
-      step focus user Member on page UserInterface.CardDetail
-    } with {
-      briefly as "Adding a comment to a card"
-      described by {
-        | This use case describes the process of a member adding a comment
-        | to a card to provide updates, feedback, or additional information.
-      }
-    }
-    
-    case AssignMember is {
-      user Member wants to "assign a member to a card" so that "responsibility is clear"
-      
-      step from user Member "views" page UserInterface.CardDetail
-      step from user Member "clicks" button UserInterface.CardDetail.AddMember
-      step from user Member "selects" member
-      step send command AssignMember from user Member to entity Card
-      step from entity Card "updates" to page UserInterface.CardDetail
-      step focus user Member on page UserInterface.CardDetail
-    } with {
-      briefly as "Assigning a member to a card"
-      described by {
-        | This use case describes the process of a member assigning another member
-        | (or themselves) to a card to indicate responsibility for the task.
-      }
-    }
-    
-    case AddChecklist is {
-      user Member wants to "add a checklist to a card" so that "they can track subtasks"
-      
-      step from user Member "views" page UserInterface.CardDetail
-      step from user Member "clicks" button UserInterface.CardDetail.AddChecklist
-      step from user Member "enters" checklist name
-      step send command AddChecklist from user Member to entity Card
-      step from entity Card "updates" to page UserInterface.CardDetail
-      step focus user Member on page UserInterface.CardDetail
-    } with {
-      briefly as "Adding a checklist to a card"
-      described by {
-        | This use case describes the process of a member adding a checklist
-        | to a card to track subtasks or steps required to complete the task.
-      }
-    }
-    
-    case SetDueDate is {
-      user Member wants to "set a due date for a card" so that "they can track deadlines"
-      
-      step from user Member "views" page UserInterface.CardDetail
-      step from user Member "submits" form UserInterface.CardDetail.DueDate
-      step send command SetDueDate from form UserInterface.CardDetail.DueDate to entity Card
-      step from entity Card "updates" to page UserInterface.CardDetail
-      step focus user Member on page UserInterface.CardDetail
-    } with {
-      briefly as "Setting a due date for a card"
-      described by {
-        | This use case describes the process of a member setting or updating
-        | the due date for a card to indicate when the task should be completed.
-      }
-    }
-  } with {
-    briefly as "User stories related to card details"
-    described by {
-      | This epic covers the functionality related to managing card details,
-      | including editing card information, adding comments, assigning members,
-      | adding checklists, and setting due dates.
-    }
-  }
-  
-  epic WorkspaceManagementEpic is {
-    user Admin wants to "manage workspaces and members" so that "they can organize teams and projects"
-    
-    case CreateWorkspace is {
-      user Admin wants to "create a new workspace" so that "they can organize related boards"
-      
-      step from user Admin "views" page UserInterface.WorkspacesList
-      step from user Admin "clicks" button Create
-      step from user Admin "enters" workspace details
-      step send command CreateWorkspace from user Admin to entity Workspace
-      step from entity Workspace "processes" to page UserInterface.WorkspaceSettings
-      step focus user Admin on page UserInterface.WorkspaceSettings
-    } with {
-      briefly as "Creating a new workspace"
-      described by {
-        | This use case describes the process of an admin creating a new workspace
-        | to organize related boards and define team access.
-      }
-    }
-    
-    case AddWorkspaceMember is {
-      user Admin wants to "add a member to a workspace" so that "they can access workspace boards"
-      
-      step from user Admin "views" page UserInterface.WorkspaceSettings
-      step from user Admin "clicks" button AddMember
-      step from user Admin "enters" member email and role
-      step send command AddMember from user Admin to entity Workspace
-      step from entity Workspace "updates" to page UserInterface.WorkspaceSettings
-      step focus user Admin on page UserInterface.WorkspaceSettings
-    } with {
-      briefly as "Adding a member to a workspace"
-      described by {
-        | This use case describes the process of an admin adding a new member
-        | to a workspace and assigning them a role.
-      }
-    }
-    
-    case UpdateWorkspaceSettings is {
-      user Admin wants to "update workspace settings" so that "they can adjust visibility and preferences"
-      
-      step from user Admin "views" page UserInterface.WorkspaceSettings
-      step from user Admin "edits" workspace settings
-      step send command UpdateWorkspace from user Admin to entity Workspace
-      step from entity Workspace "updates" to page UserInterface.WorkspaceSettings
-      step focus user Admin on page UserInterface.WorkspaceSettings
-    } with {
-      briefly as "Updating workspace settings"
-      described by {
-        | This use case describes the process of an admin updating workspace settings
-        | such as name, description, and visibility.
-      }
-    }
-  } with {
-    briefly as "User stories related to workspace management"
-    described by {
-      | This epic covers the functionality related to managing workspaces,
-      | including creating workspaces, adding members, and updating settings.
-      | These features enable administrators to organize teams and projects.
-    }
-  }
-  
+domain Trello {
   epic NotificationEpic is {
     user Member wants to "receive and manage notifications" so that "they stay informed of relevant updates"
-    
+
     case ViewNotifications is {
       user Member wants to "view their notifications" so that "they can see recent activity"
-      
-      step from user Member "clicks" notification icon
+      step from user Member "clicks" notification.icon
       step focus user Member on page UserInterface.Notifications
       step from user Member "views" notifications
     } with {
@@ -930,10 +14,10 @@
         | notifications to stay informed about relevant activities.
       }
     }
-    
+
     case MarkNotificationAsRead is {
       user Member wants to "mark notifications as read" so that "they can focus on new notifications"
-      
+
       step from user Member "views" page UserInterface.Notifications
       step from user Member "clicks" on notification
       step send command MarkAsRead from user Member to entity Notification
@@ -946,10 +30,10 @@
         | as read to indicate they've seen it.
       }
     }
-    
+
     case MarkAllNotificationsAsRead is {
       user Member wants to "mark all notifications as read" so that "they can clear their notification list"
-      
+
       step from user Member "views" page UserInterface.Notifications
       step from user Member "clicks" button MarkAllAsRead
       step send command MarkAllAsRead from user Member to entity Notification
@@ -991,7 +75,1528 @@
     | - Event-driven persistence through repositories
     | - Clearly defined user stories and interaction patterns
   }
-}      briefly as "Record type containing card data"
+}
+
+domain TrelloSystem is {
+  author Modeler is {
+    name is "System Modeler"
+    email is "modeler@example.com"
+  } with {
+    briefly as "Model creator and maintainer"
+    described by {
+      | Primary architect responsible for designing this model based on
+      | Trello application requirements and workflow.
+    }
+  }
+
+  // Core Types
+  type UUID is UUID with {
+    briefly as "Unique identifier"
+    described by {
+      | Standard UUID format used to uniquely identify entities across the system.
+    }
+  }
+
+  type Email is Pattern("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$") with {
+    briefly as "Email address format"
+    described by {
+      | Represents a standard email address format used for user identification
+      | and communications.
+    }
+  }
+
+  type Title is String(1, 100) with {
+    briefly as "Title for boards, lists, and cards"
+    described by {
+      | A string between 1 and 100 characters representing a title or name.
+      | Used for boards, lists, cards, and other Trello elements.
+    }
+  }
+
+  type Description is String(0, 16384) with {
+    briefly as "Detailed description text"
+    described by {
+      | A string containing detailed description text.
+      | Can be empty or up to 16KB in length.
+    }
+  }
+
+  type Position is Real with {
+    briefly as "Relative position value"
+    described by {
+      | A floating-point number representing the relative position of an item.
+      | Used for ordering lists on boards and cards within lists.
+    }
+  }
+
+  type Color is Pattern("^#[0-9A-Fa-f]{6}$") with {
+    briefly as "Hexadecimal color code"
+    described by {
+      | A hexadecimal color code in the format #RRGGBB.
+      | Used for label colors and board backgrounds.
+    }
+  }
+
+  type Timestamp is String with {
+    briefly as "ISO format timestamp"
+    described by {
+      | ISO 8601 formatted timestamp for recording creation, updates, and deadlines.
+    }
+  }
+
+  type Bool is Boolean with {
+    briefly as "Boolean type for UI components"
+    described by {
+      | A wrapper for the predefined Boolean type, used for flags and UI states.
+    }
+  }
+
+  type Visibility is any of {
+    Private
+    TeamVisible
+    OrganizationVisible
+    Public
+  } with {
+    briefly as "Visibility options for boards"
+    described by {
+      | Defines the possible visibility settings for boards:
+      | - Private: Only visible to board members
+      | - TeamVisible: Visible to all team members
+      | - OrganizationVisible: Visible to the entire organization
+      | - Public: Visible to anyone with the link
+    }
+  }
+
+  // User definitions
+  user Member is "A Trello user who can create and interact with boards" with {
+    briefly as "Regular Trello user"
+    described by {
+      | A standard Trello user who can create boards, lists, and cards,
+      | and can be added to boards as a member.
+    }
+  }
+
+  user Admin is "A user with administrative privileges" with {
+    briefly as "Administrative user"
+    described by {
+      | A user with additional administrative privileges who can
+      | manage workspace settings and member permissions.
+    }
+  }
+
+  context UserManagement is {
+    // User profile record
+    type UserProfile is {
+      userId is UUID
+      username is String(1, 50)
+      email is Email
+      fullName is String(0, 100)
+      avatarUrl is String
+      bio is String(0, 500)
+      settings is UserSettings
+    } with {
+      briefly as "User profile information"
+      described by {
+        | Contains all user profile information including
+        | identification, display preferences, and settings.
+      }
+    }
+
+    type UserSettings is {
+      emailNotifications is Bool
+      colorBlindMode is Bool
+      language is String(2, 5)
+      defaultBoardView is String(1, 20)
+    } with {
+      briefly as "User preference settings"
+      described by {
+        | User configurable settings and preferences that
+        | affect the display and behavior of the application.
+      }
+    }
+
+    // User entity
+    entity User is {
+      state UserData of UserProfile with {
+        briefly as "User state containing profile information"
+        described by {
+          | Contains the complete user profile information including
+          | preferences and settings. This state is modified by
+          | profile updates and setting changes.
+        }
+      }
+
+      // Commands
+      command CreateUser is {
+        email is Email
+        username is String(1, 50)
+        fullName is String(0, 100)
+        password is String(8, 64)
+      } with {
+        briefly as "Command to create a new user"
+        described by {
+          | Creates a new user account with the provided email,
+          | username, full name, and password.
+        }
+      }
+
+      command UpdateProfile is {
+        userId is UUID
+        username is String(1, 50)
+        fullName is String(0, 100)
+        avatarUrl is String
+        bio is String(0, 500)
+      } with {
+        briefly as "Command to update user profile"
+        described by {
+          | Updates the user's profile information including
+          | username, full name, avatar, and bio.
+        }
+      }
+
+      command UpdateSettings is {
+        userId is UUID
+        settings is UserSettings
+      } with {
+        briefly as "Command to update user settings"
+        described by {
+          | Updates the user's application settings and preferences.
+        }
+      }
+
+      // Events
+      event UserCreated is {
+        userId is UUID
+        username is String(1, 50)
+        email is Email
+      } with {
+        briefly as "Event indicating a new user was created"
+        described by {
+          | Emitted when a new user account is successfully created.
+          | Contains the user's ID, username, and email for reference.
+        }
+      }
+
+      event ProfileUpdated is {
+        userId is UUID
+        username is String(1, 50)
+        fullName is String(0, 100)
+      } with {
+        briefly as "Event indicating profile information was updated"
+        described by {
+          | Emitted when a user's profile information is successfully updated.
+          | Contains the updated profile fields for UI updates.
+        }
+      }
+
+      event SettingsUpdated is {
+        userId is UUID
+      } with {
+        briefly as "Event indicating user settings were updated"
+        described by {
+          | Emitted when a user's application settings are successfully updated.
+        }
+      }
+
+      // Handler for processing commands
+      handler UserCommandHandler is {
+        on command CreateUser is {
+          // Create user with provided information
+          morph entity User to state UserData with command CreateUser
+
+          // Emit event
+          tell event UserCreated to entity User
+        }
+
+        on command UpdateProfile is {
+          // Validate user exists
+          if "userExists(command.userId)" then {
+            // Update user profile
+            morph entity User to state UserData with command UpdateProfile
+
+            // Emit event
+            tell event ProfileUpdated to entity User
+          } else {
+            error "User does not exist"
+          } end
+        }
+
+        on command UpdateSettings is {
+          // Validate user exists
+          if "userExists(command.userId)" then {
+            // Update user settings
+            morph entity User to state UserData with command UpdateSettings
+
+            // Emit event
+            tell event SettingsUpdated to entity User
+          } else {
+            error "User does not exist"
+          } end
+        }
+      } with {
+        briefly as "Processes commands for user management"
+        described by {
+          | Handles commands related to user account creation and management.
+          | Validates input data, updates user state, and emits relevant events.
+        }
+      }
+    } with {
+      briefly as "Represents a Trello user account"
+      described by {
+        | The User entity represents a user account in the Trello system.
+        | It contains user profile information, preferences, and settings.
+        | Users can create and join boards, and interact with cards and lists.
+      }
+    }
+
+    // User repository
+    repository UserRepository is {
+      schema UserData is relational of
+        user as User
+
+      handler UserRepositoryHandler is {
+        on event UserCreated is {
+          write "Create new user record" to user
+        }
+
+        on event ProfileUpdated is {
+          write "Update user profile" to user
+        }
+
+        on event SettingsUpdated is {
+          write "Update user settings" to user
+        }
+      } with {
+        briefly as "Handles persistence of user events"
+        described by {
+          | Handles all event-driven persistence operations related to users.
+          | Responds to user events by updating the persistent state of user records.
+        }
+      }
+    } with {
+      briefly as "Persistent storage for user data"
+      described by {
+        | The UserRepository provides persistent storage for user account data,
+        | including profile information and settings.
+      }
+    }
+
+    // Notification system
+    type NotificationRecord is {
+      notificationId is UUID
+      userId is UUID
+      entityType is String  // "card", "board", "comment", etc.
+      entityId is UUID
+      action is String      // "created", "moved", "commented", etc.
+      actorId is UUID       // User who performed the action
+      isRead is Bool
+      createdAt is Timestamp
+    } with {
+      briefly as "Record type for user notifications"
+      described by {
+        | Defines the structure of a notification, including the target user,
+        | the entity affected, the action performed, and who performed it.
+      }
+    }
+
+    entity Notification is {
+      state NotificationData of NotificationRecord with {
+        briefly as "Notification state containing all notification information"
+        described by {
+          | Contains complete notification information including the target user,
+          | the entity affected, the action performed, and read status.
+        }
+      }
+
+      // Commands
+      command CreateNotification is {
+        userId is UUID
+        entityType is String
+        entityId is UUID
+        action is String
+        actorId is UUID
+      } with {
+        briefly as "Command to create a new notification"
+        described by {
+          | Creates a new notification for a user regarding an action performed on an entity.
+        }
+      }
+
+      command MarkAsRead is {
+        notificationId is UUID
+      } with {
+        briefly as "Command to mark a notification as read"
+        described by {
+          | Marks a notification as having been read by the user.
+        }
+      }
+
+      command MarkAllAsRead is {
+        userId is UUID
+      } with {
+        briefly as "Command to mark all notifications for a user as read"
+        described by {
+          | Marks all of a user's unread notifications as read.
+        }
+      }
+
+      // Events
+      event NotificationCreated is {
+        notificationId is UUID
+        userId is UUID
+        entityType is String
+        entityId is UUID
+        action is String
+      } with {
+        briefly as "Event indicating a new notification was created"
+        described by {
+          | Emitted when a new notification is created for a user.
+          | Contains the notification details for UI updates.
+        }
+      }
+
+      event NotificationRead is {
+        notificationId is UUID
+      } with {
+        briefly as "Event indicating a notification was marked as read"
+        described by {
+          | Emitted when a notification is marked as read.
+        }
+      }
+
+      event AllNotificationsRead is {
+        userId is UUID
+      } with {
+        briefly as "Event indicating all notifications for a user were marked as read"
+        described by {
+          | Emitted when all of a user's notifications are marked as read.
+        }
+      }
+
+      // Handler for processing commands
+      handler NotificationCommandHandler is {
+        on command CreateNotification is {
+          // Generate a new notification ID
+          "const notificationId = generateUUID()"
+
+          // Create the notification
+          morph entity Notification to state NotificationData with command CreateNotification
+
+          // Emit event
+          tell event NotificationCreated to entity Notification
+        }
+
+        on command MarkAsRead is {
+          // Validate notification exists
+          if "notificationExists(command.notificationId)" then {
+            // Mark notification as read
+            morph entity Notification to state NotificationData with command MarkAsRead
+
+            // Emit event
+            tell event NotificationRead to entity Notification
+          } else {
+            error "Notification does not exist"
+          } end
+        }
+
+        on command MarkAllAsRead is {
+          // Validate user exists
+          if "userExists(command.userId)" then {
+            // Mark all notifications as read
+            morph entity Notification to state NotificationData with command MarkAllAsRead
+
+            // Emit event
+            tell event AllNotificationsRead to entity Notification
+          } else {
+            error "User does not exist"
+          } end
+        }
+      } with {
+        briefly as "Processes commands for notification management"
+        described by {
+          | Handles commands related to notification creation and status updates.
+          | Validates input data, updates notification state, and emits relevant events.
+        }
+      }
+    } with {
+      briefly as "Represents a user notification"
+      described by {
+        | The Notification entity represents an alert or message for a user
+        | about actions performed on boards, lists, or cards they are involved with.
+        | Notifications can be created, read, and aggregated by user.
+      }
+    }
+
+    repository NotificationRepository is {
+      schema NotificationData is relational of
+        notification as Notification
+        link user as field Notification.userId to field User.userId
+
+      handler NotificationRepositoryHandler is {
+        on event NotificationCreated is {
+          write "Create new notification record" to notification
+        }
+
+        on event NotificationRead is {
+          write "Update notification read status" to notification
+        }
+
+        on event AllNotificationsRead is {
+          write "Update read status for all user notifications" to notification
+        }
+      } with {
+        briefly as "Handles persistence of notification events"
+        described by {
+          | Handles all event-driven persistence operations related to notifications.
+          | Responds to notification events by updating the persistent state of notification records.
+        }
+      }
+    } with {
+      briefly as "Persistent storage for notification data"
+      described by {
+        | The NotificationRepository provides persistent storage for notification data,
+        | including notification details and relationships to users.
+      }
+    }
+  } with {
+    briefly as "User management and authentication context"
+    described by {
+      | The UserManagement context handles user account management,
+      | including registration, authentication, and profile management.
+      | It contains entities and processes related to user identity and access,
+      | as well as notifications to keep users informed of relevant updates.
+    }
+  }
+
+  context WorkspaceManagement is {
+    // Workspace Record Type
+    type WorkspaceRecord is {
+      workspaceId is UUID
+      name is Title
+      description is Description
+      visibility is Visibility
+      members is many UUID  // User IDs
+      boards is many UUID   // Board IDs
+      createdBy is UUID     // User ID
+      createdAt is Timestamp
+      updatedAt is Timestamp
+    } with {
+      briefly as "Record type containing workspace data"
+      described by {
+        | Defines the structure of a workspace including name, description,
+        | visibility settings, members, and associated boards.
+      }
+    }
+
+    // Workspace membership record
+    type MembershipRecord is {
+      userId is UUID
+      workspaceId is UUID
+      role is any of {
+        Admin
+        Normal
+        Observer
+      }
+      joinedAt is Timestamp
+    } with {
+      briefly as "Record for workspace membership details"
+      described by {
+        | Contains the details of a user's membership in a workspace,
+        | including their role and when they joined.
+      }
+    }
+
+    // Workspace Entity
+    entity Workspace is {
+      state WorkspaceData of WorkspaceRecord with {
+        briefly as "Workspace state containing all workspace information"
+        described by {
+          | Contains complete workspace information including name,
+          | visibility settings, members, and associated boards.
+        }
+      }
+
+      // Commands
+      command CreateWorkspace is {
+        name is Title
+        description is Description
+        visibility is Visibility
+        createdBy is UUID
+      } with {
+        briefly as "Command to create a new workspace"
+        described by {
+          | Creates a new workspace with the provided name, description,
+          | and visibility settings. The creator becomes the initial admin.
+        }
+      }
+
+      command UpdateWorkspace is {
+        workspaceId is UUID
+        name is Title
+        description is Description
+        visibility is Visibility
+      } with {
+        briefly as "Command to update workspace details"
+        described by {
+          | Updates the details of an existing workspace including
+          | name, description, and visibility settings.
+        }
+      }
+
+      command AddMember is {
+        workspaceId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Command to add a member to a workspace"
+        described by {
+          | Adds a user to a workspace with the specified role.
+        }
+      }
+
+      command RemoveMember is {
+        workspaceId is UUID
+        userId is UUID
+      } with {
+        briefly as "Command to remove a member from a workspace"
+        described by {
+          | Removes a user from a workspace.
+        }
+      }
+
+      command UpdateMemberRole is {
+        workspaceId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Command to update a member's role in a workspace"
+        described by {
+          | Updates the role of an existing workspace member.
+        }
+      }
+
+      // Events
+      event WorkspaceCreated is {
+        workspaceId is UUID
+        name is Title
+        createdBy is UUID
+      } with {
+        briefly as "Event indicating a new workspace was created"
+        described by {
+          | Emitted when a new workspace is successfully created.
+          | Contains the workspace ID, name, and creator ID.
+        }
+      }
+
+      event WorkspaceUpdated is {
+        workspaceId is UUID
+        name is Title
+        visibility is Visibility
+      } with {
+        briefly as "Event indicating workspace details were updated"
+        described by {
+          | Emitted when workspace details are successfully updated.
+          | Contains the updated workspace information.
+        }
+      }
+
+      event MemberAdded is {
+        workspaceId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Event indicating a member was added to a workspace"
+        described by {
+          | Emitted when a user is successfully added to a workspace.
+          | Contains the user ID, workspace ID, and assigned role.
+        }
+      }
+
+      event MemberRemoved is {
+        workspaceId is UUID
+        userId is UUID
+      } with {
+        briefly as "Event indicating a member was removed from a workspace"
+        described by {
+          | Emitted when a user is successfully removed from a workspace.
+          | Contains the user ID and workspace ID.
+        }
+      }
+
+      event MemberRoleUpdated is {
+        workspaceId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Event indicating a member's role was updated"
+        described by {
+          | Emitted when a member's role in a workspace is successfully updated.
+          | Contains the user ID, workspace ID, and new role.
+        }
+      }
+
+      // Handler for processing commands
+      handler WorkspaceCommandHandler is {
+        on command CreateWorkspace is {
+          // Generate a new workspace ID
+          "const workspaceId = generateUUID()"
+
+          // Create the workspace
+          morph entity Workspace to state WorkspaceData with command CreateWorkspace
+
+          // Emit event
+          tell event WorkspaceCreated to entity Workspace
+        }
+
+        on command UpdateWorkspace is {
+          // Validate workspace exists
+          if "workspaceExists(command.workspaceId)" then {
+            // Update workspace
+            morph entity Workspace to state WorkspaceData with command UpdateWorkspace
+
+            // Emit event
+            tell event WorkspaceUpdated to entity Workspace
+          } else {
+            error "Workspace does not exist"
+          } end
+        }
+
+        on command AddMember is {
+          // Validate workspace and user exist
+          if "workspaceExists(command.workspaceId) && userExists(command.userId)" then {
+            // Add member to workspace
+            morph entity Workspace to state WorkspaceData with command AddMember
+
+            // Emit event
+            tell event MemberAdded to entity Workspace
+          } else {
+            error "Workspace or user does not exist"
+          } end
+        }
+
+        on command RemoveMember is {
+          // Validate workspace and membership exist
+          if "workspaceExists(command.workspaceId) && membershipExists(command.workspaceId, command.userId)" then {
+            // Remove member from workspace
+            morph entity Workspace to state WorkspaceData with command RemoveMember
+
+            // Emit event
+            tell event MemberRemoved to entity Workspace
+          } else {
+            error "Workspace or membership does not exist"
+          } end
+        }
+
+        on command UpdateMemberRole is {
+          // Validate workspace and membership exist
+          if "workspaceExists(command.workspaceId) && membershipExists(command.workspaceId, command.userId)" then {
+            // Update member role
+            morph entity Workspace to state WorkspaceData with command UpdateMemberRole
+
+            // Emit event
+            tell event MemberRoleUpdated to entity Workspace
+          } else {
+            error "Workspace or membership does not exist"
+          } end
+        }
+      } with {
+        briefly as "Processes commands for workspace management"
+        described by {
+          | Handles commands related to workspace creation and management.
+          | Validates input data, updates workspace state, and emits relevant events.
+        }
+      }
+    } with {
+      briefly as "Represents a Trello workspace"
+      described by {
+        | The Workspace entity represents a collection of boards shared by a group of users.
+        | It contains settings for visibility and member access,
+        | and serves as a container for related boards.
+      }
+    }
+
+    // Workspace repository
+    repository WorkspaceRepository is {
+      schema WorkspaceData is relational of
+        workspace as Workspace
+        membership as MembershipRecord
+        link members as field Workspace.members to field User.userId
+        link boards as field Workspace.boards to field Board.boardId
+
+      handler WorkspaceRepositoryHandler is {
+        on event WorkspaceCreated is {
+          write "Create new workspace record" to workspace
+          write "Create initial admin membership" to membership
+        }
+
+        on event WorkspaceUpdated is {
+          write "Update workspace details" to workspace
+        }
+
+        on event MemberAdded is {
+          write "Add member to workspace" to membership
+          write "Update workspace members list" to workspace
+        }
+
+        on event MemberRemoved is {
+          write "Remove member from workspace" to membership
+          write "Update workspace members list" to workspace
+        }
+
+        on event MemberRoleUpdated is {
+          write "Update member role in workspace" to membership
+        }
+      } with {
+        briefly as "Handles persistence of workspace events"
+        described by {
+          | Handles all event-driven persistence operations related to workspaces.
+          | Responds to workspace events by updating the persistent state of workspace records.
+        }
+      }
+    } with {
+      briefly as "Persistent storage for workspace data"
+      described by {
+        | The WorkspaceRepository provides persistent storage for workspace data,
+        | including workspace details, memberships, and relationships to boards.
+      }
+    }
+  } with {
+    briefly as "Workspace management context"
+    described by {
+      | The WorkspaceManagement context handles the creation and management of workspaces,
+      | which serve as containers for boards and define user access permissions.
+    }
+  }
+
+  context BoardManagement is {
+    // Label record
+    type Label is {
+      labelId is UUID
+      name is String(0, 50)
+      color is Color
+    } with {
+      briefly as "Record for board label"
+      described by {
+        | Defines a label that can be applied to cards,
+        | consisting of a name and color.
+      }
+    }
+
+    // Board Record Type
+    type BoardRecord is {
+      boardId is UUID
+      workspaceId is UUID
+      name is Title
+      description is Description
+      visibility is Visibility
+      background is any of {
+        Color
+        ImageUrl is String
+      }
+      members is many UUID
+      labels is many Label
+      lists is many UUID
+      createdBy is UUID
+      createdAt is Timestamp
+      updatedAt is Timestamp
+      isStarred is Bool
+      isClosed is Bool
+    } with {
+      briefly as "Record type containing board data"
+      described by {
+        | Defines the structure of a board including name, description,
+        | visibility, background, members, and associated lists.
+      }
+    }
+
+    // Board membership record
+    type BoardMembershipRecord is {
+      userId is UUID
+      boardId is UUID
+      role is any of {
+        Admin
+        Normal
+        Observer
+      }
+      joinedAt is Timestamp
+    } with {
+      briefly as "Record for board membership details"
+      described by {
+        | Contains the details of a user's membership on a board,
+        | including their role and when they joined.
+      }
+    }
+
+    // Board Entity
+    entity Board is {
+      state BoardData of BoardRecord with {
+        briefly as "Board state containing all board information"
+        described by {
+          | Contains complete board information including name,
+          | visibility settings, members, lists, and labels.
+        }
+      }
+
+      // Commands
+      command CreateBoard is {
+        name is Title
+        description is Description
+        workspaceId is UUID
+        visibility is Visibility
+        background is any of {
+          Color
+          ImageUrl is String
+        }
+        createdBy is UUID
+      } with {
+        briefly as "Command to create a new board"
+        described by {
+          | Creates a new board with the provided name, description,
+          | workspace, visibility, and background. The creator becomes the initial admin.
+        }
+      }
+
+      command UpdateBoard is {
+        boardId is UUID
+        name is Title
+        description is Description
+        visibility is Visibility
+        background is any of {
+          Color
+          ImageUrl is String
+        }
+      } with {
+        briefly as "Command to update board details"
+        described by {
+          | Updates the details of an existing board including
+          | name, description, visibility, and background.
+        }
+      }
+
+      command StarBoard is {
+        boardId is UUID
+        userId is UUID
+        isStarred is Bool
+      } with {
+        briefly as "Command to star or unstar a board"
+        described by {
+          | Marks a board as starred or unstarred for a specific user.
+        }
+      }
+
+      command CloseBoard is {
+        boardId is UUID
+        isClosed is Bool
+      } with {
+        briefly as "Command to close or reopen a board"
+        described by {
+          | Marks a board as closed or reopens it.
+        }
+      }
+
+      command AddBoardMember is {
+        boardId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Command to add a member to a board"
+        described by {
+          | Adds a user to a board with the specified role.
+        }
+      }
+
+      command RemoveBoardMember is {
+        boardId is UUID
+        userId is UUID
+      } with {
+        briefly as "Command to remove a member from a board"
+        described by {
+          | Removes a user from a board.
+        }
+      }
+
+      command UpdateBoardMemberRole is {
+        boardId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Command to update a member's role on a board"
+        described by {
+          | Updates the role of an existing board member.
+        }
+      }
+
+      command CreateLabel is {
+        boardId is UUID
+        name is String(0, 50)
+        color is Color
+      } with {
+        briefly as "Command to create a new label"
+        described by {
+          | Creates a new label with the provided name and color.
+        }
+      }
+
+      command UpdateLabel is {
+        boardId is UUID
+        labelId is UUID
+        name is String(0, 50)
+        color is Color
+      } with {
+        briefly as "Command to update a label"
+        described by {
+          | Updates an existing label's name and color.
+        }
+      }
+
+      command DeleteLabel is {
+        boardId is UUID
+        labelId is UUID
+      } with {
+        briefly as "Command to delete a label"
+        described by {
+          | Deletes a label from a board.
+        }
+      }
+
+      // Events
+      event BoardCreated is {
+        boardId is UUID
+        workspaceId is UUID
+        name is Title
+        createdBy is UUID
+      } with {
+        briefly as "Event indicating a new board was created"
+        described by {
+          | Emitted when a new board is successfully created.
+          | Contains the board ID, workspace ID, name, and creator ID.
+        }
+      }
+
+      event BoardUpdated is {
+        boardId is UUID
+        name is Title
+        visibility is Visibility
+      } with {
+        briefly as "Event indicating board details were updated"
+        described by {
+          | Emitted when board details are successfully updated.
+          | Contains the updated board information.
+        }
+      }
+
+      event BoardStarred is {
+        boardId is UUID
+        userId is UUID
+        isStarred is Bool
+      } with {
+        briefly as "Event indicating a board was starred or unstarred"
+        described by {
+          | Emitted when a board is starred or unstarred by a user.
+          | Contains the board ID, user ID, and star status.
+        }
+      }
+
+      event BoardClosed is {
+        boardId is UUID
+        isClosed is Bool
+      } with {
+        briefly as "Event indicating a board was closed or reopened"
+        described by {
+          | Emitted when a board is closed or reopened.
+          | Contains the board ID and closed status.
+        }
+      }
+
+      event BoardMemberAdded is {
+        boardId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Event indicating a member was added to a board"
+        described by {
+          | Emitted when a user is successfully added to a board.
+          | Contains the user ID, board ID, and assigned role.
+        }
+      }
+
+      event BoardMemberRemoved is {
+        boardId is UUID
+        userId is UUID
+      } with {
+        briefly as "Event indicating a member was removed from a board"
+        described by {
+          | Emitted when a user is successfully removed from a board.
+          | Contains the user ID and board ID.
+        }
+      }
+
+      event BoardMemberRoleUpdated is {
+        boardId is UUID
+        userId is UUID
+        role is any of {
+          Admin
+          Normal
+          Observer
+        }
+      } with {
+        briefly as "Event indicating a member's role was updated"
+        described by {
+          | Emitted when a member's role on a board is successfully updated.
+          | Contains the user ID, board ID, and new role.
+        }
+      }
+
+      event LabelCreated is {
+        boardId is UUID
+        labelId is UUID
+        name is String(0, 50)
+        color is Color
+      } with {
+        briefly as "Event indicating a new label was created"
+        described by {
+          | Emitted when a new label is successfully created on a board.
+          | Contains the label details for UI updates.
+        }
+      }
+
+      event LabelUpdated is {
+        boardId is UUID
+        labelId is UUID
+        name is String(0, 50)
+        color is Color
+      } with {
+        briefly as "Event indicating a label was updated"
+        described by {
+          | Emitted when a label is successfully updated.
+          | Contains the updated label information.
+        }
+      }
+
+      event LabelDeleted is {
+        boardId is UUID
+        labelId is UUID
+      } with {
+        briefly as "Event indicating a label was deleted"
+        described by {
+          | Emitted when a label is successfully deleted from a board.
+          | Contains the board ID and label ID.
+        }
+      }
+
+      // Handler for processing commands
+      handler BoardCommandHandler is {
+        on command CreateBoard is {
+          // Generate a new board ID
+          "const boardId = generateUUID()"
+
+          // Create the board
+          morph entity Board to state BoardData with command CreateBoard
+
+          // Emit event
+          tell event BoardCreated to entity Board
+        }
+
+        on command UpdateBoard is {
+          // Validate board exists
+          if "boardExists(command.boardId)" then {
+            // Update board
+            morph entity Board to state BoardData with command UpdateBoard
+
+            // Emit event
+            tell event BoardUpdated to entity Board
+          } else {
+            error "Board does not exist"
+          } end
+        }
+
+        on command StarBoard is {
+          // Validate board exists
+          if "boardExists(command.boardId) && userExists(command.userId)" then {
+            // Update board starred status
+            morph entity Board to state BoardData with command StarBoard
+
+            // Emit event
+            tell event BoardStarred to entity Board
+          } else {
+            error "Board or user does not exist"
+          } end
+        }
+
+        on command CloseBoard is {
+          // Validate board exists
+          if "boardExists(command.boardId)" then {
+            // Update board closed status
+            morph entity Board to state BoardData with command CloseBoard
+
+            // Emit event
+            tell event BoardClosed to entity Board
+          } else {
+            error "Board does not exist"
+          } end
+        }
+
+        on command AddBoardMember is {
+          // Validate board and user exist
+          if "boardExists(command.boardId) && userExists(command.userId)" then {
+            // Add member to board
+            morph entity Board to state BoardData with command AddBoardMember
+
+            // Emit event
+            tell event BoardMemberAdded to entity Board
+          } else {
+            error "Board or user does not exist"
+          } end
+        }
+
+        on command RemoveBoardMember is {
+          // Validate board and membership exist
+          if "boardExists(command.boardId) && boardMembershipExists(command.boardId, command.userId)" then {
+            // Remove member from board
+            morph entity Board to state BoardData with command RemoveBoardMember
+
+            // Emit event
+            tell event BoardMemberRemoved to entity Board
+          } else {
+            error "Board or membership does not exist"
+          } end
+        }
+
+        on command UpdateBoardMemberRole is {
+          // Validate board and membership exist
+          if "boardExists(command.boardId) && boardMembershipExists(command.boardId, command.userId)" then {
+            // Update member role
+            morph entity Board to state BoardData with command UpdateBoardMemberRole
+
+            // Emit event
+            tell event BoardMemberRoleUpdated to entity Board
+          } else {
+            error "Board or membership does not exist"
+          } end
+        }
+
+        on command CreateLabel is {
+          // Validate board exists
+          if "boardExists(command.boardId)" then {
+            // Generate a new label ID
+            "const labelId = generateUUID()"
+
+            // Create the label
+            morph entity Board to state BoardData with command CreateLabel
+
+            // Emit event
+            tell event LabelCreated to entity Board
+          } else {
+            error "Board does not exist"
+          } end
+        }
+
+        on command UpdateLabel is {
+          // Validate board and label exist
+          if "boardExists(command.boardId) && labelExists(command.boardId, command.labelId)" then {
+            // Update label
+            morph entity Board to state BoardData with command UpdateLabel
+
+            // Emit event
+            tell event LabelUpdated to entity Board
+          } else {
+            error "Board or label does not exist"
+          } end
+        }
+      } with {
+        briefly as "Processes commands for board management"
+        described by {
+          | Handles commands related to board creation and management.
+          | Validates input data, updates board state, and emits relevant events.
+        }
+      }
+    } with {
+      briefly as "Represents a Trello board"
+      described by {
+        | The Board entity represents a workspace where users organize cards into lists.
+        | It contains settings for visibility, background, members, and labels,
+        | and serves as a container for lists and cards.
+      }
+    }
+
+    // Now adding List and Card entities
+    type ListRecord is {
+      listId is UUID
+      boardId is UUID
+      name is Title
+      position is Position
+      createdAt is Timestamp
+      updatedAt is Timestamp
+      isArchived is Bool
+    } with {
+      briefly as "Record type containing list data"
+      described by {
+        | Defines the structure of a list including name, position on the board,
+        | creation date, and archive status.
+      }
+    }
+
+    entity List is {
+      state ListData of ListRecord with {
+        briefly as "List state containing all list information"
+        described by {
+          | Contains complete list information including name, position,
+          | and relationship to its parent board.
+        }
+      }
+
+      // Commands
+      command CreateList is {
+        boardId is UUID
+        name is Title
+        position is Position
+      } with {
+        briefly as "Command to create a new list"
+        described by {
+          | Creates a new list on a board with the provided name and position.
+        }
+      }
+
+      command UpdateList is {
+        listId is UUID
+        name is Title
+      } with {
+        briefly as "Command to update list details"
+        described by {
+          | Updates the name of an existing list.
+        }
+      }
+
+      command MoveList is {
+        listId is UUID
+        position is Position
+      } with {
+        briefly as "Command to move a list to a new position"
+        described by {
+          | Updates the position of a list on its board.
+        }
+      }
+
+      command ArchiveList is {
+        listId is UUID
+        isArchived is Bool
+      } with {
+        briefly as "Command to archive or restore a list"
+        described by {
+          | Marks a list as archived or restores it from the archive.
+        }
+      }
+
+      // Events
+      event ListCreated is {
+        listId is UUID
+        boardId is UUID
+        name is Title
+        position is Position
+      } with {
+        briefly as "Event indicating a new list was created"
+        described by {
+          | Emitted when a new list is successfully created on a board.
+          | Contains the list ID, board ID, name, and position.
+        }
+      }
+
+      event ListUpdated is {
+        listId is UUID
+        name is Title
+      } with {
+        briefly as "Event indicating list details were updated"
+        described by {
+          | Emitted when a list's name is successfully updated.
+        }
+      }
+
+      event ListMoved is {
+        listId is UUID
+        position is Position
+      } with {
+        briefly as "Event indicating a list was moved"
+        described by {
+          | Emitted when a list's position is successfully updated.
+        }
+      }
+
+      event ListArchived is {
+        listId is UUID
+        isArchived is Bool
+      } with {
+        briefly as "Event indicating a list was archived or restored"
+        described by {
+          | Emitted when a list is archived or restored from the archive.
+        }
+      }
+
+      // Handler for processing commands
+      handler ListCommandHandler is {
+        on command CreateList is {
+          // Validate board exists
+          if "boardExists(command.boardId)" then {
+            // Generate a new list ID
+            "const listId = generateUUID()"
+
+            // Create the list
+            morph entity List to state ListData with command CreateList
+
+            // Emit event
+            tell event ListCreated to entity List
+          } else {
+            error "Board does not exist"
+          } end
+        }
+
+        on command UpdateList is {
+          // Validate list exists
+          if "listExists(command.listId)" then {
+            // Update list
+            morph entity List to state ListData with command UpdateList
+
+            // Emit event
+            tell event ListUpdated to entity List
+          } else {
+            error "List does not exist"
+          } end
+        }
+
+        on command MoveList is {
+          // Validate list exists
+          if "listExists(command.listId)" then {
+            // Move list
+            morph entity List to state ListData with command MoveList
+
+            // Emit event
+            tell event ListMoved to entity List
+          } else {
+            error "List does not exist"
+          } end
+        }
+
+        on command ArchiveList is {
+          // Validate list exists
+          if "listExists(command.listId)" then {
+            // Archive or restore list
+            morph entity List to state ListData with command ArchiveList
+
+            // Emit event
+            tell event ListArchived to entity List
+          } else {
+            error "List does not exist"
+          } end
+        }
+      } with {
+        briefly as "Processes commands for list management"
+        described by {
+          | Handles commands related to list creation and management.
+          | Validates input data, updates list state, and emits relevant events.
+        }
+      }
+    } with {
+      briefly as "Represents a Trello list"
+      described by {
+        | The List entity represents a column on a Trello board.
+        | It contains cards and has a specific position on the board.
+        | Lists can be created, renamed, moved, and archived.
+      }
+    }
+
+    // Card components
+    type Comment is {
+      commentId is UUID
+      userId is UUID
+      text is String(1, 16384)
+      createdAt is Timestamp
+      updatedAt is Timestamp
+    } with {
+      briefly as "Record for card comment"
+      described by {
+        | Defines a comment on a card, including the author,
+        | text content, and timestamps.
+      }
+    }
+
+    type Attachment is {
+      attachmentId is UUID
+      name is String(1, 256)
+      url is String
+      mimeType is String
+      size is Integer
+      createdAt is Timestamp
+    } with {
+      briefly as "Record for card attachment"
+      described by {
+        | Defines an attachment on a card, including name,
+        | URL, type, size, and creation timestamp.
+      }
+    }
+
+    type Checklist is {
+      checklistId is UUID
+      name is String(1, 100)
+      items is many {
+        itemId is UUID
+        text is String(1, 1000)
+        isComplete is Bool
+        position is Position
+      }
+    } with {
+      briefly as "Record for card checklist"
+      described by {
+        | Defines a checklist on a card, including name and
+        | a collection of checklist items.
+      }
+    }
+
+    type CardRecord is {
+      cardId is UUID
+      listId is UUID
+      name is Title
+      description is Description
+      position is Position
+      labels is many UUID  // Label IDs
+      members is many UUID // User IDs
+      dueDate is Timestamp
+      startDate is Timestamp
+      comments is many Comment
+      attachments is many Attachment
+      checklists is many Checklist
+      isArchived is Bool
+      createdBy is UUID
+      createdAt is Timestamp
+      updatedAt is Timestamp
+    } with {
+      briefly as "Record type containing card data"
       described by {
         | Defines the structure of a card including name, description,
         | position, labels, members, due date, and other components.
@@ -1472,10 +2077,10 @@
           if "listExists(command.listId)" then {
             // Generate a new card ID
             "const cardId = generateUUID()"
-            
+
             // Create the card
             morph entity Card to state CardData with command CreateCard
-            
+
             // Emit event
             tell event CardCreated to entity Card
           } else {
@@ -1488,7 +2093,7 @@
           if "cardExists(command.cardId)" then {
             // Update card details
             morph entity Card to state CardData with command UpdateCardDetails
-            
+
             // Emit event
             tell event CardDetailsUpdated to entity Card
           } else {
@@ -1496,1700 +2101,911 @@
           } end
         }
 
-        on command MoveCard is {
-          // Validate card and list exist
-          if "cardExists(command.cardId) && listExists(command.listId)" then {
-            // Get current list ID
-            "const fromListId = getCardListId(command.cardId)"
-            
-            // Move card
-            morph entity Card to state CardData with command MoveCard
-            
+        on command UpdateChecklist is {
+          // Validate card has the checklist
+          if "cardExists(command.cardId) && cardHasChecklist(command.cardId, command.checklistId)" then {
+            // Update checklist
+            morph entity Card to state CardData with command UpdateChecklist
+
             // Emit event
-            tell event CardMoved to entity Card
+            tell event CardChecklistUpdated to entity Card
           } else {
-            error "Card or list does not exist"
+            error "Card does not exist or does not have the checklist"
           } end
         }
 
-        on command AddLabel is {
-          // Validate card and label exist
-          if "cardExists(command.cardId) && labelExists(command.labelId)" then {
-            // Add label to card
-            morph entity Card to state CardData with command AddLabel
-            
+        on command RemoveChecklist is {
+          // Validate card has the checklist
+          if "cardExists(command.cardId) && cardHasChecklist(command.cardId, command.checklistId)" then {
+            // Remove checklist
+            morph entity Card to state CardData with command RemoveChecklist
+
             // Emit event
-            tell event CardLabelAdded to entity Card
+            tell event CardChecklistRemoved to entity Card
           } else {
-            error "Card or label does not exist"
+            error "Card does not exist or does not have the checklist"
           } end
         }
 
-        on command RemoveLabel is {
-          // Validate card has the label
-          if "cardExists(command.cardId) && cardHasLabel(command.cardId, command.labelId)" then {
-            // Remove label from card
-            morph entity Card to state CardData with command RemoveLabel
-            
+        on command AddChecklistItem is {
+          // Validate card has the checklist
+          if "cardExists(command.cardId) && cardHasChecklist(command.cardId, command.checklistId)" then {
+            // Generate a new item ID
+            "const itemId = generateUUID()"
+
+            // Add item to checklist
+            morph entity Card to state CardData with command AddChecklistItem
+
             // Emit event
-            tell event CardLabelRemoved to entity Card
+            tell event CardChecklistItemAdded to entity Card
           } else {
-            error "Card does not exist or does not have the label"
+            error "Card does not exist or does not have the checklist"
           } end
         }
 
-        on command AssignMember is {
-          // Validate card and user exist
-          if "cardExists(command.cardId) && userExists(command.userId)" then {
-            // Assign member to card
-            morph entity Card to state CardData with command AssignMember
-            
+        on command UpdateChecklistItem is {
+          // Validate card has the checklist item
+          if "cardExists(command.cardId) && cardHasChecklistItem(command.cardId, command.checklistId, command.itemId)" then {
+            // Update checklist item
+            morph entity Card to state CardData with command UpdateChecklistItem
+
             // Emit event
-            tell event CardMemberAssigned to entity Card
+            tell event CardChecklistItemUpdated to entity Card
           } else {
-            error "Card or user does not exist"
+            error "Card does not exist or does not have the checklist item"
           } end
         }
 
-        on command UnassignMember is {
-          // Validate card has the member
-          if "cardExists(command.cardId) && cardHasMember(command.cardId, command.userId)" then {
-            // Unassign member from card
-            morph entity Card to state CardData with command UnassignMember
-            
+        on command RemoveChecklistItem is {
+          // Validate card has the checklist item
+          if "cardExists(command.cardId) && cardHasChecklistItem(command.cardId, command.checklistId, command.itemId)" then {
+            // Remove checklist item
+            morph entity Card to state CardData with command RemoveChecklistItem
+
             // Emit event
-            tell event CardMemberUnassigned to entity Card
+            tell event CardChecklistItemRemoved to entity Card
           } else {
-            error "Card does not exist or does not have the member"
+            error "Card does not exist or does not have the checklist item"
           } end
         }
 
-        on command SetDueDate is {
+        on command ArchiveCard is {
           // Validate card exists
           if "cardExists(command.cardId)" then {
-            // Set card due date
-            morph entity Card to state CardData with command SetDueDate
-            
+            // Archive or restore card
+            morph entity Card to state CardData with command ArchiveCard
+
             // Emit event
-            tell event CardDueDateSet to entity Card
+            tell event CardArchived to entity Card
           } else {
             error "Card does not exist"
           } end
         }
-
-        on command AddComment is {
-          // Validate card and user exist
-          if "cardExists(command.cardId) && userExists(command.userId)" then {
-            // Generate a new comment ID
-            "const commentId = generateUUID()"
-            
-            // Add comment to card
-            morph entity Card to state CardData with command AddComment
-            
-            // Emit event
-            tell event CardCommentAdded to entity Card
-          } else {
-            error "Card or user does not exist"
-          } end
+      } with {
+        briefly as "Processes commands for card management"
+        described by {
+          | Handles commands related to card creation and management.
+          | Validates input data, updates card state, and emits relevant events.
         }
+      }
 
-        on command UpdateComment is {
-          // Validate card has the comment
-          if "cardExists(command.cardId) && cardHasComment(command.cardId, command.commentId)" then {
-            // Update comment
-            morph entity Card to state CardData with command UpdateComment
-            
-            // Emit event
-            tell event CardCommentUpdated to entity Card
-          } else {
-            error "Card does not exist or does not have the comment"
-          } end
-        }
-
-        on command DeleteComment is {
-          // Validate card has the comment
-          if "cardExists(command.cardId) && cardHasComment(command.cardId, command.commentId)" then {
-            // Delete comment
-            morph entity Card to state CardData with command DeleteComment
-            
-            // Emit event
-            tell event CardCommentDeleted to entity Card
-          } else {
-            error "Card does not exist or does not have the comment"
-          } end
-        }
-
-        on command AddAttachment is {
-          // Validate card exists
-          if "cardExists(command.cardId)" then {
-            // Generate a new attachment ID
-            "const attachmentId = generateUUID()"
-            
-            // Add attachment to card
-            morph entity Card to state CardData with command AddAttachment
-            
-            // Emit event
-            tell event CardAttachmentAdded to entity Card
-          } else {
-            error "Card does not exist"
-          } end
-        }
-
-        on command RemoveAttachment is {
-          // Validate card has the attachment
-          if "cardExists(command.cardId) && cardHasAttachment(command.cardId, command.attachmentId)" then {
-            // Remove attachment
-            morph entity Card to state CardData with command RemoveAttachment
-            
-            // Emit event
-            tell event CardAttachmentRemoved to entity Card
-          } else {
-            error "Card does not exist or does not have the attachment"
-          } end
-        }
-
-        on command AddChecklist is {
-          // Validate card exists
-          if "cardExists(command.cardId)" then {
-            // Generate a new checklist ID
-            "const checklistId = generateUUID()"
-            
-            // Add checklist to card
-            morph entity Card to state CardData with command Addomain TrelloSystem is {
-  author Modeler is {
-    name is "System Modeler"
-    email is "modeler@example.com"
-  } with {
-    briefly as "Model creator and maintainer"
-    described by {
-      | Primary architect responsible for designing this model based on
-      | Trello application requirements and workflow.
-    }
-  }
-
-  // Core Types
-  type UUID is UUID with {
-    briefly as "Unique identifier"
-    described by {
-      | Standard UUID format used to uniquely identify entities across the system.
-    }
-  }
-
-  type Email is Pattern("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$") with {
-    briefly as "Email address format"
-    described by {
-      | Represents a standard email address format used for user identification
-      | and communications.
-    }
-  }
-
-  type Title is String(1, 100) with {
-    briefly as "Title for boards, lists, and cards"
-    described by {
-      | A string between 1 and 100 characters representing a title or name.
-      | Used for boards, lists, cards, and other Trello elements.
-    }
-  }
-
-  type Description is String(0, 16384) with {
-    briefly as "Detailed description text"
-    described by {
-      | A string containing detailed description text.
-      | Can be empty or up to 16KB in length.
-    }
-  }
-
-  type Position is Real with {
-    briefly as "Relative position value"
-    described by {
-      | A floating-point number representing the relative position of an item.
-      | Used for ordering lists on boards and cards within lists.
-    }
-  }
-
-  type Color is Pattern("^#[0-9A-Fa-f]{6}$") with {
-    briefly as "Hexadecimal color code"
-    described by {
-      | A hexadecimal color code in the format #RRGGBB.
-      | Used for label colors and board backgrounds.
-    }
-  }
-
-  type Timestamp is String with {
-    briefly as "ISO format timestamp"
-    described by {
-      | ISO 8601 formatted timestamp for recording creation, updates, and deadlines.
-    }
-  }
-
-  type Bool is Boolean with {
-    briefly as "Boolean type for UI components"
-    described by {
-      | A wrapper for the predefined Boolean type, used for flags and UI states.
-    }
-  }
-
-  type Visibility is any of {
-    Private
-    TeamVisible
-    OrganizationVisible
-    Public
-  } with {
-    briefly as "Visibility options for boards"
-    described by {
-      | Defines the possible visibility settings for boards:
-      | - Private: Only visible to board members
-      | - TeamVisible: Visible to all team members
-      | - OrganizationVisible: Visible to the entire organization
-      | - Public: Visible to anyone with the link
-    }
-  }
-
-  // User definitions
-  user Member is "A Trello user who can create and interact with boards" with {
-    briefly as "Regular Trello user"
-    described by {
-      | A standard Trello user who can create boards, lists, and cards,
-      | and can be added to boards as a member.
-    }
-  }
-
-  user Admin is "A user with administrative privileges" with {
-    briefly as "Administrative user"
-    described by {
-      | A user with additional administrative privileges who can
-      | manage workspace settings and member permissions.
-    }
-  }
-
-  context UserManagement is {
-    // User profile record
-    type UserProfile is {
-      userId is UUID
-      username is String(1, 50)
-      email is Email
-      fullName is String(0, 100)
-      avatarUrl is String
-      bio is String(0, 500)
-      settings is UserSettings
     } with {
-      briefly as "User profile information"
+      briefly as "Represents a Trello card"
       described by {
-        | Contains all user profile information including
-        | identification, display preferences, and settings.
+        | The Card entity represents a task or item on a Trello board.
+        | It contains details such as title, description, due date, comments,
+        | checklists, attachments, and member assignments. Cards can be
+        | moved between lists and have their properties modified.
       }
     }
 
-    type UserSettings is {
-      emailNotifications is Bool
-      colorBlindMode is Bool
-      language is String(2, 5)
-      defaultBoardView is String(1, 20)
-    } with {
-      briefly as "User preference settings"
-      described by {
-        | User configurable settings and preferences that
-        | affect the display and behavior of the application.
-      }
-    }
+    // Board repository
+    repository BoardRepository is {
+      schema BoardData is relational of
+        board as Board
+        boardMembership as BoardMembershipRecord
+        link members as field Board.members to field User.userId
+        link workspace as field Board.workspaceId to field Workspace.workspaceId
+        link lists as field Board.lists to field List.listId
 
-    // User entity
-    entity User is {
-      state UserData of UserProfile with {
-        briefly as "User state containing profile information"
-        described by {
-          | Contains the complete user profile information including
-          | preferences and settings. This state is modified by
-          | profile updates and setting changes.
-        }
-      }
-
-      // Commands
-      command CreateUser is {
-        email is Email
-        username is String(1, 50)
-        fullName is String(0, 100)
-        password is String(8, 64)
-      } with {
-        briefly as "Command to create a new user"
-        described by {
-          | Creates a new user account with the provided email,
-          | username, full name, and password.
-        }
-      }
-
-      command UpdateProfile is {
-        userId is UUID
-        username is String(1, 50)
-        fullName is String(0, 100)
-        avatarUrl is String
-        bio is String(0, 500)
-      } with {
-        briefly as "Command to update user profile"
-        described by {
-          | Updates the user's profile information including
-          | username, full name, avatar, and bio.
-        }
-      }
-
-      command UpdateSettings is {
-        userId is UUID
-        settings is UserSettings
-      } with {
-        briefly as "Command to update user settings"
-        described by {
-          | Updates the user's application settings and preferences.
-        }
-      }
-
-      // Events
-      event UserCreated is {
-        userId is UUID
-        username is String(1, 50)
-        email is Email
-      } with {
-        briefly as "Event indicating a new user was created"
-        described by {
-          | Emitted when a new user account is successfully created.
-          | Contains the user's ID, username, and email for reference.
-        }
-      }
-
-      event ProfileUpdated is {
-        userId is UUID
-        username is String(1, 50)
-        fullName is String(0, 100)
-      } with {
-        briefly as "Event indicating profile information was updated"
-        described by {
-          | Emitted when a user's profile information is successfully updated.
-          | Contains the updated profile fields for UI updates.
-        }
-      }
-
-      event SettingsUpdated is {
-        userId is UUID
-      } with {
-        briefly as "Event indicating user settings were updated"
-        described by {
-          | Emitted when a user's application settings are successfully updated.
-        }
-      }
-
-      // Handler for processing commands
-      handler UserCommandHandler is {
-        on command CreateUser is {
-          // Create user with provided information
-          morph entity User to state UserData with command CreateUser
-          
-          // Emit event
-          tell event UserCreated to entity User
+      handler BoardRepositoryHandler is {
+        on event BoardCreated is {
+          write "Create new board record" to board
+          write "Create initial admin membership" to boardMembership
         }
 
-        on command UpdateProfile is {
-          // Validate user exists
-          if "userExists(command.userId)" then {
-            // Update user profile
-            morph entity User to state UserData with command UpdateProfile
-            
-            // Emit event
-            tell event ProfileUpdated to entity User
-          } else {
-            error "User does not exist"
-          } end
+        on event BoardUpdated is {
+          write "Update board details" to board
         }
 
-        on command UpdateSettings is {
-          // Validate user exists
-          if "userExists(command.userId)" then {
-            // Update user settings
-            morph entity User to state UserData with command UpdateSettings
-            
-            // Emit event
-            tell event SettingsUpdated to entity User
-          } else {
-            error "User does not exist"
-          } end
+        on event BoardStarred is {
+          write "Update board starred status" to board
+        }
+
+        on event BoardClosed is {
+          write "Update board closed status" to board
+        }
+
+        on event BoardMemberAdded is {
+          write "Add member to board" to boardMembership
+          write "Update board members list" to board
+        }
+
+        on event BoardMemberRemoved is {
+          write "Remove member from board" to boardMembership
+          write "Update board members list" to board
+        }
+
+        on event BoardMemberRoleUpdated is {
+          write "Update member role on board" to boardMembership
+        }
+
+        on event LabelCreated is {
+          write "Add label to board" to board
+        }
+
+        on event LabelUpdated is {
+          write "Update label on board" to board
+        }
+
+        on event LabelDeleted is {
+          write "Remove label from board" to board
         }
       } with {
-        briefly as "Processes commands for user management"
+        briefly as "Handles persistence of board events"
         described by {
-          | Handles commands related to user account creation and management.
-          | Validates input data, updates user state, and emits relevant events.
+          | Handles all event-driven persistence operations related to boards.
+          | Responds to board events by updating the persistent state of board records.
         }
       }
     } with {
-      briefly as "Represents a Trello user account"
+      briefly as "Persistent storage for board data"
       described by {
-        | The User entity represents a user account in the Trello system.
-        | It contains user profile information, preferences, and settings.
-        | Users can create and join boards, and interact with cards and lists.
+        | The BoardRepository provides persistent storage for board data,
+        | including board details, memberships, and relationships to users and lists.
       }
     }
 
-    // User repository
-    repository UserRepository is {
-      schema UserData is relational of
-        user as User
+    // List and Card repositories
+    repository ListRepository is {
+      schema ListData is relational of
+        list as List
+        link board as field List.boardId to field Board.boardId
+        link cards as field Card.listId to field List.listId
 
-      handler UserRepositoryHandler is {
-        on event UserCreated is {
-          write "Create new user record" to User
+      handler ListRepositoryHandler is {
+        on event ListCreated is {
+          write "Create new list record" to list
+          write "Update board lists" to board
         }
 
-        on event ProfileUpdated is {
-          write "Update user profile" to User
+        on event ListUpdated is {
+          write "Update list name" to list
         }
 
-        on event SettingsUpdated is {
-          write "Update user settings" to User
+        on event ListMoved is {
+          write "Update list position" to list
+        }
+
+        on event ListArchived is {
+          write "Update list archived status" to list
         }
       } with {
-        briefly as "Handles persistence of user events"
+        briefly as "Handles persistence of list events"
         described by {
-          | Handles all event-driven persistence operations related to users.
-          | Responds to user events by updating the persistent state of user records.
+          | Handles all event-driven persistence operations related to lists.
+          | Responds to list events by updating the persistent state of list records.
         }
       }
     } with {
-      briefly as "Persistent storage for user data"
+      briefly as "Persistent storage for list data"
       described by {
-        | The UserRepository provides persistent storage for user account data,
-        | including profile information and settings.
+        | The ListRepository provides persistent storage for list data,
+        | including list details and relationships to boards and cards.
       }
     }
-    
-    // Notification system
-    type NotificationRecord is {
-      notificationId is UUID
-      userId is UUID
-      entityType is String  // "card", "board", "comment", etc.
+
+    repository CardRepository is {
+      schema CardData is relational of
+        card as Card
+        link list as field Card.listId to field List.listId
+        link members as field Card.members to field User.userId
+        link labels as field Card.labels to field Label.labelId
+
+      handler CardRepositoryHandler is {
+        on event CardCreated is {
+          write "Create new card record" to card
+        }
+
+        on event CardDetailsUpdated is {
+          write "Update card details" to card
+        }
+
+        on event CardMoved is {
+          write "Update card list and position" to card
+        }
+
+        on event CardLabelAdded is {
+          write "Add label to card" to card
+        }
+
+        on event CardLabelRemoved is {
+          write "Remove label from card" to card
+        }
+
+        on event CardMemberAssigned is {
+          write "Assign member to card" to card
+        }
+
+        on event CardMemberUnassigned is {
+          write "Unassign member from card" to card
+        }
+
+        on event CardDueDateSet is {
+          write "Update card due date" to card
+        }
+
+        on event CardCommentAdded is {
+          write "Add comment to card" to card
+        }
+
+        on event CardCommentUpdated is {
+          write "Update card comment" to card
+        }
+
+        on event CardCommentDeleted is {
+          write "Delete comment from card" to card
+        }
+
+        on event CardAttachmentAdded is {
+          write "Add attachment to card" to card
+        }
+
+        on event CardAttachmentRemoved is {
+          write "Remove attachment from card" to card
+        }
+
+        on event CardChecklistAdded is {
+          write "Add checklist to card" to card
+        }
+
+        on event CardChecklistUpdated is {
+          write "Update card checklist" to card
+        }
+
+        on event CardChecklistRemoved is {
+          write "Remove checklist from card" to card
+        }
+
+        on event CardChecklistItemAdded is {
+          write "Add item to checklist" to card
+        }
+
+        on event CardChecklistItemUpdated is {
+          write "Update checklist item" to card
+        }
+
+        on event CardChecklistItemRemoved is {
+          write "Remove item from checklist" to card
+        }
+
+        on event CardArchived is {
+          write "Update card archived status" to card
+        }
+      } with {
+        briefly as "Handles persistence of card events"
+        described by {
+          | Handles all event-driven persistence operations related to cards.
+          | Responds to card events by updating the persistent state of card records.
+        }
+      }
+    } with {
+      briefly as "Persistent storage for card data"
+      described by {
+        | The CardRepository provides persistent storage for card data,
+        | including card details, comments, attachments, checklists, and
+        | relationships to lists, labels, and members.
+      }
+    }
+
+    // Activity tracking system
+    type ActivityRecord is {
+      activityId is UUID
+      entityType is String  // "board", "list", "card", etc.
       entityId is UUID
       action is String      // "created", "moved", "commented", etc.
-      actorId is UUID       // User who performed the action
-      isRead is Bool
+      details is String
+      userId is UUID        // User who performed the action
       createdAt is Timestamp
     } with {
-      briefly as "Record type for user notifications"
+      briefly as "Record type for activity tracking"
       described by {
-        | Defines the structure of a notification, including the target user,
-        | the entity affected, the action performed, and who performed it.
+        | Defines the structure of an activity log entry, including the entity affected,
+        | the action performed, additional details, and who performed it.
       }
     }
-    
-    entity Notification is {
-      state NotificationData of NotificationRecord with {
-        briefly as "Notification state containing all notification information"
+
+    entity Activity is {
+      state ActivityData of ActivityRecord with {
+        briefly as "Activity state containing all activity information"
         described by {
-          | Contains complete notification information including the target user,
-          | the entity affected, the action performed, and read status.
+          | Contains complete activity information including the entity affected,
+          | the action performed, additional details, and who performed it.
         }
       }
-      
+
       // Commands
-      command CreateNotification is {
-        userId is UUID
+      command LogActivity is {
         entityType is String
         entityId is UUID
         action is String
-        actorId is UUID
-      } with {
-        briefly as "Command to create a new notification"
-        described by {
-          | Creates a new notification for a user regarding an action performed on an entity.
-        }
-      }
-      
-      command MarkAsRead is {
-        notificationId is UUID
-      } with {
-        briefly as "Command to mark a notification as read"
-        described by {
-          | Marks a notification as having been read by the user.
-        }
-      }
-      
-      command MarkAllAsRead is {
+        details is String
         userId is UUID
       } with {
-        briefly as "Command to mark all notifications for a user as read"
+        briefly as "Command to log an activity"
         described by {
-          | Marks all of a user's unread notifications as read.
+          | Records an activity performed by a user on an entity.
         }
       }
-      
+
       // Events
-      event NotificationCreated is {
-        notificationId is UUID
-        userId is UUID
+      event ActivityLogged is {
+        activityId is UUID
         entityType is String
         entityId is UUID
         action is String
-      } with {
-        briefly as "Event indicating a new notification was created"
-        described by {
-          | Emitted when a new notification is created for a user.
-          | Contains the notification details for UI updates.
-        }
-      }
-      
-      event NotificationRead is {
-        notificationId is UUID
-      } with {
-        briefly as "Event indicating a notification was marked as read"
-        described by {
-          | Emitted when a notification is marked as read.
-        }
-      }
-      
-      event AllNotificationsRead is {
         userId is UUID
       } with {
-        briefly as "Event indicating all notifications for a user were marked as read"
+        briefly as "Event indicating an activity was logged"
         described by {
-          | Emitted when all of a user's notifications are marked as read.
+          | Emitted when an activity is successfully logged.
+          | Contains the basic activity details.
         }
       }
-      
+
       // Handler for processing commands
-      handler NotificationCommandHandler is {
-        on command CreateNotification is {
-          // Generate a new notification ID
-          "const notificationId = generateUUID()"
-          
-          // Create the notification
-          morph entity Notification to state NotificationData with command CreateNotification
-          
+      handler ActivityCommandHandler is {
+        on command LogActivity is {
+          // Generate a new activity ID
+          "const activityId = generateUUID()"
+
+          // Log the activity
+          morph entity Activity to state ActivityData with command LogActivity
+
           // Emit event
-          tell event NotificationCreated to entity Notification
-        }
-        
-        on command MarkAsRead is {
-          // Validate notification exists
-          if "notificationExists(command.notificationId)" then {
-            // Mark notification as read
-            morph entity Notification to state NotificationData with command MarkAsRead
-            
-            // Emit event
-            tell event NotificationRead to entity Notification
-          } else {
-            error "Notification does not exist"
-          } end
-        }
-        
-        on command MarkAllAsRead is {
-          // Validate user exists
-          if "userExists(command.userId)" then {
-            // Mark all notifications as read
-            morph entity Notification to state NotificationData with command MarkAllAsRead
-            
-            // Emit event
-            tell event AllNotificationsRead to entity Notification
-          } else {
-            error "User does not exist"
-          } end
+          tell event ActivityLogged to entity Activity
         }
       } with {
-        briefly as "Processes commands for notification management"
+        briefly as "Processes commands for activity logging"
         described by {
-          | Handles commands related to notification creation and status updates.
-          | Validates input data, updates notification state, and emits relevant events.
+          | Handles commands related to activity tracking.
+          | Validates input data, updates activity state, and emits relevant events.
         }
       }
     } with {
-      briefly as "Represents a user notification"
+      briefly as "Represents an activity log entry"
       described by {
-        | The Notification entity represents an alert or message for a user
-        | about actions performed on boards, lists, or cards they are involved with.
-        | Notifications can be created, read, and aggregated by user.
+        | The Activity entity represents a record of an action performed by a user
+        | on a board, list, card, or other entity. Activities are used to provide
+        | a history of changes and to generate notifications.
       }
     }
-    
-    repository NotificationRepository is {
-      schema NotificationData is relational of
-        notification as Notification
-        link user as field Notification.userId to field User.userId
-        
-      handler NotificationRepositoryHandler is {
-        on event NotificationCreated is {
-          write "Create new notification record" to notification
-        }
-        
-        on event NotificationRead is {
-          write "Update notification read status" to notification
-        }
-        
-        on event AllNotificationsRead is {
-          write "Update read status for all user notifications" to notification
+
+    repository ActivityRepository is {
+      schema ActivityData is relational of
+        activity as Activity
+        link user as field Activity.userId to field User.userId
+
+      handler ActivityRepositoryHandler is {
+        on event ActivityLogged is {
+          write "Create new activity record" to activity
         }
       } with {
-        briefly as "Handles persistence of notification events"
+        briefly as "Handles persistence of activity events"
         described by {
-          | Handles all event-driven persistence operations related to notifications.
-          | Responds to notification events by updating the persistent state of notification records.
+          | Handles all event-driven persistence operations related to activities.
+          | Responds to activity events by updating the persistent state of activity records.
         }
       }
     } with {
-      briefly as "Persistent storage for notification data"
+      briefly as "Persistent storage for activity data"
       described by {
-        | The NotificationRepository provides persistent storage for notification data,
-        | including notification details and relationships to users.
+        | The ActivityRepository provides persistent storage for activity data,
+        | including activity details and relationships to users and entities.
+      }
+    }
+
+    // Define a saga for card movement with notifications
+    saga CardMovementProcess is {
+      requires {
+        cardId is UUID
+        fromListId is UUID
+        toListId is UUID
+        position is Position
+        userId is UUID  // User performing the action
+      }
+
+      returns {
+        success is Bool
+        message is String
+      }
+
+      step MoveCard is {
+        // Send command to move the card
+        tell command MoveCard to entity Card
+      } reverted by {
+        // Move card back to original list if later steps fail
+        tell command MoveCard to entity Card
+      } with {
+        briefly as "Moves a card to a different list"
+        described by {
+          | Sends the command to move a card from one list to another.
+          | This is the primary action of the saga.
+        }
+      }
+
+      step LogActivity is {
+        // Log the card movement as an activity
+        tell command LogActivity to entity Activity
+      } reverted by {
+        // Nothing to revert for logging
+      } with {
+        briefly as "Logs the card movement activity"
+        described by {
+          | Records the action of moving a card in the activity history.
+        }
+      }
+
+      step NotifyAssignedMembers is {
+        // Get all members assigned to the card
+        foreach field Card.members do {
+          // Create notification for each assigned member
+          tell command CreateNotification to entity Notification
+        } end
+      } reverted by {
+        // Nothing to revert for notifications
+      } with {
+        briefly as "Notifies all members assigned to the card"
+        described by {
+          | Creates notifications for all users assigned to the card
+          | to inform them about the card movement.
+        }
+      }
+    } with {
+      briefly as "Orchestrates the process of moving a card"
+      described by {
+        | This saga coordinates the multi-step process of moving a card from one list
+        | to another, including updating the card's position, logging the activity,
+        | and notifying relevant users. It includes compensation actions to ensure
+        | consistency if later steps fail.
       }
     }
   } with {
-    briefly as "User management and authentication context"
+    briefly as "Board management context"
     described by {
-      | The UserManagement context handles user account management,
-      | including registration, authentication, and profile management.
-      | It contains entities and processes related to user identity and access,
-      | as well as notifications to keep users informed of relevant updates.
+      | The BoardManagement context handles the creation and management of boards,
+      | lists, cards, and their components. It includes entities for tracking board
+      | membership, list ordering, card details, comments, attachments, labels,
+      | and activity history.
     }
   }
 
-  context WorkspaceManagement is {
-    // Workspace Record Type
-    type WorkspaceRecord is {
-      workspaceId is UUID
-      name is Title
-      description is Description
-      visibility is Visibility
-      members is many UUID  // User IDs
-      boards is many UUID   // Board IDs
-      createdBy is UUID     // User ID
-      createdAt is Timestamp
-      updatedAt is Timestamp
+  context UserInterface is {
+    // Common UI components
+    type ActionResult is {
+      success is Bool
+      message is String
     } with {
-      briefly as "Record type containing workspace data"
+      briefly as "Result of UI actions"
       described by {
-        | Defines the structure of a workspace including name, description, 
-        | visibility settings, members, and associated boards.
+        | Standard response type for UI actions, indicating success
+        | or failure and providing a message.
       }
     }
 
-    // Workspace membership record
-    type MembershipRecord is {
-      userId is UUID
-      workspaceId is UUID
-      role is any of {
-        Admin
-        Normal
-        Observer
-      }
-      joinedAt is Timestamp
-    } with {
-      briefly as "Record for workspace membership details"
+    // UI Components for Workspaces
+    page WorkspacesList is { ??? } with {
+      briefly as "Page showing all workspaces"
       described by {
-        | Contains the details of a user's membership in a workspace,
-        | including their role and when they joined.
+        | Displays all workspaces the user is a member of, with options
+        | to create new workspaces or open existing ones.
       }
     }
 
-    // Workspace Entity
-    entity Workspace is {
-      state WorkspaceData of WorkspaceRecord with {
-        briefly as "Workspace state containing all workspace information"
+    page WorkspaceSettings is { ??? } with {
+      briefly as "Page for managing workspace settings"
+      described by {
+        | Allows users to update workspace details, manage members,
+        | and configure workspace-level settings.
+      }
+    }
+
+    // UI Components for Boards
+    page BoardsList is { ??? } with {
+      briefly as "Page showing all boards in a workspace"
+      described by {
+        | Displays all boards within a workspace, with options to
+        | create new boards or open existing ones.
+      }
+    }
+
+    page BoardView is {
+      button AddList activates type Bool with {
+        briefly as "Button to add a new list"
         described by {
-          | Contains complete workspace information including name, 
-          | visibility settings, members, and associated boards.
+          | Button that opens a form to create a new list on the board.
         }
       }
 
-      // Commands
-      command CreateWorkspace is {
-        name is Title
+      form NewList submits type Title with {
+        briefly as "Form for creating a new list"
+        described by {
+          | Collects the name for a new list to be created on the board.
+        }
+      }
+
+      button AddCard activates type Bool with {
+        briefly as "Button to add a new card"
+        described by {
+          | Button that opens a form to create a new card in a list.
+        }
+      }
+
+      form NewCard submits type Title with {
+        briefly as "Form for creating a new card"
+        described by {
+          | Collects the title for a new card to be created in a list.
+        }
+      }
+    } with {
+      briefly as "Main board view with lists and cards"
+      described by {
+        | The primary interface for interacting with a board, showing all lists
+        | and cards horizontally. Allows for creating, moving, and managing lists and cards.
+      }
+    }
+
+    page BoardSettings is { ??? } with {
+      briefly as "Page for managing board settings"
+      described by {
+        | Allows users to update board details, manage members and labels,
+        | and configure board-level settings.
+      }
+    }
+
+    // UI Components for Cards
+    page CardDetail is {
+      form CardTitleDescription submits type {
+        title is Title
         description is Description
-        visibility is Visibility
-        createdBy is UUID
       } with {
-        briefly as "Command to create a new workspace"
+        briefly as "Form for editing card title and description"
         described by {
-          | Creates a new workspace with the provided name, description,
-          | and visibility settings. The creator becomes the initial admin.
+          | Allows editing the basic details of a card.
         }
       }
 
-      command UpdateWorkspace is {
-        workspaceId is UUID
-        name is Title
-        description is Description
-        visibility is Visibility
-      } with {
-        briefly as "Command to update workspace details"
+      button AddMember activates type Bool with {
+        briefly as "Button to add members to a card"
         described by {
-          | Updates the details of an existing workspace including
-          | name, description, and visibility settings.
+          | Opens a member selection interface to assign users to the card.
         }
       }
 
-      command AddMember is {
-        workspaceId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Command to add a member to a workspace"
+      button AddLabel activates type Bool with {
+        briefly as "Button to add labels to a card"
         described by {
-          | Adds a user to a workspace with the specified role.
+          | Opens a label selection interface to tag the card with labels.
         }
       }
 
-      command RemoveMember is {
-        workspaceId is UUID
-        userId is UUID
-      } with {
-        briefly as "Command to remove a member from a workspace"
+      button AddChecklist activates type Bool with {
+        briefly as "Button to add a checklist to a card"
         described by {
-          | Removes a user from a workspace.
+          | Opens a form to create a new checklist on the card.
         }
       }
 
-      command UpdateMemberRole is {
-        workspaceId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Command to update a member's role in a workspace"
+      form NewComment submits type String with {
+        briefly as "Form for adding a comment to a card"
         described by {
-          | Updates the role of an existing workspace member.
+          | Collects text for a new comment to be added to the card.
         }
       }
 
-      // Events
-      event WorkspaceCreated is {
-        workspaceId is UUID
-        name is Title
-        createdBy is UUID
-      } with {
-        briefly as "Event indicating a new workspace was created"
+      form DueDate submits type Timestamp with {
+        briefly as "Form for setting a due date"
         described by {
-          | Emitted when a new workspace is successfully created.
-          | Contains the workspace ID, name, and creator ID.
+          | Allows setting or updating the due date for a card.
         }
       }
 
-      event WorkspaceUpdated is {
-        workspaceId is UUID
-        name is Title
-        visibility is Visibility
-      } with {
-        briefly as "Event indicating workspace details were updated"
+      button AttachFile activates type Bool with {
+        briefly as "Button to attach a file"
         described by {
-          | Emitted when workspace details are successfully updated.
-          | Contains the updated workspace information.
+          | Opens a file selector to attach files to the card.
         }
       }
 
-      event MemberAdded is {
-        workspaceId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Event indicating a member was added to a workspace"
+      button MoveCard activates type Bool with {
+        briefly as "Button to move a card"
         described by {
-          | Emitted when a user is successfully added to a workspace.
-          | Contains the user ID, workspace ID, and assigned role.
+          | Opens an interface to select a new list for the card.
         }
       }
 
-      event MemberRemoved is {
-        workspaceId is UUID
-        userId is UUID
-      } with {
-        briefly as "Event indicating a member was removed from a workspace"
+      button ArchiveCard activates type Bool with {
+        briefly as "Button to archive a card"
         described by {
-          | Emitted when a user is successfully removed from a workspace.
-          | Contains the user ID and workspace ID.
-        }
-      }
-
-      event MemberRoleUpdated is {
-        workspaceId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Event indicating a member's role was updated"
-        described by {
-          | Emitted when a member's role in a workspace is successfully updated.
-          | Contains the user ID, workspace ID, and new role.
-        }
-      }
-
-      // Handler for processing commands
-      handler WorkspaceCommandHandler is {
-        on command CreateWorkspace is {
-          // Generate a new workspace ID
-          "const workspaceId = generateUUID()"
-          
-          // Create the workspace
-          morph entity Workspace to state WorkspaceData with command CreateWorkspace
-          
-          // Emit event
-          tell event WorkspaceCreated to entity Workspace
-        }
-
-        on command UpdateWorkspace is {
-          // Validate workspace exists
-          if "workspaceExists(command.workspaceId)" then {
-            // Update workspace
-            morph entity Workspace to state WorkspaceData with command UpdateWorkspace
-            
-            // Emit event
-            tell event WorkspaceUpdated to entity Workspace
-          } else {
-            error "Workspace does not exist"
-          } end
-        }
-
-        on command AddMember is {
-          // Validate workspace and user exist
-          if "workspaceExists(command.workspaceId) && userExists(command.userId)" then {
-            // Add member to workspace
-            morph entity Workspace to state WorkspaceData with command AddMember
-            
-            // Emit event
-            tell event MemberAdded to entity Workspace
-          } else {
-            error "Workspace or user does not exist"
-          } end
-        }
-
-        on command RemoveMember is {
-          // Validate workspace and membership exist
-          if "workspaceExists(command.workspaceId) && membershipExists(command.workspaceId, command.userId)" then {
-            // Remove member from workspace
-            morph entity Workspace to state WorkspaceData with command RemoveMember
-            
-            // Emit event
-            tell event MemberRemoved to entity Workspace
-          } else {
-            error "Workspace or membership does not exist"
-          } end
-        }
-
-        on command UpdateMemberRole is {
-          // Validate workspace and membership exist
-          if "workspaceExists(command.workspaceId) && membershipExists(command.workspaceId, command.userId)" then {
-            // Update member role
-            morph entity Workspace to state WorkspaceData with command UpdateMemberRole
-            
-            // Emit event
-            tell event MemberRoleUpdated to entity Workspace
-          } else {
-            error "Workspace or membership does not exist"
-          } end
-        }
-      } with {
-        briefly as "Processes commands for workspace management"
-        described by {
-          | Handles commands related to workspace creation and management.
-          | Validates input data, updates workspace state, and emits relevant events.
+          | Archives the current card, removing it from the board view.
         }
       }
     } with {
-      briefly as "Represents a Trello workspace"
+      briefly as "Detailed card view"
       described by {
-        | The Workspace entity represents a collection of boards shared by a group of users.
-        | It contains settings for visibility and member access,
-        | and serves as a container for related boards.
+        | Modal interface showing all details of a card and providing
+        | options to edit, move, and manage the card and its components.
       }
     }
 
-    // Workspace repository
-    repository WorkspaceRepository is {
-      schema WorkspaceData is relational of
-        workspace as Workspace
-        membership as MembershipRecord
-        link members as field Workspace.members to field User.userId
-        link boards as field Workspace.boards to field Board.boardId
-
-      handler WorkspaceRepositoryHandler is {
-        on event WorkspaceCreated is {
-          write "Create new workspace record" to workspace
-          write "Create initial admin membership" to membership
-        }
-
-        on event WorkspaceUpdated is {
-          write "Update workspace details" to workspace
-        }
-
-        on event MemberAdded is {
-          write "Add member to workspace" to membership
-          write "Update workspace members list" to workspace
-        }
-
-        on event MemberRemoved is {
-          write "Remove member from workspace" to membership
-          write "Update workspace members list" to workspace
-        }
-
-        on event MemberRoleUpdated is {
-          write "Update member role in workspace" to membership
-        }
-      } with {
-        briefly as "Handles persistence of workspace events"
-        described by {
-          | Handles all event-driven persistence operations related to workspaces.
-          | Responds to workspace events by updating the persistent state of workspace records.
-        }
-      }
-    } with {
-      briefly as "Persistent storage for workspace data"
+    // UI Components for User
+    page UserProfile is { ??? } with {
+      briefly as "User profile page"
       described by {
-        | The WorkspaceRepository provides persistent storage for workspace data,
-        | including workspace details, memberships, and relationships to boards.
+        | Displays and allows editing of user profile information,
+        | preferences, and settings.
+      }
+    }
+
+    page Notifications is { ??? } with {
+      briefly as "Notifications page"
+      described by {
+        | Shows all notifications for the user, with options to
+        | mark them as read or navigate to the related content.
+      }
+    }
+
+  } with {
+    briefly as "User interface components for the system"
+    described by {
+      | Contains all UI components used in the Trello system, including
+      | workspace management, board views, card details, and user interfaces.
+    }
+  }
+
+  // Epics for user stories
+  epic BoardManagementEpic is {
+    user Member wants to "create and manage boards" so that "they can organize their work"
+
+    case CreateBoard is {
+      user Member wants to "create a new board" so that "they can start organizing tasks"
+
+      step from user Member "views" page UserInterface.WorkspacesList
+      step from user Member "clicks" button Create
+      step send command CreateBoard from user Member to entity Board
+      step from entity Board "processes" to page UserInterface.BoardView
+      step focus user Member on page UserInterface.BoardView
+    } with {
+      briefly as "Creating a new board"
+      described by {
+        | This use case describes the process of a member creating a new board
+        | within a workspace, which they can then populate with lists and cards.
+      }
+    }
+
+    case AddList is {
+      user Member wants to "add a list to a board" so that "they can organize cards by category"
+
+      step from user Member "views" page UserInterface.BoardView
+      step from user Member "clicks" button UserInterface.BoardView.AddList
+      step from user Member "submits" form UserInterface.BoardView.NewList
+      step send command CreateList from form UserInterface.BoardView.NewList to entity List
+      step from entity List "updates" to page UserInterface.BoardView
+      step focus user Member on page UserInterface.BoardView
+    } with {
+      briefly as "Adding a new list to a board"
+      described by {
+        | This use case describes the process of a member adding a new list
+        | to an existing board to organize cards into categories.
+      }
+    }
+
+    case AddCard is {
+      user Member wants to "add a card to a list" so that "they can track a specific task"
+
+      step from user Member "views" page UserInterface.BoardView
+      step from user Member "clicks" button UserInterface.BoardView.AddCard
+      step from user Member "submits" form UserInterface.BoardView.NewCard
+      step send command CreateCard from form UserInterface.BoardView.NewCard to entity Card
+      step from entity Card "updates" to page UserInterface.BoardView
+      step focus user Member on page UserInterface.BoardView
+    } with {
+      briefly as "Adding a new card to a list"
+      described by {
+        | This use case describes the process of a member adding a new card
+        | to a list to represent a task or item to be tracked.
+      }
+    }
+
+    case MoveCard is {
+      user Member wants to "move a card to a different list" so that "they can update its status"
+
+      step from user Member "views" page UserInterface.BoardView
+      step from user Member "drags" card
+      step from user Member "drops" card on list
+      step send command MoveCard from user Member to entity Card
+      step from entity Card "processes" to saga CardMovementProcess
+      step from saga CardMovementProcess "updates" to page UserInterface.BoardView
+      step focus user Member on page UserInterface.BoardView
+    } with {
+      briefly as "Moving a card between lists"
+      described by {
+        | This use case describes the process of a member moving a card
+        | from one list to another, typically to update its status.
       }
     }
   } with {
-    briefly as "Workspace management context"
+    briefly as "User stories related to board management"
     described by {
-      | The WorkspaceManagement context handles the creation and management of workspaces,
-      | which serve as containers for boards and define user access permissions.
+      | This epic covers the core board management functionality, including
+      | creating boards, adding lists and cards, and moving cards between lists.
+      | These features enable users to organize and track their work.
     }
   }
 
-  context BoardManagement is {
-    // Label record
-    type Label is {
-      labelId is UUID
-      name is String(0, 50)
-      color is Color
+  epic CardDetailEpic is {
+    user Member wants to "manage card details" so that "they can track task information"
+
+    case EditCardDetails is {
+      user Member wants to "edit card details" so that "they can provide more information"
+
+      step from user Member "views" page UserInterface.BoardView
+      step from user Member "clicks" on card
+      step focus user Member on page UserInterface.CardDetail
+      step from user Member "edits" form UserInterface.CardDetail.CardTitleDescription
+      step send command UpdateCardDetails from form UserInterface.CardDetail.CardTitleDescription to entity Card
+      step from entity Card "updates" to page UserInterface.CardDetail
+      step focus user Member on page UserInterface.CardDetail
     } with {
-      briefly as "Record for board label"
+      briefly as "Editing card details"
       described by {
-        | Defines a label that can be applied to cards,
-        | consisting of a name and color.
+        | This use case describes the process of a member editing the
+        | title and description of a card to provide more information.
       }
     }
 
-    // Board Record Type
-    type BoardRecord is {
-      boardId is UUID
-      workspaceId is UUID
-      name is Title
-      description is Description
-      visibility is Visibility
-      background is any of {
-        Color
-        ImageUrl is String
-      }
-      members is many UUID
-      labels is many Label
-      lists is many UUID
-      createdBy is UUID
-      createdAt is Timestamp
-      updatedAt is Timestamp
-      isStarred is Bool
-      isClosed is Bool
+    case AddComment is {
+      user Member wants to "add a comment to a card" so that "they can provide updates or feedback"
+
+      step from user Member "views" page UserInterface.CardDetail
+      step from user Member "submits" form UserInterface.CardDetail.NewComment
+      step send command AddComment from form UserInterface.CardDetail.NewComment to entity Card
+      step from entity Card "updates" to page UserInterface.CardDetail
+      step focus user Member on page UserInterface.CardDetail
     } with {
-      briefly as "Record type containing board data"
+      briefly as "Adding a comment to a card"
       described by {
-        | Defines the structure of a board including name, description,
-        | visibility, background, members, and associated lists.
+        | This use case describes the process of a member adding a comment
+        | to a card to provide updates, feedback, or additional information.
       }
     }
 
-    // Board membership record
-    type BoardMembershipRecord is {
-      userId is UUID
-      boardId is UUID
-      role is any of {
-        Admin
-        Normal
-        Observer
-      }
-      joinedAt is Timestamp
+    case AssignMember is {
+      user Member wants to "assign a member to a card" so that "responsibility is clear"
+
+      step from user Member "views" page UserInterface.CardDetail
+      step from user Member "clicks" button UserInterface.CardDetail.AddMember
+      step from user Member "selects" member
+      step send command AssignMember from user Member to entity Card
+      step from entity Card "updates" to page UserInterface.CardDetail
+      step focus user Member on page UserInterface.CardDetail
     } with {
-      briefly as "Record for board membership details"
+      briefly as "Assigning a member to a card"
       described by {
-        | Contains the details of a user's membership on a board,
-        | including their role and when they joined.
+        | This use case describes the process of a member assigning another member
+        | (or themselves) to a card to indicate responsibility for the task.
       }
     }
 
-    // Board Entity
-    entity Board is {
-      state BoardData of BoardRecord with {
-        briefly as "Board state containing all board information"
-        described by {
-          | Contains complete board information including name,
-          | visibility settings, members, lists, and labels.
-        }
-      }
+    case AddChecklist is {
+      user Member wants to "add a checklist to a card" so that "they can track subtasks"
 
-      // Commands
-      command CreateBoard is {
-        name is Title
-        description is Description
-        workspaceId is UUID
-        visibility is Visibility
-        background is any of {
-          Color
-          ImageUrl is String
-        }
-        createdBy is UUID
-      } with {
-        briefly as "Command to create a new board"
-        described by {
-          | Creates a new board with the provided name, description,
-          | workspace, visibility, and background. The creator becomes the initial admin.
-        }
-      }
-
-      command UpdateBoard is {
-        boardId is UUID
-        name is Title
-        description is Description
-        visibility is Visibility
-        background is any of {
-          Color
-          ImageUrl is String
-        }
-      } with {
-        briefly as "Command to update board details"
-        described by {
-          | Updates the details of an existing board including
-          | name, description, visibility, and background.
-        }
-      }
-
-      command StarBoard is {
-        boardId is UUID
-        userId is UUID
-        isStarred is Bool
-      } with {
-        briefly as "Command to star or unstar a board"
-        described by {
-          | Marks a board as starred or unstarred for a specific user.
-        }
-      }
-
-      command CloseBoard is {
-        boardId is UUID
-        isClosed is Bool
-      } with {
-        briefly as "Command to close or reopen a board"
-        described by {
-          | Marks a board as closed or reopens it.
-        }
-      }
-
-      command AddBoardMember is {
-        boardId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Command to add a member to a board"
-        described by {
-          | Adds a user to a board with the specified role.
-        }
-      }
-
-      command RemoveBoardMember is {
-        boardId is UUID
-        userId is UUID
-      } with {
-        briefly as "Command to remove a member from a board"
-        described by {
-          | Removes a user from a board.
-        }
-      }
-
-      command UpdateBoardMemberRole is {
-        boardId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Command to update a member's role on a board"
-        described by {
-          | Updates the role of an existing board member.
-        }
-      }
-
-      command CreateLabel is {
-        boardId is UUID
-        name is String(0, 50)
-        color is Color
-      } with {
-        briefly as "Command to create a new label"
-        described by {
-          | Creates a new label with the provided name and color.
-        }
-      }
-
-      command UpdateLabel is {
-        boardId is UUID
-        labelId is UUID
-        name is String(0, 50)
-        color is Color
-      } with {
-        briefly as "Event indicating a label was updated"
-        described by {
-          | Emitted when a label is successfully updated.
-          | Contains the updated label information.
-        }
-      }
-
-      event LabelDeleted is {
-        boardId is UUID
-        labelId is UUID
-      } with {
-        briefly as "Event indicating a label was deleted"
-        described by {
-          | Emitted when a label is successfully deleted from a board.
-          | Contains the board ID and label ID.
-        }
-      }
-
-      // Handler for processing commands
-      handler BoardCommandHandler is {
-        on command CreateBoard is {
-          // Generate a new board ID
-          "const boardId = generateUUID()"
-          
-          // Create the board
-          morph entity Board to state BoardData with command CreateBoard
-          
-          // Emit event
-          tell event BoardCreated to entity Board
-        }
-
-        on command UpdateBoard is {
-          // Validate board exists
-          if "boardExists(command.boardId)" then {
-            // Update board
-            morph entity Board to state BoardData with command UpdateBoard
-            
-            // Emit event
-            tell event BoardUpdated to entity Board
-          } else {
-            error "Board does not exist"
-          } end
-        }
-
-        on command StarBoard is {
-          // Validate board exists
-          if "boardExists(command.boardId) && userExists(command.userId)" then {
-            // Update board starred status
-            morph entity Board to state BoardData with command StarBoard
-            
-            // Emit event
-            tell event BoardStarred to entity Board
-          } else {
-            error "Board or user does not exist"
-          } end
-        }
-
-        on command CloseBoard is {
-          // Validate board exists
-          if "boardExists(command.boardId)" then {
-            // Update board closed status
-            morph entity Board to state BoardData with command CloseBoard
-            
-            // Emit event
-            tell event BoardClosed to entity Board
-          } else {
-            error "Board does not exist"
-          } end
-        }
-
-        on command AddBoardMember is {
-          // Validate board and user exist
-          if "boardExists(command.boardId) && userExists(command.userId)" then {
-            // Add member to board
-            morph entity Board to state BoardData with command AddBoardMember
-            
-            // Emit event
-            tell event BoardMemberAdded to entity Board
-          } else {
-            error "Board or user does not exist"
-          } end
-        }
-
-        on command RemoveBoardMember is {
-          // Validate board and membership exist
-          if "boardExists(command.boardId) && boardMembershipExists(command.boardId, command.userId)" then {
-            // Remove member from board
-            morph entity Board to state BoardData with command RemoveBoardMember
-            
-            // Emit event
-            tell event BoardMemberRemoved to entity Board
-          } else {
-            error "Board or membership does not exist"
-          } end
-        }
-
-        on command UpdateBoardMemberRole is {
-          // Validate board and membership exist
-          if "boardExists(command.boardId) && boardMembershipExists(command.boardId, command.userId)" then {
-            // Update member role
-            morph entity Board to state BoardData with command UpdateBoardMemberRole
-            
-            // Emit event
-            tell event BoardMemberRoleUpdated to entity Board
-          } else {
-            error "Board or membership does not exist"
-          } end
-        }
-
-        on command CreateLabel is {
-          // Validate board exists
-          if "boardExists(command.boardId)" then {
-            // Generate a new label ID
-            "const labelId = generateUUID()"
-            
-            // Create the label
-            morph entity Board to state BoardData with command CreateLabel
-            
-            // Emit event
-            tell event LabelCreated to entity Board
-          } else {
-            error "Board does not exist"
-          } end
-        }
-
-        on command UpdateLabel is {
-          // Validate board and label exist
-          if "boardExists(command.boardId) && labelExists(command.boardId, command.labelId)" then {
-            // Update label
-            morph entity Board to state BoardData with command UpdateLabel
-            
-            // Emit event
-            tell event LabelUpdated to entity Board
-          } else {
-            error "Board or label does not exist"
-          } end
-        }
-
-        on command DeleteLabel is {
-          // Validate board and label exist
-          if "boardExists(command.boardId) && labelExists(command.boardId, command.labelId)" then {
-            // Delete label
-            morph entity Board to state BoardData with command DeleteLabel
-            
-            // Emit event
-            tell event LabelDeleted to entity Board
-          } else {
-            error "Board or label does not exist"
-          } end
-        }
-      } with {
-        briefly as "Processes commands for board management"
-        described by {
-          | Handles commands related to board creation and management.
-          | Validates input data, updates board state, and emits relevant events.
-        }
-      }
+      step from user Member "views" page UserInterface.CardDetail
+      step from user Member "clicks" button UserInterface.CardDetail.AddChecklist
+      step from user Member "enters" checklist name
+      step send command AddChecklist from user Member to entity Card
+      step from entity Card "updates" to page UserInterface.CardDetail
+      step focus user Member on page UserInterface.CardDetail
     } with {
-      briefly as "Represents a Trello board"
+      briefly as "Adding a checklist to a card"
       described by {
-        | The Board entity represents a workspace where users organize cards into lists.
-        | It contains settings for visibility, background, members, and labels,
-        | and serves as a container for lists and cards.
+        | This use case describes the process of a member adding a checklist
+        | to a card to track subtasks or steps required to complete the task.
       }
     }
 
-    // Now adding List and Card entities
-    type ListRecord is {
-      listId is UUID
-      boardId is UUID
-      name is Title
-      position is Position
-      createdAt is Timestamp
-      updatedAt is Timestamp
-      isArchived is Bool
+    case SetDueDate is {
+      user Member wants to "set a due date for a card" so that "they can track deadlines"
+
+      step from user Member "views" page UserInterface.CardDetail
+      step from user Member "submits" form UserInterface.CardDetail.DueDate
+      step send command SetDueDate from form UserInterface.CardDetail.DueDate to entity Card
+      step from entity Card "updates" to page UserInterface.CardDetail
+      step focus user Member on page UserInterface.CardDetail
     } with {
-      briefly as "Record type containing list data"
+      briefly as "Setting a due date for a card"
       described by {
-        | Defines the structure of a list including name, position on the board,
-        | creation date, and archive status.
+        | This use case describes the process of a member setting or updating
+        | the due date for a card to indicate when the task should be completed.
+      }
+    }
+  } with {
+    briefly as "User stories related to card details"
+    described by {
+      | This epic covers the functionality related to managing card details,
+      | including editing card information, adding comments, assigning members,
+      | adding checklists, and setting due dates.
+    }
+  }
+
+  epic WorkspaceManagementEpic is {
+    user Admin wants to "manage workspaces and members" so that "they can organize teams and projects"
+
+    case CreateWorkspace is {
+      user Admin wants to "create a new workspace" so that "they can organize related boards"
+
+      step from user Admin "views" page UserInterface.WorkspacesList
+      step from user Admin "clicks" button Create
+      step from user Admin "enters" workspace details
+      step send command CreateWorkspace from user Admin to entity Workspace
+      step from entity Workspace "processes" to page UserInterface.WorkspaceSettings
+      step focus user Admin on page UserInterface.WorkspaceSettings
+    } with {
+      briefly as "Creating a new workspace"
+      described by {
+        | This use case describes the process of an admin creating a new workspace
+        | to organize related boards and define team access.
       }
     }
 
-    entity List is {
-      state ListData of ListRecord with {
-        briefly as "List state containing all list information"
-        described by {
-          | Contains complete list information including name, position,
-          | and relationship to its parent board.
-        }
-      }
+    case AddWorkspaceMember is {
+      user Admin wants to "add a member to a workspace" so that "they can access workspace boards"
 
-      // Commands
-      command CreateList is {
-        boardId is UUID
-        name is Title
-        position is Position
-      } with {
-        briefly as "Command to create a new list"
-        described by {
-          | Creates a new list on a board with the provided name and position.
-        }
-      }
-
-      command UpdateList is {
-        listId is UUID
-        name is Title
-      } with {
-        briefly as "Command to update list details"
-        described by {
-          | Updates the name of an existing list.
-        }
-      }
-
-      command MoveList is {
-        listId is UUID
-        position is Position
-      } with {
-        briefly as "Command to move a list to a new position"
-        described by {
-          | Updates the position of a list on its board.
-        }
-      }
-
-      command ArchiveList is {
-        listId is UUID
-        isArchived is Bool
-      } with {
-        briefly as "Command to archive or restore a list"
-        described by {
-          | Marks a list as archived or restores it from the archive.
-        }
-      }
-
-      // Events
-      event ListCreated is {
-        listId is UUID
-        boardId is UUID
-        name is Title
-        position is Position
-      } with {
-        briefly as "Event indicating a new list was created"
-        described by {
-          | Emitted when a new list is successfully created on a board.
-          | Contains the list ID, board ID, name, and position.
-        }
-      }
-
-      event ListUpdated is {
-        listId is UUID
-        name is Title
-      } with {
-        briefly as "Event indicating list details were updated"
-        described by {
-          | Emitted when a list's name is successfully updated.
-        }
-      }
-
-      event ListMoved is {
-        listId is UUID
-        position is Position
-      } with {
-        briefly as "Event indicating a list was moved"
-        described by {
-          | Emitted when a list's position is successfully updated.
-        }
-      }
-
-      event ListArchived is {
-        listId is UUID
-        isArchived is Bool
-      } with {
-        briefly as "Event indicating a list was archived or restored"
-        described by {
-          | Emitted when a list is archived or restored from the archive.
-        }
-      }
-
-      // Handler for processing commands
-      handler ListCommandHandler is {
-        on command CreateList is {
-          // Validate board exists
-          if "boardExists(command.boardId)" then {
-            // Generate a new list ID
-            "const listId = generateUUID()"
-            
-            // Create the list
-            morph entity List to state ListData with command CreateList
-            
-            // Emit event
-            tell event ListCreated to entity List
-          } else {
-            error "Board does not exist"
-          } end
-        }
-
-        on command UpdateList is {
-          // Validate list exists
-          if "listExists(command.listId)" then {
-            // Update list
-            morph entity List to state ListData with command UpdateList
-            
-            // Emit event
-            tell event ListUpdated to entity List
-          } else {
-            error "List does not exist"
-          } end
-        }
-
-        on command MoveList is {
-          // Validate list exists
-          if "listExists(command.listId)" then {
-            // Move list
-            morph entity List to state ListData with command MoveList
-            
-            // Emit event
-            tell event ListMoved to entity List
-          } else {
-            error "List does not exist"
-          } end
-        }
-
-        on command ArchiveList is {
-          // Validate list exists
-          if "listExists(command.listId)" then {
-            // Archive or restore list
-            morph entity List to state ListData with command ArchiveList
-            
-            // Emit event
-            tell event ListArchived to entity List
-          } else {
-            error "List does not exist"
-          } end
-        }
-      } with {
-        briefly as "Processes commands for list management"
-        described by {
-          | Handles commands related to list creation and management.
-          | Validates input data, updates list state, and emits relevant events.
-        }
-      }
+      step from user Admin "views" page UserInterface.WorkspaceSettings
+      step from user Admin "clicks" button AddMember
+      step from user Admin "enters" member email and role
+      step send command AddMember from user Admin to entity Workspace
+      step from entity Workspace "updates" to page UserInterface.WorkspaceSettings
+      step focus user Admin on page UserInterface.WorkspaceSettings
     } with {
-      briefly as "Represents a Trello list"
+      briefly as "Adding a member to a workspace"
       described by {
-        | The List entity represents a column on a Trello board.
-        | It contains cards and has a specific position on the board.
-        | Lists can be created, renamed, moved, and archived.
+        | This use case describes the process of an admin adding a new member
+        | to a workspace and assigning them a role.
       }
     }
 
-    // Card components
-    type Comment is {
-      commentId is UUID
-      userId is UUID
-      text is String(1, 16384)
-      createdAt is Timestamp
-      updatedAt is Timestamp
+    case UpdateWorkspaceSettings is {
+      user Admin wants to "update workspace settings" so that "they can adjust visibility and preferences"
+
+      step from user Admin "views" page UserInterface.WorkspaceSettings
+      step from user Admin "edits" workspace settings
+      step send command UpdateWorkspace from user Admin to entity Workspace
+      step from entity Workspace "updates" to page UserInterface.WorkspaceSettings
+      step focus user Admin on page UserInterface.WorkspaceSettings
     } with {
-      briefly as "Record for card comment"
+      briefly as "Updating workspace settings"
       described by {
-        | Defines a comment on a card, including the author,
-        | text content, and timestamps.
+        | This use case describes the process of an admin updating workspace settings
+        | such as name, description, and visibility.
       }
     }
-
-    type Attachment is {
-      attachmentId is UUID
-      name is String(1, 256)
-      url is String
-      mimeType is String
-      size is Integer
-      createdAt is Timestamp
-    } with {
-      briefly as "Record for card attachment"
-      described by {
-        | Defines an attachment on a card, including name,
-        | URL, type, size, and creation timestamp.
-      }
+  } with {
+    briefly as "User stories related to workspace management"
+    described by {
+      | This epic covers the functionality related to managing workspaces,
+      | including creating workspaces, adding members, and updating settings.
+      | These features enable administrators to organize teams and projects.
     }
-
-    type Checklist is {
-      checklistId is UUID
-      name is String(1, 100)
-      items is many {
-        itemId is UUID
-        text is String(1, 1000)
-        isComplete is Bool
-        position is Position
-      }
-    } with {
-      briefly as "Record for card checklist"
-      described by {
-        | Defines a checklist on a card, including name and
-        | a collection of checklist items.
-      }
-    }
-
-    type CardRecord is {
-      cardId is UUID
-      listId is UUID
-      name is Title
-      description is Description
-      position is Position
-      labels is many UUID  // Label IDs
-      members is many UUID // User IDs
-      dueDate is Timestamp
-      startDate is Timestamp
-      comments is many Comment
-      attachments is many Attachment
-      checklists is many Checklist
-      isArchived is Bool
-      createdBy is UUID
-      createdAt is Timestamp
-      updatedAt is Timestamp
-    } with {
-      briefly as "Record type containing card data"
-      described by {
-        | Defines the structure of a card including name, description,
-        | position, labels, members, due date, and other components.
-      }
-    }0, 50)
-        color is Color
-      } with {
-        briefly as "Command to update a label"
-        described by {
-          | Updates an existing label's name and color.
-        }
-      }
-
-      command DeleteLabel is {
-        boardId is UUID
-        labelId is UUID
-      } with {
-        briefly as "Command to delete a label"
-        described by {
-          | Deletes a label from a board.
-        }
-      }
-
-      // Events
-      event BoardCreated is {
-        boardId is UUID
-        workspaceId is UUID
-        name is Title
-        createdBy is UUID
-      } with {
-        briefly as "Event indicating a new board was created"
-        described by {
-          | Emitted when a new board is successfully created.
-          | Contains the board ID, workspace ID, name, and creator ID.
-        }
-      }
-
-      event BoardUpdated is {
-        boardId is UUID
-        name is Title
-        visibility is Visibility
-      } with {
-        briefly as "Event indicating board details were updated"
-        described by {
-          | Emitted when board details are successfully updated.
-          | Contains the updated board information.
-        }
-      }
-
-      event BoardStarred is {
-        boardId is UUID
-        userId is UUID
-        isStarred is Bool
-      } with {
-        briefly as "Event indicating a board was starred or unstarred"
-        described by {
-          | Emitted when a board is starred or unstarred by a user.
-          | Contains the board ID, user ID, and star status.
-        }
-      }
-
-      event BoardClosed is {
-        boardId is UUID
-        isClosed is Bool
-      } with {
-        briefly as "Event indicating a board was closed or reopened"
-        described by {
-          | Emitted when a board is closed or reopened.
-          | Contains the board ID and closed status.
-        }
-      }
-
-      event BoardMemberAdded is {
-        boardId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Event indicating a member was added to a board"
-        described by {
-          | Emitted when a user is successfully added to a board.
-          | Contains the user ID, board ID, and assigned role.
-        }
-      }
-
-      event BoardMemberRemoved is {
-        boardId is UUID
-        userId is UUID
-      } with {
-        briefly as "Event indicating a member was removed from a board"
-        described by {
-          | Emitted when a user is successfully removed from a board.
-          | Contains the user ID and board ID.
-        }
-      }
-
-      event BoardMemberRoleUpdated is {
-        boardId is UUID
-        userId is UUID
-        role is any of {
-          Admin
-          Normal
-          Observer
-        }
-      } with {
-        briefly as "Event indicating a member's role was updated"
-        described by {
-          | Emitted when a member's role on a board is successfully updated.
-          | Contains the user ID, board ID, and new role.
-        }
-      }
-
-      event LabelCreated is {
-        boardId is UUID
-        labelId is UUID
-        name is String(0, 50)
-        color is Color
-      } with {
-        briefly as "Event indicating a new label was created"
-        described by {
-          | Emitted when a new label is successfully created on a board.
-          | Contains the label details for UI updates.
-        }
-      }
-
-      event LabelUpdated is {
-        boardId is UUID
-        labelId is UUID
-        name is String(
+  }
+}

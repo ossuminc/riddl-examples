@@ -6,3 +6,8 @@
 .DS_Store
 */.DS_Store
 /task/
+
+# Claude Code transient files
+.claude/*
+!.claude/skills/
+!.claude/skills/**

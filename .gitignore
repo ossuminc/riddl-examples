@@ -2,6 +2,8 @@
 /target/
 /project/target/
 /project/project/
+# sbt 2 build-server metadata
+/.bsp/
 /src/riddl/ReactiveBBQ/static/images/logo.png
 .DS_Store
 */.DS_Store

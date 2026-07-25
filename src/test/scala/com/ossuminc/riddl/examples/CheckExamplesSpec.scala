@@ -1,3 +1,9 @@
+/*
+ * Copyright 2022-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.examples
 
 import com.ossuminc.riddl.examples.HugoTranslateExamplesBase

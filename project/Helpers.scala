@@ -1,4 +1,4 @@
-import sbt._
+import sbt.*
 
 /** V - Dependency Versions object */
 object V {

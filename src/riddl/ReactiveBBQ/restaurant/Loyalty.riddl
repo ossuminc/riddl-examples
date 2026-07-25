@@ -9,6 +9,7 @@ context Loyalty is {
         // then accrue points
         tell command AccruePoints to entity LoyaltyAccount
       }
+      on other { error "unexpected message" }
     }
   } with { described as "Adapts loyalty rewards from payments" }
   type AccruePoints is command {

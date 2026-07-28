@@ -19,17 +19,13 @@ epic MakeAndFileADoodle is {
     step take form StartDoodle from user Artist
     step send command ToDoodles.Doodle.Drawing.CreateDrawing
       from source ToDoodles.ToDoodlesApp.DrawingRequests to sink ToDoodles.Doodle.Intake
+    step show list Gallery to user Artist
   } with {
     briefly as "Starting a doodle from the studio screen"
     described as {
       |The artist names a doodle on the studio screen and the application
-      |echoes it back, then turns it into a command for the Doodle context.
-      |
-      |There is deliberately no `show … to …` step here. That step kind is
-      |currently unusable: the parser hardcodes an empty relationship on it
-      |(EpicParser.showOutputStep), so every such step fails the "must have a
-      |non-empty relationship" check no matter how it is written. Filed
-      |against riddl; restore the step once that is fixed.
+      |echoes it back, turns it into a command for the Doodle context, and
+      |the gallery redraws with the new doodle among the others.
     }
   }
 

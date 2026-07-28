@@ -109,7 +109,7 @@ domain ShopifyCart is {
 
   context ShoppingContext is {
     // Product Record Type for State
-    type ProductRecord is {
+    record ProductRecord is {
       productId is ProductId
       sku is SKU
       name is Name
@@ -237,13 +237,13 @@ domain ShopifyCart is {
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Product.UpdateProductPrice is {
           // Validate the price change
-          when "newPrice > 0" then
+          when prompt("newPrice > 0") then
             // Update the product price in the ProductData state
             morph entity Product to state ProductData with record ProductRecord
             // Emit event
             tell event ProductPriceUpdated to entity Product
           end
-          when "newPrice <= 0" then
+          when prompt("newPrice <= 0") then
             error "Price must be greater than zero"
           end
         }
@@ -293,7 +293,7 @@ domain ShopifyCart is {
     }
 
     // Cart Record
-    type CartRecord is {
+    record CartRecord is {
       cartId is CartId
       items is many CartItem
       subtotal is Price
@@ -846,14 +846,14 @@ domain ShopifyCart is {
 
         on command AddToCart is {
           // Check if product exists and is in stock
-          when "productExists(command.productId) && isInStock(command.productId)" then
+          when prompt("productExists(command.productId) && isInStock(command.productId)") then
             // Get product details and calculate new cart state
             // Update cart state
             morph entity Cart to state CartData with record CartRecord
             // Emit event
             tell event ItemAddedToCart to entity Cart
           end
-          when "!productExists(command.productId) || !isInStock(command.productId)" then
+          when prompt("!productExists(command.productId) || !isInStock(command.productId)") then
             error "Product is not available"
           end
         }
@@ -868,30 +868,30 @@ domain ShopifyCart is {
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Cart.UpdateQuantity is {
           // Validate new quantity
-          when "command.quantity > 0" then
+          when prompt("command.quantity > 0") then
             // Update cart state
             morph entity Cart to state CartData with record CartRecord
             // Emit event
             tell event CartQuantityUpdated to entity Cart
           end
-          when "command.quantity == 0" then
+          when prompt("command.quantity == 0") then
             // Remove item if quantity is zero
             tell command RemoveFromCart to entity Cart
           end
-          when "command.quantity < 0" then
+          when prompt("command.quantity < 0") then
             error "Quantity must be zero or positive"
           end
         }
 
         on command ApplyDiscount is {
           // Validate discount code
-          when "isValidDiscountCode(command.discountCode)" then
+          when prompt("isValidDiscountCode(command.discountCode)") then
             // Update cart state
             morph entity Cart to state CartData with record CartRecord
             // Emit event
             tell event DiscountApplied to entity Cart
           end
-          when "!isValidDiscountCode(command.discountCode)" then
+          when prompt("!isValidDiscountCode(command.discountCode)") then
             error "Invalid discount code"
           end
         }
@@ -1102,12 +1102,12 @@ domain ShopifyCart is {
 
         on command CompleteCheckout is {
           // Validate cart and payment information
-          when "isValidCart(command.cartId) && hasPaymentMethod()" then
+          when prompt("isValidCart(command.cartId) && hasPaymentMethod()") then
             // Process payment, Create order, Clear cart
             // Emit event with new order ID
             tell event CheckoutCompleted to entity ShopifyCart.ShoppingContext.Checkout
           end
-          when "!isValidCart(command.cartId) || !hasPaymentMethod()" then
+          when prompt("!isValidCart(command.cartId) || !hasPaymentMethod()") then
             error "Cannot complete checkout"
           end
         }
@@ -1142,7 +1142,7 @@ domain ShopifyCart is {
       }
 
       schema CartData is relational of
-        cart as Cart
+        cart as record CartRecord
         link cartItems as field Cart.items.id to field Product.id
       with {
         briefly as "How carts are laid out in storage"
@@ -1199,7 +1199,7 @@ domain ShopifyCart is {
     repository ProductRepository is {
 
       schema ProductData is flat of
-        product as Product
+        product as record ProductRecord
       with {
         briefly as "How products are laid out in storage"
         described as {
@@ -1266,10 +1266,10 @@ domain ShopifyCart is {
       step ValidateCart is {
         tell command ShopifyCart.ShoppingContext.Cart.RemoveFromCart to entity Cart
         // Check if cart exists and has items
-        when "cartRepository.exists(cartId) && cartRepository.hasItems(cartId)" then
+        when prompt("cartRepository.exists(cartId) && cartRepository.hasItems(cartId)") then
           do "Continue to next step after cart validation"
         end
-        when "!cartRepository.exists(cartId) || !cartRepository.hasItems(cartId)" then
+        when prompt("!cartRepository.exists(cartId) || !cartRepository.hasItems(cartId)") then
           error "Cart is empty or does not exist"
         end
       } reverted by {
@@ -1286,10 +1286,10 @@ domain ShopifyCart is {
       step ValidateInventory is {
         tell command ShopifyCart.ShoppingContext.Product.UpdateInventory to entity Product
         // Check inventory for all items in cart
-        when "allItemsHaveInventory(Cart.items)" then
+        when prompt("allItemsHaveInventory(Cart.items)") then
           do "Inventory validated for all items"
         end
-        when "!allItemsHaveInventory(Cart.items)" then
+        when prompt("!allItemsHaveInventory(Cart.items)") then
           error "Insufficient inventory for product"
         end
       } reverted by {
@@ -1306,15 +1306,15 @@ domain ShopifyCart is {
       step ProcessPayment is {
         tell command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout to entity ShopifyCart.ShoppingContext.Checkout
         // Process payment with payment provider
-        when "paymentService.process(cartId, paymentInfo)" then
+        when prompt("paymentService.process(cartId, paymentInfo)") then
           do "Payment processed successfully"
         end
-        when "!paymentService.process(cartId, paymentInfo)" then
+        when prompt("!paymentService.process(cartId, paymentInfo)") then
           error "Payment failed"
         end
       } reverted by {
         // Refund payment if necessary
-        when "paymentWasProcessed" then
+        when prompt("paymentWasProcessed") then
           do "Refund payment via paymentService"
         end
       }
@@ -1332,7 +1332,7 @@ domain ShopifyCart is {
         do "Create order from cart using orderService"
       } reverted by {
         // Cancel order if created
-        when "orderWasCreated" then
+        when prompt("orderWasCreated") then
           do "Cancel order via orderService"
         end
       }

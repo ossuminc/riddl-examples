@@ -13,3 +13,6 @@
 .claude/*
 !.claude/skills/
 !.claude/skills/**
+
+# Synapify editor state
+.synapify/

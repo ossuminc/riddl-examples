@@ -135,6 +135,33 @@ domain ShopifyCart is {
     // Product Entity
     entity Product is {
 
+      type ProductIdentity is Id(ShopifyCart.ShoppingContext.Product) with {
+        briefly as "This entity's own identity type"
+        described as {
+          |RIDDL 2.0 wants each entity to declare the Id type that names it.
+        }
+      }
+
+      query WhichProduct is {
+        id is ProductIdentity
+      } with {
+        briefly as "Ask for the current state of one product"
+        described as {
+          |Sent when a reader wants a product they already know of.
+        }
+      }
+
+      result TheProduct is {
+        id is ProductIdentity,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichProduct query"
+        described as {
+          |Carries the identity and a short summary.
+        }
+      }
+
+
       state ProductData of record ProductRecord with {
         briefly as "Product state containing all product information"
         described by {
@@ -199,6 +226,10 @@ domain ShopifyCart is {
 
       // Handler for processing commands
       handler ProductCommandHandler is {
+        on query WhichProduct {
+          yield result TheProduct
+        }
+
         on init {
           set field ProductRecord.productId to "a freshly minted product identifier"
         }
@@ -281,6 +312,33 @@ domain ShopifyCart is {
 
     // Cart Entity
     entity Cart is {
+
+      type CartIdentity is Id(ShopifyCart.ShoppingContext.Cart) with {
+        briefly as "This entity's own identity type"
+        described as {
+          |RIDDL 2.0 wants each entity to declare the Id type that names it.
+        }
+      }
+
+      query WhichCart is {
+        id is CartIdentity
+      } with {
+        briefly as "Ask for the current state of one cart"
+        described as {
+          |Sent when a reader wants a cart they already know of.
+        }
+      }
+
+      result TheCart is {
+        id is CartIdentity,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichCart query"
+        described as {
+          |Carries the identity and a short summary.
+        }
+      }
+
       state CartData of record CartRecord with {
         briefly as "Shopping cart state containing all cart information"
         described by {
@@ -776,6 +834,10 @@ domain ShopifyCart is {
 
       // Handler for processing commands
       handler CartCommandHandler is {
+        on query WhichCart {
+          yield result TheCart
+        }
+
         on init {
           set field CartRecord.cartId to "a freshly minted cart identifier"
         }
@@ -904,6 +966,33 @@ domain ShopifyCart is {
     // Checkout Process
     entity Checkout is {
 
+      type CheckoutIdentity is Id(ShopifyCart.ShoppingContext.Checkout) with {
+        briefly as "This entity's own identity type"
+        described as {
+          |RIDDL 2.0 wants each entity to declare the Id type that names it.
+        }
+      }
+
+      query WhichCheckout is {
+        id is CheckoutIdentity
+      } with {
+        briefly as "Ask for the current state of one checkout"
+        described as {
+          |Sent when a reader wants a checkout they already know of.
+        }
+      }
+
+      result TheCheckout is {
+        id is CheckoutIdentity,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichCheckout query"
+        described as {
+          |Carries the identity and a short summary.
+        }
+      }
+
+
 
       state CheckoutData of record CheckoutRecord with {
         briefly as "Checkout state containing cart and customer data"
@@ -994,6 +1083,10 @@ domain ShopifyCart is {
 
       // Handler for processing commands
       handler CheckoutCommandHandler is {
+        on query WhichCheckout {
+          yield result TheCheckout
+        }
+
         on init {
           set field CheckoutRecord.cartId to "the cart this checkout is for"
         }
@@ -1118,10 +1211,12 @@ domain ShopifyCart is {
       handler ProductRepositoryHandler is {
         on event ProductPriceUpdated is {
           do "Update product price in Product repository"
+          set field ProductRecord.price to "the price carried by the event"
         }
 
         on event InventoryUpdated is {
           do "Update product inventory in Product repository"
+          set field ProductRecord.sku to "the sku carried by the event"
         }
       }
       with {
@@ -1289,6 +1384,68 @@ domain ShopifyCart is {
         | across multiple services.
       }
     }
+    type ShoppingEvent is one of {
+      event ShopifyCart.ShoppingContext.Cart.CartCreated or event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated
+    } with {
+      briefly as "Anything ShoppingContext announces"
+      described as {
+        |The alternation of the events this context publishes so one outlet
+        |can carry them all.
+      }
+    }
+
+    processor ShoppingAnnouncer as source is {
+      outlet Published is type ShoppingEvent with {
+        briefly as "Where ShoppingContext publishes what happened"
+        described as {
+          |Events leave this context through this outlet.
+        }
+      }
+      handler ShoppingAnnouncerHandler is {
+        on event ShopifyCart.ShoppingContext.Cart.CartCreated {
+          send event ShopifyCart.ShoppingContext.Cart.CartCreated to outlet ShoppingAnnouncer.Published
+        }
+        on other {
+          do "ignore anything that is not a shopping event"
+        }
+      } with {
+        briefly as "Publishes shopping events"
+        described as {
+          |Puts each event the entities announced onto the outlet.
+        }
+      }
+    } with {
+      briefly as "The context's publication point"
+      described as {
+        |A source streamlet carrying what ShoppingContext wants known.
+      }
+    }
+
+    processor ShoppingIntake as sink is {
+      inlet Requests is command ShopifyCart.ShoppingContext.Cart.AddToCart with {
+        briefly as "Where shopping commands arrive from the application"
+        described as {
+          |Everything the application asks the domain to do enters here.
+        }
+      }
+      handler ShoppingIntakeHandler is {
+        on command ShopifyCart.ShoppingContext.Cart.AddToCart {
+          tell command ShopifyCart.ShoppingContext.Cart.AddToCart to entity Cart
+        }
+      } with {
+        briefly as "Dispatches arriving commands"
+        described as {
+          |Receives commands at the boundary and forwards them.
+        }
+      }
+    } with {
+      briefly as "The context's front door"
+      described as {
+        |A sink receiving messages addressed to ShoppingContext.
+      }
+    }
+
+
   }
   with {
     briefly as "Main shopping context containing all commerce entities"
@@ -1300,6 +1457,7 @@ domain ShopifyCart is {
   }
 
   // User definitions for epics
+
   user Customer is "A shopper who wants to purchase items from the store"
   with {
 
@@ -1325,7 +1483,43 @@ domain ShopifyCart is {
   record InventoryUpdateDetails is { ??? }
   record ProductPriceDetails is { ??? }
 
+
   application context UserInterface is {
+
+    handler InteractionRouter is {
+      on command ShopifyCart.ShoppingContext.Cart.AddToCart {
+        tell command ShopifyCart.ShoppingContext.Cart.AddToCart to entity Cart
+      }
+      on command ShopifyCart.ShoppingContext.Cart.RemoveFromCart {
+        tell command ShopifyCart.ShoppingContext.Cart.RemoveFromCart to entity Cart
+      }
+      on command ShopifyCart.ShoppingContext.Cart.UpdateQuantity {
+        tell command ShopifyCart.ShoppingContext.Cart.UpdateQuantity to entity Cart
+      }
+      on command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout {
+        tell command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout to entity ShopifyCart.ShoppingContext.Checkout
+      }
+      on command ShopifyCart.ShoppingContext.Checkout.SelectPaymentMethod {
+        tell command ShopifyCart.ShoppingContext.Checkout.SelectPaymentMethod to entity ShopifyCart.ShoppingContext.Checkout
+      }
+      on command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout {
+        tell command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout to entity ShopifyCart.ShoppingContext.Checkout
+      }
+      on command ShopifyCart.ShoppingContext.Product.UpdateProductPrice {
+        tell command ShopifyCart.ShoppingContext.Product.UpdateProductPrice to entity Product
+      }
+      on command ShopifyCart.ShoppingContext.Product.UpdateInventory {
+        tell command ShopifyCart.ShoppingContext.Product.UpdateInventory to entity Product
+      }
+    } with {
+      briefly as "Carries what the shopper does on a page into the domain"
+      described as {
+        |RIDDL 2.0 confines user interaction to the application boundary, and
+        |wants each epic step witnessed by real wiring. This handler is that
+        |wiring: every command a page can raise is told to the entity that
+        |owns it.
+      }
+    }
     page ProductDetails is { ??? } with {
       briefly as "Page showing product information"
       described by {
@@ -1337,7 +1531,12 @@ domain ShopifyCart is {
     page ShoppingCart is {
       // FIXED: Using defined Bool type instead of Boolean
       // FIXED: Renamed to avoid ambiguity
-      button CheckoutBtn activates type Bool
+      button CheckoutBtn activates type Bool with {
+        briefly as "Starts the checkout flow"
+        described as {
+          |Takes the shopper from their cart to the checkout pages.
+        }
+      }
     } with {
       briefly as "Page showing cart contents"
       described by {

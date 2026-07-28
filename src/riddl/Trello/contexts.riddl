@@ -1,0 +1,1258 @@
+context UserManagement is {
+
+  type AccountId is Id(Trello.UserManagement.Account) with {
+    briefly as "Unique identifier for one user"
+    described as {
+      |Defined inside UserManagement because user identity is this context's concern.
+    }
+  }
+
+  entity Account is {
+
+    command CreateAccount is {
+      username is String,
+      email is String
+    } with {
+      briefly as "Ask for a user to be created"
+      described as {
+        |Sent when a person joined Trello.
+      }
+    }
+
+    command UpdateProfile is {
+      id is Trello.UserManagement.AccountId
+    } with {
+      briefly as "Change a member's profile"
+      described as {
+        |Sent when change a member's profile.
+      }
+    }
+
+    command UpdateSettings is {
+      id is Trello.UserManagement.AccountId
+    } with {
+      briefly as "Change a member's settings"
+      described as {
+        |Sent when change a member's settings.
+      }
+    }
+
+    query WhichAccount is {
+      id is Trello.UserManagement.AccountId
+    } with {
+      briefly as "Ask for the current state of one user"
+      described as {
+        |Sent when a reader wants a user they already know of.
+      }
+    }
+
+    result TheAccount is {
+      id is Trello.UserManagement.AccountId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichAccount query"
+      described as {
+        |Carries the identity and a short summary of the user.
+      }
+    }
+
+    event AccountCreated is {
+      id is Trello.UserManagement.AccountId
+    } with {
+      briefly as "Records that a person joined Trello"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record AccountFields is {
+      id is Trello.UserManagement.AccountId,
+      username is String,
+      email is String
+    } with {
+      briefly as "Everything Trello keeps about one user"
+      described as {
+        |The stored shape of a user.
+      }
+    }
+
+    initial state AccountState of record Trello.UserManagement.Account.AccountFields with {
+      briefly as "The state of one user"
+      described as {
+        |A user has a single state; its fields change over its lifetime.
+      }
+    }
+
+    handler AccountHandler is {
+      on init {
+        set field Trello.UserManagement.Account.AccountFields.id to "a freshly minted identifier"
+      }
+      on command CreateAccount {
+        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields
+        send event AccountCreated to outlet UserManagementAnnouncer.Published
+      }
+      on command UpdateProfile {
+        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields
+        send event AccountCreated to outlet UserManagementAnnouncer.Published
+      }
+      on command UpdateSettings {
+        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields
+        send event AccountCreated to outlet UserManagementAnnouncer.Published
+      }
+      on query WhichAccount {
+        yield result TheAccount
+      }
+    } with {
+      briefly as "Handles messages addressed to a user"
+      described as {
+        |Creates and changes users and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single user in Trello"
+    described as {
+      |The entity that remembers that a person joined Trello.
+    }
+  }
+
+  type NotificationId is Id(Trello.UserManagement.Notification) with {
+    briefly as "Unique identifier for one notification"
+    described as {
+      |Defined inside UserManagement because notification identity is this context's concern.
+    }
+  }
+
+  entity Notification is {
+
+    command CreateNotification is {
+      text is String,
+      read is Boolean
+    } with {
+      briefly as "Ask for a notification to be created"
+      described as {
+        |Sent when a member was told something.
+      }
+    }
+
+    command MarkAsRead is {
+      id is Trello.UserManagement.NotificationId
+    } with {
+      briefly as "Mark one notification read"
+      described as {
+        |Sent when mark one notification read.
+      }
+    }
+
+    command MarkAllAsRead is {
+      id is Trello.UserManagement.NotificationId
+    } with {
+      briefly as "Mark every notification read"
+      described as {
+        |Sent when mark every notification read.
+      }
+    }
+
+    query WhichNotification is {
+      id is Trello.UserManagement.NotificationId
+    } with {
+      briefly as "Ask for the current state of one notification"
+      described as {
+        |Sent when a reader wants a notification they already know of.
+      }
+    }
+
+    result TheNotification is {
+      id is Trello.UserManagement.NotificationId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichNotification query"
+      described as {
+        |Carries the identity and a short summary of the notification.
+      }
+    }
+
+    event NotificationCreated is {
+      id is Trello.UserManagement.NotificationId
+    } with {
+      briefly as "Records that a member was told something"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record NotificationFields is {
+      id is Trello.UserManagement.NotificationId,
+      text is String,
+      read is Boolean
+    } with {
+      briefly as "Everything Trello keeps about one notification"
+      described as {
+        |The stored shape of a notification.
+      }
+    }
+
+    initial state NotificationState of record Trello.UserManagement.Notification.NotificationFields with {
+      briefly as "The state of one notification"
+      described as {
+        |A notification has a single state; its fields change over its lifetime.
+      }
+    }
+
+    handler NotificationHandler is {
+      on init {
+        set field Trello.UserManagement.Notification.NotificationFields.id to "a freshly minted identifier"
+      }
+      on command CreateNotification {
+        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields
+        send event NotificationCreated to outlet UserManagementAnnouncer.Published
+      }
+      on command MarkAsRead {
+        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields
+        send event NotificationCreated to outlet UserManagementAnnouncer.Published
+      }
+      on command MarkAllAsRead {
+        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields
+        send event NotificationCreated to outlet UserManagementAnnouncer.Published
+      }
+      on query WhichNotification {
+        yield result TheNotification
+      }
+    } with {
+      briefly as "Handles messages addressed to a notification"
+      described as {
+        |Creates and changes notifications and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single notification in Trello"
+    described as {
+      |The entity that remembers that a member was told something.
+    }
+  }
+
+  type UserManagementEvent is one of {
+    event Trello.UserManagement.Account.AccountCreated or
+    event Trello.UserManagement.Notification.NotificationCreated
+  } with {
+    briefly as "Anything UserManagement announces"
+    described as {
+      |The alternation of every event this context publishes, so one outlet
+      |can carry them all.
+    }
+  }
+
+  type UserManagementCommand is one of {
+    command Trello.UserManagement.Account.CreateAccount or
+    command Trello.UserManagement.Account.UpdateProfile or
+    command Trello.UserManagement.Account.UpdateSettings or
+    command Trello.UserManagement.Notification.CreateNotification or
+    command Trello.UserManagement.Notification.MarkAsRead or
+    command Trello.UserManagement.Notification.MarkAllAsRead
+  } with {
+    briefly as "Everything UserManagement can be asked to do"
+    described as {
+      |The alternation of every command the application sends here, so one
+      |inlet and one connector can carry them all.
+    }
+  }
+
+  processor UserManagementAnnouncer as source is {
+    outlet Published is type Trello.UserManagement.UserManagementEvent with {
+      briefly as "Where UserManagement publishes what happened"
+      described as {
+        |Events leave this context through this outlet.
+      }
+    }
+    handler UserManagementAnnouncerHandler is {
+      on event Trello.UserManagement.Account.AccountCreated {
+        send event Trello.UserManagement.Account.AccountCreated to outlet UserManagementAnnouncer.Published
+      }
+      on other {
+        do "publish any other event this context raises"
+      }
+    } with {
+      briefly as "Publishes UserManagement events"
+      described as {
+        |Puts each event an entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The context's publication point"
+    described as {
+      |A source streamlet carrying what UserManagement wants known elsewhere.
+    }
+  }
+
+  processor UserManagementIntake as sink is {
+    inlet Requests is type Trello.UserManagement.UserManagementCommand with {
+      briefly as "Where commands arrive from the application"
+      described as {
+        |Everything UserManagement is asked to do enters here.
+      }
+    }
+    handler UserManagementIntakeHandler is {
+      on command Trello.UserManagement.Account.CreateAccount {
+        tell command Trello.UserManagement.Account.CreateAccount to entity Account
+      }
+      on command Trello.UserManagement.Account.UpdateProfile {
+        tell command Trello.UserManagement.Account.UpdateProfile to entity Account
+      }
+      on command Trello.UserManagement.Account.UpdateSettings {
+        tell command Trello.UserManagement.Account.UpdateSettings to entity Account
+      }
+      on command Trello.UserManagement.Notification.CreateNotification {
+        tell command Trello.UserManagement.Notification.CreateNotification to entity Notification
+      }
+      on command Trello.UserManagement.Notification.MarkAsRead {
+        tell command Trello.UserManagement.Notification.MarkAsRead to entity Notification
+      }
+      on command Trello.UserManagement.Notification.MarkAllAsRead {
+        tell command Trello.UserManagement.Notification.MarkAllAsRead to entity Notification
+      }
+    } with {
+      briefly as "Dispatches arriving commands to the entity that owns them"
+      described as {
+        |The witness pass requires a receiving on-clause for every command
+        |an epic step sends here, so each is handled explicitly.
+      }
+    }
+  } with {
+    briefly as "The context's front door"
+    described as {
+      |A sink receiving messages addressed to UserManagement.
+    }
+  }
+
+  repository UserManagementStore is {
+    inlet Recorded is type Trello.UserManagement.UserManagementEvent with {
+      briefly as "Where events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema UserManagementSchema is flat
+      of Held as record Trello.UserManagement.Account.AccountFields
+    with {
+      briefly as "How UserManagement records are laid out in storage"
+      described as {
+        |A flat schema: one stored row per record.
+      }
+    }
+    handler UserManagementStoreHandler is {
+      on event Trello.UserManagement.Account.AccountCreated {
+        set field Trello.UserManagement.Account.AccountFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists what this context owns"
+    described as {
+      |Entities are stateful, so UserManagement keeps a repository.
+    }
+  }
+
+  connector UserManagementRecording is {
+    from outlet UserManagementAnnouncer.Published to inlet UserManagementStore.Recorded
+  } with {
+    briefly as "Carries UserManagement events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Members and what they are told"
+  described as {
+    |Owns who a Trello member is, their profile and settings, and the
+    |notifications addressed to them.
+  }
+}
+
+context WorkspaceManagement is {
+
+  type WorkspaceId is Id(Trello.WorkspaceManagement.Workspace) with {
+    briefly as "Unique identifier for one workspace"
+    described as {
+      |Defined inside WorkspaceManagement because workspace identity is this context's concern.
+    }
+  }
+
+  entity Workspace is {
+
+    command CreateWorkspace is {
+      name is String,
+      visibility is String
+    } with {
+      briefly as "Ask for a workspace to be created"
+      described as {
+        |Sent when a workspace was created.
+      }
+    }
+
+    command AddWorkspaceMember is {
+      id is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "Add a member to a workspace"
+      described as {
+        |Sent when add a member to a workspace.
+      }
+    }
+
+    command UpdateWorkspaceSettings is {
+      id is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "Change a workspace's settings"
+      described as {
+        |Sent when change a workspace's settings.
+      }
+    }
+
+    query WhichWorkspace is {
+      id is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "Ask for the current state of one workspace"
+      described as {
+        |Sent when a reader wants a workspace they already know of.
+      }
+    }
+
+    result TheWorkspace is {
+      id is Trello.WorkspaceManagement.WorkspaceId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichWorkspace query"
+      described as {
+        |Carries the identity and a short summary of the workspace.
+      }
+    }
+
+    event WorkspaceCreated is {
+      id is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "Records that a workspace was created"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record WorkspaceFields is {
+      id is Trello.WorkspaceManagement.WorkspaceId,
+      name is String,
+      visibility is String
+    } with {
+      briefly as "Everything Trello keeps about one workspace"
+      described as {
+        |The stored shape of a workspace.
+      }
+    }
+
+    initial state WorkspaceState of record Trello.WorkspaceManagement.Workspace.WorkspaceFields with {
+      briefly as "The state of one workspace"
+      described as {
+        |A workspace has a single state; its fields change over its lifetime.
+      }
+    }
+
+    handler WorkspaceHandler is {
+      on init {
+        set field Trello.WorkspaceManagement.Workspace.WorkspaceFields.id to "a freshly minted identifier"
+      }
+      on command CreateWorkspace {
+        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
+        send event WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+      }
+      on command AddWorkspaceMember {
+        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
+        send event WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+      }
+      on command UpdateWorkspaceSettings {
+        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
+        send event WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+      }
+      on query WhichWorkspace {
+        yield result TheWorkspace
+      }
+    } with {
+      briefly as "Handles messages addressed to a workspace"
+      described as {
+        |Creates and changes workspaces and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single workspace in Trello"
+    described as {
+      |The entity that remembers that a workspace was created.
+    }
+  }
+
+  type WorkspaceManagementEvent is one of {
+    event Trello.WorkspaceManagement.Workspace.WorkspaceCreated
+  } with {
+    briefly as "Anything WorkspaceManagement announces"
+    described as {
+      |The alternation of every event this context publishes, so one outlet
+      |can carry them all.
+    }
+  }
+
+  type WorkspaceManagementCommand is one of {
+    command Trello.WorkspaceManagement.Workspace.CreateWorkspace or
+    command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember or
+    command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings
+  } with {
+    briefly as "Everything WorkspaceManagement can be asked to do"
+    described as {
+      |The alternation of every command the application sends here, so one
+      |inlet and one connector can carry them all.
+    }
+  }
+
+  processor WorkspaceManagementAnnouncer as source is {
+    outlet Published is type Trello.WorkspaceManagement.WorkspaceManagementEvent with {
+      briefly as "Where WorkspaceManagement publishes what happened"
+      described as {
+        |Events leave this context through this outlet.
+      }
+    }
+    handler WorkspaceManagementAnnouncerHandler is {
+      on event Trello.WorkspaceManagement.Workspace.WorkspaceCreated {
+        send event Trello.WorkspaceManagement.Workspace.WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+      }
+      on other {
+        do "publish any other event this context raises"
+      }
+    } with {
+      briefly as "Publishes WorkspaceManagement events"
+      described as {
+        |Puts each event an entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The context's publication point"
+    described as {
+      |A source streamlet carrying what WorkspaceManagement wants known elsewhere.
+    }
+  }
+
+  processor WorkspaceManagementIntake as sink is {
+    inlet Requests is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+      briefly as "Where commands arrive from the application"
+      described as {
+        |Everything WorkspaceManagement is asked to do enters here.
+      }
+    }
+    handler WorkspaceManagementIntakeHandler is {
+      on command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
+        tell command Trello.WorkspaceManagement.Workspace.CreateWorkspace to entity Workspace
+      }
+      on command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember {
+        tell command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember to entity Workspace
+      }
+      on command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings {
+        tell command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings to entity Workspace
+      }
+    } with {
+      briefly as "Dispatches arriving commands to the entity that owns them"
+      described as {
+        |The witness pass requires a receiving on-clause for every command
+        |an epic step sends here, so each is handled explicitly.
+      }
+    }
+  } with {
+    briefly as "The context's front door"
+    described as {
+      |A sink receiving messages addressed to WorkspaceManagement.
+    }
+  }
+
+  repository WorkspaceManagementStore is {
+    inlet Recorded is type Trello.WorkspaceManagement.WorkspaceManagementEvent with {
+      briefly as "Where events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema WorkspaceManagementSchema is flat
+      of Held as record Trello.WorkspaceManagement.Workspace.WorkspaceFields
+    with {
+      briefly as "How WorkspaceManagement records are laid out in storage"
+      described as {
+        |A flat schema: one stored row per record.
+      }
+    }
+    handler WorkspaceManagementStoreHandler is {
+      on event Trello.WorkspaceManagement.Workspace.WorkspaceCreated {
+        set field Trello.WorkspaceManagement.Workspace.WorkspaceFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists what this context owns"
+    described as {
+      |Entities are stateful, so WorkspaceManagement keeps a repository.
+    }
+  }
+
+  connector WorkspaceManagementRecording is {
+    from outlet WorkspaceManagementAnnouncer.Published to inlet WorkspaceManagementStore.Recorded
+  } with {
+    briefly as "Carries WorkspaceManagement events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Workspaces and who belongs to them"
+  described as {
+    |Owns the workspaces that group boards together and the membership
+    |that governs who may see them.
+  }
+}
+
+context BoardManagement is {
+
+  type BoardId is Id(Trello.BoardManagement.Board) with {
+    briefly as "Unique identifier for one board"
+    described as {
+      |Defined inside BoardManagement because board identity is this context's concern.
+    }
+  }
+
+  entity Board is {
+
+    command CreateBoard is {
+      title is String,
+      visibility is String
+    } with {
+      briefly as "Ask for a board to be created"
+      described as {
+        |Sent when a board was created.
+      }
+    }
+
+    command AddBoardMember is {
+      id is Trello.BoardManagement.BoardId
+    } with {
+      briefly as "Add a member to a board"
+      described as {
+        |Sent when add a member to a board.
+      }
+    }
+
+    query WhichBoard is {
+      id is Trello.BoardManagement.BoardId
+    } with {
+      briefly as "Ask for the current state of one board"
+      described as {
+        |Sent when a reader wants a board they already know of.
+      }
+    }
+
+    result TheBoard is {
+      id is Trello.BoardManagement.BoardId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichBoard query"
+      described as {
+        |Carries the identity and a short summary of the board.
+      }
+    }
+
+    event BoardCreated is {
+      id is Trello.BoardManagement.BoardId
+    } with {
+      briefly as "Records that a board was created"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record BoardFields is {
+      id is Trello.BoardManagement.BoardId,
+      title is String,
+      visibility is String
+    } with {
+      briefly as "Everything Trello keeps about one board"
+      described as {
+        |The stored shape of a board.
+      }
+    }
+
+    initial state BoardState of record Trello.BoardManagement.Board.BoardFields with {
+      briefly as "The state of one board"
+      described as {
+        |A board has a single state; its fields change over its lifetime.
+      }
+    }
+
+    handler BoardHandler is {
+      on init {
+        set field Trello.BoardManagement.Board.BoardFields.id to "a freshly minted identifier"
+      }
+      on command CreateBoard {
+        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields
+        send event BoardCreated to outlet BoardManagementAnnouncer.Published
+      }
+      on command AddBoardMember {
+        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields
+        send event BoardCreated to outlet BoardManagementAnnouncer.Published
+      }
+      on query WhichBoard {
+        yield result TheBoard
+      }
+    } with {
+      briefly as "Handles messages addressed to a board"
+      described as {
+        |Creates and changes boards and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single board in Trello"
+    described as {
+      |The entity that remembers that a board was created.
+    }
+  }
+
+  type CardListId is Id(Trello.BoardManagement.CardList) with {
+    briefly as "Unique identifier for one cardlist"
+    described as {
+      |Defined inside BoardManagement because cardlist identity is this context's concern.
+    }
+  }
+
+  entity CardList is {
+
+    command AddList is {
+      title is String,
+      position is Integer
+    } with {
+      briefly as "Ask for a cardlist to be created"
+      described as {
+        |Sent when a list was added to a board.
+      }
+    }
+
+    command MoveList is {
+      id is Trello.BoardManagement.CardListId
+    } with {
+      briefly as "Reorder a list on its board"
+      described as {
+        |Sent when reorder a list on its board.
+      }
+    }
+
+    query WhichCardList is {
+      id is Trello.BoardManagement.CardListId
+    } with {
+      briefly as "Ask for the current state of one cardlist"
+      described as {
+        |Sent when a reader wants a cardlist they already know of.
+      }
+    }
+
+    result TheCardList is {
+      id is Trello.BoardManagement.CardListId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichCardList query"
+      described as {
+        |Carries the identity and a short summary of the cardlist.
+      }
+    }
+
+    event ListAdded is {
+      id is Trello.BoardManagement.CardListId
+    } with {
+      briefly as "Records that a list was added to a board"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record CardListFields is {
+      id is Trello.BoardManagement.CardListId,
+      title is String,
+      position is Integer
+    } with {
+      briefly as "Everything Trello keeps about one cardlist"
+      described as {
+        |The stored shape of a cardlist.
+      }
+    }
+
+    initial state CardListState of record Trello.BoardManagement.CardList.CardListFields with {
+      briefly as "The state of one cardlist"
+      described as {
+        |A cardlist has a single state; its fields change over its lifetime.
+      }
+    }
+
+    handler CardListHandler is {
+      on init {
+        set field Trello.BoardManagement.CardList.CardListFields.id to "a freshly minted identifier"
+      }
+      on command AddList {
+        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields
+        send event ListAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on command MoveList {
+        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields
+        send event ListAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on query WhichCardList {
+        yield result TheCardList
+      }
+    } with {
+      briefly as "Handles messages addressed to a cardlist"
+      described as {
+        |Creates and changes cardlists and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single cardlist in Trello"
+    described as {
+      |The entity that remembers that a list was added to a board.
+    }
+  }
+
+  type CardId is Id(Trello.BoardManagement.Card) with {
+    briefly as "Unique identifier for one card"
+    described as {
+      |Defined inside BoardManagement because card identity is this context's concern.
+    }
+  }
+
+  entity Card is {
+
+    command AddCard is {
+      title is String,
+      description is String,
+      dueDate is TimeStamp
+    } with {
+      briefly as "Ask for a card to be created"
+      described as {
+        |Sent when a card was added to a list.
+      }
+    }
+
+    command EditCard is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Change a card's details"
+      described as {
+        |Sent when change a card's details.
+      }
+    }
+
+    command MoveCard is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Move a card to another list"
+      described as {
+        |Sent when move a card to another list.
+      }
+    }
+
+    command AssignMember is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Give a card an owner"
+      described as {
+        |Sent when give a card an owner.
+      }
+    }
+
+    command AddComment is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Comment on a card"
+      described as {
+        |Sent when comment on a card.
+      }
+    }
+
+    command AddChecklist is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Add a checklist to a card"
+      described as {
+        |Sent when add a checklist to a card.
+      }
+    }
+
+    command SetDueDate is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Give a card a deadline"
+      described as {
+        |Sent when give a card a deadline.
+      }
+    }
+
+    query WhichCard is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Ask for the current state of one card"
+      described as {
+        |Sent when a reader wants a card they already know of.
+      }
+    }
+
+    result TheCard is {
+      id is Trello.BoardManagement.CardId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichCard query"
+      described as {
+        |Carries the identity and a short summary of the card.
+      }
+    }
+
+    event CardAdded is {
+      id is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Records that a card was added to a list"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record CardFields is {
+      id is Trello.BoardManagement.CardId,
+      title is String,
+      description is String,
+      dueDate is TimeStamp
+    } with {
+      briefly as "Everything Trello keeps about one card"
+      described as {
+        |The stored shape of a card.
+      }
+    }
+
+    initial state CardState of record Trello.BoardManagement.Card.CardFields with {
+      briefly as "The state of one card"
+      described as {
+        |A card has a single state; its fields change over its lifetime.
+      }
+    }
+
+    handler CardHandler is {
+      on init {
+        set field Trello.BoardManagement.Card.CardFields.id to "a freshly minted identifier"
+      }
+      on command AddCard {
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
+        send event CardAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on command EditCard {
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
+        send event CardAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on command MoveCard {
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
+        send event CardAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on command AssignMember {
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
+        send event CardAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on command AddComment {
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
+        send event CardAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on command AddChecklist {
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
+        send event CardAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on command SetDueDate {
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
+        send event CardAdded to outlet BoardManagementAnnouncer.Published
+      }
+      on query WhichCard {
+        yield result TheCard
+      }
+    } with {
+      briefly as "Handles messages addressed to a card"
+      described as {
+        |Creates and changes cards and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single card in Trello"
+    described as {
+      |The entity that remembers that a card was added to a list.
+    }
+  }
+
+  type ActivityId is Id(Trello.BoardManagement.Activity) with {
+    briefly as "Unique identifier for one activity"
+    described as {
+      |Defined inside BoardManagement because activity identity is this context's concern.
+    }
+  }
+
+  entity Activity is {
+
+    command RecordActivity is {
+      summary is String,
+      occurredAt is TimeStamp
+    } with {
+      briefly as "Ask for a activity to be created"
+      described as {
+        |Sent when something happened on a board.
+      }
+    }
+
+    query WhichActivity is {
+      id is Trello.BoardManagement.ActivityId
+    } with {
+      briefly as "Ask for the current state of one activity"
+      described as {
+        |Sent when a reader wants a activity they already know of.
+      }
+    }
+
+    result TheActivity is {
+      id is Trello.BoardManagement.ActivityId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichActivity query"
+      described as {
+        |Carries the identity and a short summary of the activity.
+      }
+    }
+
+    event ActivityRecorded is {
+      id is Trello.BoardManagement.ActivityId
+    } with {
+      briefly as "Records that something happened on a board"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record ActivityFields is {
+      id is Trello.BoardManagement.ActivityId,
+      summary is String,
+      occurredAt is TimeStamp
+    } with {
+      briefly as "Everything Trello keeps about one activity"
+      described as {
+        |The stored shape of a activity.
+      }
+    }
+
+    initial state ActivityState of record Trello.BoardManagement.Activity.ActivityFields with {
+      briefly as "The state of one activity"
+      described as {
+        |A activity has a single state; its fields change over its lifetime.
+      }
+    }
+
+    handler ActivityHandler is {
+      on init {
+        set field Trello.BoardManagement.Activity.ActivityFields.id to "a freshly minted identifier"
+      }
+      on command RecordActivity {
+        morph entity Activity to state ActivityState with record Trello.BoardManagement.Activity.ActivityFields
+        send event ActivityRecorded to outlet BoardManagementAnnouncer.Published
+      }
+      on query WhichActivity {
+        yield result TheActivity
+      }
+    } with {
+      briefly as "Handles messages addressed to a activity"
+      described as {
+        |Creates and changes activitys and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single activity in Trello"
+    described as {
+      |The entity that remembers that something happened on a board.
+    }
+  }
+
+  type BoardManagementEvent is one of {
+    event Trello.BoardManagement.Board.BoardCreated or
+    event Trello.BoardManagement.CardList.ListAdded or
+    event Trello.BoardManagement.Card.CardAdded or
+    event Trello.BoardManagement.Activity.ActivityRecorded
+  } with {
+    briefly as "Anything BoardManagement announces"
+    described as {
+      |The alternation of every event this context publishes, so one outlet
+      |can carry them all.
+    }
+  }
+
+  type BoardManagementCommand is one of {
+    command Trello.BoardManagement.Board.CreateBoard or
+    command Trello.BoardManagement.Board.AddBoardMember or
+    command Trello.BoardManagement.CardList.AddList or
+    command Trello.BoardManagement.CardList.MoveList or
+    command Trello.BoardManagement.Card.AddCard or
+    command Trello.BoardManagement.Card.EditCard or
+    command Trello.BoardManagement.Card.MoveCard or
+    command Trello.BoardManagement.Card.AssignMember or
+    command Trello.BoardManagement.Card.AddComment or
+    command Trello.BoardManagement.Card.AddChecklist or
+    command Trello.BoardManagement.Card.SetDueDate or
+    command Trello.BoardManagement.Activity.RecordActivity
+  } with {
+    briefly as "Everything BoardManagement can be asked to do"
+    described as {
+      |The alternation of every command the application sends here, so one
+      |inlet and one connector can carry them all.
+    }
+  }
+
+  processor BoardManagementAnnouncer as source is {
+    outlet Published is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Where BoardManagement publishes what happened"
+      described as {
+        |Events leave this context through this outlet.
+      }
+    }
+    handler BoardManagementAnnouncerHandler is {
+      on event Trello.BoardManagement.Board.BoardCreated {
+        send event Trello.BoardManagement.Board.BoardCreated to outlet BoardManagementAnnouncer.Published
+      }
+      on other {
+        do "publish any other event this context raises"
+      }
+    } with {
+      briefly as "Publishes BoardManagement events"
+      described as {
+        |Puts each event an entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The context's publication point"
+    described as {
+      |A source streamlet carrying what BoardManagement wants known elsewhere.
+    }
+  }
+
+  processor BoardManagementIntake as sink is {
+    inlet Requests is type Trello.BoardManagement.BoardManagementCommand with {
+      briefly as "Where commands arrive from the application"
+      described as {
+        |Everything BoardManagement is asked to do enters here.
+      }
+    }
+    handler BoardManagementIntakeHandler is {
+      on command Trello.BoardManagement.Board.CreateBoard {
+        tell command Trello.BoardManagement.Board.CreateBoard to entity Board
+      }
+      on command Trello.BoardManagement.Board.AddBoardMember {
+        tell command Trello.BoardManagement.Board.AddBoardMember to entity Board
+      }
+      on command Trello.BoardManagement.CardList.AddList {
+        tell command Trello.BoardManagement.CardList.AddList to entity CardList
+      }
+      on command Trello.BoardManagement.CardList.MoveList {
+        tell command Trello.BoardManagement.CardList.MoveList to entity CardList
+      }
+      on command Trello.BoardManagement.Card.AddCard {
+        tell command Trello.BoardManagement.Card.AddCard to entity Card
+      }
+      on command Trello.BoardManagement.Card.EditCard {
+        tell command Trello.BoardManagement.Card.EditCard to entity Card
+      }
+      on command Trello.BoardManagement.Card.MoveCard {
+        tell command Trello.BoardManagement.Card.MoveCard to entity Card
+      }
+      on command Trello.BoardManagement.Card.AssignMember {
+        tell command Trello.BoardManagement.Card.AssignMember to entity Card
+      }
+      on command Trello.BoardManagement.Card.AddComment {
+        tell command Trello.BoardManagement.Card.AddComment to entity Card
+      }
+      on command Trello.BoardManagement.Card.AddChecklist {
+        tell command Trello.BoardManagement.Card.AddChecklist to entity Card
+      }
+      on command Trello.BoardManagement.Card.SetDueDate {
+        tell command Trello.BoardManagement.Card.SetDueDate to entity Card
+      }
+      on command Trello.BoardManagement.Activity.RecordActivity {
+        tell command Trello.BoardManagement.Activity.RecordActivity to entity Activity
+      }
+    } with {
+      briefly as "Dispatches arriving commands to the entity that owns them"
+      described as {
+        |The witness pass requires a receiving on-clause for every command
+        |an epic step sends here, so each is handled explicitly.
+      }
+    }
+  } with {
+    briefly as "The context's front door"
+    described as {
+      |A sink receiving messages addressed to BoardManagement.
+    }
+  }
+
+  repository BoardManagementStore is {
+    inlet Recorded is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Where events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema BoardManagementSchema is flat
+      of Held as record Trello.BoardManagement.Board.BoardFields
+    with {
+      briefly as "How BoardManagement records are laid out in storage"
+      described as {
+        |A flat schema: one stored row per record.
+      }
+    }
+    handler BoardManagementStoreHandler is {
+      on event Trello.BoardManagement.Board.BoardCreated {
+        set field Trello.BoardManagement.Board.BoardFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists what this context owns"
+    described as {
+      |Entities are stateful, so BoardManagement keeps a repository.
+    }
+  }
+
+  connector BoardManagementRecording is {
+    from outlet BoardManagementAnnouncer.Published to inlet BoardManagementStore.Recorded
+  } with {
+    briefly as "Carries BoardManagement events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Boards, their lists, and the cards on them"
+  described as {
+    |The heart of Trello: a board holds ordered lists, each list holds
+    |cards, and every change is recorded as activity.
+  }
+}

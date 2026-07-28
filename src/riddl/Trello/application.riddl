@@ -1,0 +1,150 @@
+application context TrelloUI is {
+
+  record BoardEntry is {
+    title is String
+  } with {
+    briefly as "What a member types when creating a board"
+    described as {
+      |The application collects a title; everything else is defaulted.
+    }
+  }
+
+  record BoardSummary is {
+    title is String,
+    lists is Integer
+  } with {
+    briefly as "What the application shows about a board"
+    described as {
+      |Enough to draw a row on the boards page.
+    }
+  }
+
+  page BoardsPage is {
+    list MyBoards shows record BoardSummary with {
+      briefly as "The boards a member can open"
+      described as {
+        |One row per board the member belongs to.
+      }
+    }
+    list JustCreated shows record BoardEntry with {
+      briefly as "Echoes back the board just named"
+      described as {
+        |Confirms what was typed before the board list catches up.
+      }
+    }
+    form NewBoard acquires record BoardEntry with {
+      briefly as "Where a new board is named"
+      described as {
+        |Collects the title, then asks BoardManagement to create it.
+      }
+    }
+  } with {
+    briefly as "Where a member sees and creates boards"
+    described as {
+      |The landing screen of the application.
+    }
+  }
+
+  handler BoardsPageHandler is {
+    on command Trello.BoardManagement.Board.CreateBoard {
+      set field BoardEntry.title to "the title the member typed"
+      put get from form NewBoard to list JustCreated
+    }
+  } with {
+    briefly as "Reads what the member typed and refreshes what they see"
+    described as {
+      |Only an application context may `get` from an input or `put` to an
+      |output, so the screen's own behaviour lives here.
+    }
+  }
+
+    processor UserManagementRequests as source is {
+      outlet UserManagementSubmissions is type Trello.UserManagement.UserManagementCommand with {
+        briefly as "Where UserManagement requests leave the application"
+        described as {
+          |Requests reach the UserManagement context over a domain-scoped connector.
+        }
+      }
+      handler UserManagementRequestsHandler is {
+        on command Trello.UserManagement.Account.CreateAccount {
+          send command Trello.UserManagement.Account.CreateAccount to outlet UserManagementSubmissions
+        }
+        on other {
+          do "forward whatever else the member asked of UserManagement"
+        }
+      } with {
+        briefly as "Forwards UserManagement requests into the domain"
+        described as {
+          |Runs when a page raises a command bound for UserManagement.
+        }
+      }
+    } with {
+      briefly as "The application's outbound path to UserManagement"
+      described as {
+        |A source streamlet: what the member asked for, on its way in.
+      }
+    }
+
+    processor WorkspaceManagementRequests as source is {
+      outlet WorkspaceManagementSubmissions is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+        briefly as "Where WorkspaceManagement requests leave the application"
+        described as {
+          |Requests reach the WorkspaceManagement context over a domain-scoped connector.
+        }
+      }
+      handler WorkspaceManagementRequestsHandler is {
+        on command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
+          send command Trello.WorkspaceManagement.Workspace.CreateWorkspace to outlet WorkspaceManagementSubmissions
+        }
+        on other {
+          do "forward whatever else the member asked of WorkspaceManagement"
+        }
+      } with {
+        briefly as "Forwards WorkspaceManagement requests into the domain"
+        described as {
+          |Runs when a page raises a command bound for WorkspaceManagement.
+        }
+      }
+    } with {
+      briefly as "The application's outbound path to WorkspaceManagement"
+      described as {
+        |A source streamlet: what the member asked for, on its way in.
+      }
+    }
+
+    processor BoardManagementRequests as source is {
+      outlet BoardManagementSubmissions is type Trello.BoardManagement.BoardManagementCommand with {
+        briefly as "Where BoardManagement requests leave the application"
+        described as {
+          |Requests reach the BoardManagement context over a domain-scoped connector.
+        }
+      }
+      handler BoardManagementRequestsHandler is {
+        on command Trello.BoardManagement.Board.CreateBoard {
+          send command Trello.BoardManagement.Board.CreateBoard to outlet BoardManagementSubmissions
+        }
+        on other {
+          do "forward whatever else the member asked of BoardManagement"
+        }
+      } with {
+        briefly as "Forwards BoardManagement requests into the domain"
+        described as {
+          |Runs when a page raises a command bound for BoardManagement.
+        }
+      }
+    } with {
+      briefly as "The application's outbound path to BoardManagement"
+      described as {
+        |A source streamlet: what the member asked for, on its way in.
+      }
+    }
+
+} with {
+  briefly as "The application through which members reach Trello"
+  described as {
+    |TrelloUI is the only place a member touches this system. RIDDL 2.0
+    |requires the application intention on any context holding UI groups and
+    |confines user interaction to the application boundary.
+  }
+  option is technology("react.js")
+}

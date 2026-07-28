@@ -199,6 +199,10 @@ domain ShopifyCart is {
 
       // Handler for processing commands
       handler ProductCommandHandler is {
+        on init {
+          set field ProductRecord.productId to "a freshly minted product identifier"
+        }
+
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Product.UpdateProductPrice is {
           // Validate the price change
@@ -287,15 +291,31 @@ domain ShopifyCart is {
       }
 
       // Helper functions for cart operations
+      record AppendItemToCartInput is {
+        items is many CartItem,
+        productId is ProductId,
+        quantity is Quantity
+      } with {
+        briefly as "What appendItemToCart needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record AppendItemToCartOutput is {
+        items is many CartItem
+      } with {
+        briefly as "What appendItemToCart produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function appendItemToCart is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-          quantity is Quantity
-        }
-        returns {
-          items is many CartItem
-        }
+        requires record AppendItemToCartInput
+        returns record AppendItemToCartOutput
         do "Add item to cart or update quantity if already exists"
       } with {
         briefly as "Adds a product to cart or updates quantity if already present"
@@ -306,15 +326,31 @@ domain ShopifyCart is {
         }
       }
 
+      record CalculateSubtotalInput is {
+        items is many CartItem,
+        productId is ProductId,
+        quantity is Quantity
+      } with {
+        briefly as "What calculateSubtotal needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record CalculateSubtotalOutput is {
+        price: Price
+      } with {
+        briefly as "What calculateSubtotal produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function calculateSubtotal is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-          quantity is Quantity
-        }
-        returns {
-          price: Price
-        }
+        requires record CalculateSubtotalInput
+        returns record CalculateSubtotalOutput
         do "Calculate cart subtotal from all items"
       } with {
         briefly as "Calculates the cart subtotal based on all items"
@@ -326,15 +362,31 @@ domain ShopifyCart is {
         }
       }
 
+      record CalculateTaxesInput is {
+        items is many CartItem,
+        productId is ProductId,
+        quantity is Quantity
+      } with {
+        briefly as "What calculateTaxes needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record CalculateTaxesOutput is {
+        price: Price
+      } with {
+        briefly as "What calculateTaxes produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function calculateTaxes is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-          quantity is Quantity
-        }
-        returns {
-          price: Price
-        }
+        requires record CalculateTaxesInput
+        returns record CalculateTaxesOutput
         do "Calculate taxes based on subtotal and tax rules"
       } with {
         briefly as "Calculates taxes based on cart subtotal"
@@ -345,16 +397,32 @@ domain ShopifyCart is {
         }
       }
 
+      record CalculateTotalInput is {
+        subtotal is Price,
+        taxes is Price,
+        shipping is Price,
+        discount is Price
+      } with {
+        briefly as "What calculateTotal needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record CalculateTotalOutput is {
+        price: Price
+      } with {
+        briefly as "What calculateTotal produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function calculateTotal is {
-        requires {
-          subtotal is Price
-          taxes is Price
-          shipping is Price
-          discount is Price
-        }
-        returns {
-          price: Price
-        }
+        requires record CalculateTotalInput
+        returns record CalculateTotalOutput
         do "Add subtotal, taxes, shipping and subtract discount"
       } with {
         briefly as "Calculates the final cart total"
@@ -365,14 +433,30 @@ domain ShopifyCart is {
         }
       }
 
+      record RemoveItemFromCartInput is {
+        items is many CartItem,
+        productId is ProductId
+      } with {
+        briefly as "What removeItemFromCart needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record RemoveItemFromCartOutput is {
+        items is many CartItem
+      } with {
+        briefly as "What removeItemFromCart produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function removeItemFromCart is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-        }
-        returns {
-          items is many CartItem
-        }
+        requires record RemoveItemFromCartInput
+        returns record RemoveItemFromCartOutput
         do "Remove item from cart items by productId"
       } with {
         briefly as "Removes a product from the cart"
@@ -382,15 +466,31 @@ domain ShopifyCart is {
         }
       }
 
+      record UpdateItemQuantityInput is {
+        items is many CartItem,
+        productId is ProductId,
+        quantity is Quantity
+      } with {
+        briefly as "What updateItemQuantity needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record UpdateItemQuantityOutput is {
+        items is many CartItem
+      } with {
+        briefly as "What updateItemQuantity produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function updateItemQuantity is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-          quantity is Quantity
-        }
-        returns {
-          items is many CartItem
-        }
+        requires record UpdateItemQuantityInput
+        returns record UpdateItemQuantityOutput
         do "Update quantity of an item in cart"
       } with {
         briefly as "Updates the quantity of a product in the cart"
@@ -400,14 +500,30 @@ domain ShopifyCart is {
         }
       }
 
+      record CalculateSubtotalAfterRemovalInput is {
+        items is many CartItem,
+        productId is ProductId
+      } with {
+        briefly as "What calculateSubtotalAfterRemoval needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record CalculateSubtotalAfterRemovalOutput is {
+        price: Price
+      } with {
+        briefly as "What calculateSubtotalAfterRemoval produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function calculateSubtotalAfterRemoval is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-        }
-        returns {
-          price: Price
-        }
+        requires record CalculateSubtotalAfterRemovalInput
+        returns record CalculateSubtotalAfterRemovalOutput
         do "Calculate subtotal after removing an item"
       } with {
         briefly as "Calculates cart subtotal after removing a product"
@@ -419,14 +535,30 @@ domain ShopifyCart is {
 
       }
 
+      record CalculateTaxesAfterRemovalInput is {
+        items is many CartItem,
+        productId is ProductId
+      } with {
+        briefly as "What calculateTaxesAfterRemoval needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record CalculateTaxesAfterRemovalOutput is {
+        price: Price
+      } with {
+        briefly as "What calculateTaxesAfterRemoval produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function calculateTaxesAfterRemoval is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-        }
-        returns {
-          price: Price
-        }
+        requires record CalculateTaxesAfterRemovalInput
+        returns record CalculateTaxesAfterRemovalOutput
         do "Calculate taxes after removing an item"
       } with {
         briefly as "Calculates taxes after removing a product"
@@ -438,15 +570,31 @@ domain ShopifyCart is {
 
       }
 
+      record CalculateSubtotalAfterUpdateInput is {
+        items is many CartItem,
+        productId is ProductId,
+        quantity is Quantity
+      } with {
+        briefly as "What calculateSubtotalAfterUpdate needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record CalculateSubtotalAfterUpdateOutput is {
+        price: Price
+      } with {
+        briefly as "What calculateSubtotalAfterUpdate produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function calculateSubtotalAfterUpdate is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-          quantity is Quantity
-        }
-        returns {
-          price: Price
-        }
+        requires record CalculateSubtotalAfterUpdateInput
+        returns record CalculateSubtotalAfterUpdateOutput
         do "Calculate subtotal after updating quantity"
       } with {
         briefly as "Calculates cart subtotal after updating product quantity"
@@ -458,15 +606,31 @@ domain ShopifyCart is {
 
       }
 
+      record CalculateTaxesAfterUpdateInput is {
+        items is many CartItem,
+        productId is ProductId,
+        quantity is Quantity
+      } with {
+        briefly as "What calculateTaxesAfterUpdate needs to do its work"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
+      record CalculateTaxesAfterUpdateOutput is {
+        price: Price
+      } with {
+        briefly as "What calculateTaxesAfterUpdate produces"
+        described as {
+          |Named because RIDDL 2.0 deprecates inline aggregation on
+          |'requires' and 'returns'.
+        }
+      }
+
       function calculateTaxesAfterUpdate is {
-        requires {
-          items is many CartItem
-          productId is ProductId
-          quantity is Quantity
-        }
-        returns {
-          price: Price
-        }
+        requires record CalculateTaxesAfterUpdateInput
+        returns record CalculateTaxesAfterUpdateOutput
         do "Calculate taxes after updating quantity"
       } with {
         briefly as "Calculates taxes after updating product quantity"
@@ -612,6 +776,10 @@ domain ShopifyCart is {
 
       // Handler for processing commands
       handler CartCommandHandler is {
+        on init {
+          set field CartRecord.cartId to "a freshly minted cart identifier"
+        }
+
         on command CreateCart is {
           // Create a new cart with an ID and initialized values
           morph entity Cart to state CartData with record CartRecord
@@ -826,6 +994,10 @@ domain ShopifyCart is {
 
       // Handler for processing commands
       handler CheckoutCommandHandler is {
+        on init {
+          set field CheckoutRecord.cartId to "the cart this checkout is for"
+        }
+
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout is {
           // Initialize checkout with customer information
@@ -884,6 +1056,13 @@ domain ShopifyCart is {
       schema CartData is relational of
         cart as Cart
         link cartItems as field Cart.items.id to field Product.id
+      with {
+        briefly as "How carts are laid out in storage"
+        described as {
+          |A relational schema: the cart, with its items linked to the
+          |products they refer to.
+        }
+      }
 
       // Message handlers
       handler CartRepositoryHandler is {
@@ -929,6 +1108,12 @@ domain ShopifyCart is {
 
       schema ProductData is flat of
         product as Product
+      with {
+        briefly as "How products are laid out in storage"
+        described as {
+          |A flat schema: one stored row per product.
+        }
+      }
 
       handler ProductRepositoryHandler is {
         on event ProductPriceUpdated is {
@@ -956,31 +1141,36 @@ domain ShopifyCart is {
       }
     }
 
+    record CheckoutProcessInput is {
+      paymentType is String,
+      paymentDetails is String
+    } with {
+      briefly as "What the checkout saga needs to run"
+      described as {
+        |Named because RIDDL 2.0 deprecates inline aggregation on
+        |'requires' and 'returns'.
+      }
+    }
+
+    record CheckoutProcessOutput is {
+      orderPlaced is Boolean
+    } with {
+      briefly as "What the checkout saga reports when it finishes"
+      described as {
+        |Named because RIDDL 2.0 deprecates inline aggregation on
+        |'requires' and 'returns'.
+      }
+    }
+
     // Saga for the checkout process
     saga CheckoutProcess is {
 
-      requires {
-        cartId is CartId
-        customerInfo is {
-          email is Email
-          name is Name
-          shippingAddress is Address
-          billingAddress is Address
-        }
-        paymentInfo is {
-          type is String
-          details is String
-        }
-      }
+      requires record CheckoutProcessInput
 
-      returns {
-        // FIXED: Using defined Bool type instead of Boolean
-        success is Bool
-        orderId is UUID
-        message is String
-      }
+      returns record CheckoutProcessOutput
 
       step ValidateCart is {
+        tell command ShopifyCart.ShoppingContext.Cart.RemoveFromCart to entity Cart
         // Check if cart exists and has items
         when "cartRepository.exists(cartId) && cartRepository.hasItems(cartId)" then
           do "Continue to next step after cart validation"
@@ -1000,6 +1190,7 @@ domain ShopifyCart is {
       }
 
       step ValidateInventory is {
+        tell command ShopifyCart.ShoppingContext.Product.UpdateInventory to entity Product
         // Check inventory for all items in cart
         when "allItemsHaveInventory(Cart.items)" then
           do "Inventory validated for all items"
@@ -1019,6 +1210,7 @@ domain ShopifyCart is {
       }
 
       step ProcessPayment is {
+        tell command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout to entity ShopifyCart.ShoppingContext.Checkout
         // Process payment with payment provider
         when "paymentService.process(cartId, paymentInfo)" then
           do "Payment processed successfully"
@@ -1042,6 +1234,7 @@ domain ShopifyCart is {
       }
 
       step CreateOrder is {
+        tell command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout to entity ShopifyCart.ShoppingContext.Checkout
         do "Create order from cart using orderService"
       } reverted by {
         // Cancel order if created
@@ -1059,6 +1252,7 @@ domain ShopifyCart is {
       }
 
       step UpdateInventoryLevels is {
+        tell command ShopifyCart.ShoppingContext.Product.UpdateInventory to entity Product
         do "Reduce inventory for all purchased items via inventoryService"
       } reverted by {
         do "Restore inventory levels for all items via inventoryService"
@@ -1071,6 +1265,7 @@ domain ShopifyCart is {
       }
 
       step SendConfirmation is {
+        tell command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout to entity ShopifyCart.ShoppingContext.Checkout
         do "Send order confirmation email to customer"
       } reverted by {
         do "No action needed for email revert"
@@ -1230,7 +1425,7 @@ domain ShopifyCart is {
       user Customer wants to "add products to cart" so that "they can purchase them later"
 
       step from user Customer "views" page UserInterface.ProductDetails
-      step send command AddToCart from user Customer to entity Cart
+      step send command AddToCart from page UserInterface.ProductDetails to entity Cart
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -1251,7 +1446,7 @@ domain ShopifyCart is {
 
       step from user Customer "views" page UserInterface.ShoppingCart
       // FIXED: Ambiguous reference by using fully qualified path
-      step send command ShopifyCart.ShoppingContext.Cart.UpdateQuantity from user Customer to entity Cart
+      step send command ShopifyCart.ShoppingContext.Cart.UpdateQuantity from page UserInterface.ShoppingCart to entity Cart
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -1268,7 +1463,7 @@ domain ShopifyCart is {
        so that "they can change their mind about purchases"
 
       step from user Customer "views" page UserInterface.ShoppingCart
-      step send command RemoveFromCart from user Customer to entity Cart
+      step send command RemoveFromCart from page UserInterface.ShoppingCart to entity Cart
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -1302,7 +1497,7 @@ domain ShopifyCart is {
       // FIXED: Ambiguous reference by using renamed UI component
       step from user Customer "clicks" button UserInterface.ShoppingCart.CheckoutBtn
       // FIXED: Ambiguous references by using fully qualified paths
-      step send command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout from user Customer to entity ShopifyCart.ShoppingContext.Checkout
+      step send command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout from page UserInterface.ShoppingCart to entity ShopifyCart.ShoppingContext.Checkout
       // FIXED: Ambiguous references by using fully qualified paths and renamed UI component
       step from entity ShopifyCart.ShoppingContext.Checkout "processes" to page UserInterface.CheckoutPage
       // FIXED: Ambiguous reference by using renamed UI component
@@ -1325,7 +1520,7 @@ domain ShopifyCart is {
         UserInterface.Payment.PaymentDetailsEntry to entity ShopifyCart.ShoppingContext.Checkout
       step from entity ShopifyCart.ShoppingContext.Checkout "validates" to entity ShopifyCart.ShoppingContext.Checkout
       step from user Customer "confirms" page UserInterface.Payment
-      step send command CompleteCheckout from user Customer to entity ShopifyCart.ShoppingContext.Checkout
+      step send command CompleteCheckout from page UserInterface.Payment to entity ShopifyCart.ShoppingContext.Checkout
       step from entity ShopifyCart.ShoppingContext.Checkout "processes" to saga CheckoutProcess
       step focus user Customer on page UserInterface.CheckoutCompletedPage
     }
@@ -1358,7 +1553,7 @@ domain ShopifyCart is {
 
       step from user StoreAdmin "views" page UserInterface.ProductManagement
       step from user StoreAdmin "updates" form InventoryQuantity
-      step send command ShopifyCart.ShoppingContext.Product.UpdateInventory from user StoreAdmin to entity Product
+      step send command ShopifyCart.ShoppingContext.Product.UpdateInventory from page UserInterface.ProductManagement to entity Product
       step from entity Product "processes" to entity Product
       step focus user StoreAdmin on page UserInterface.ProductManagement
     }
@@ -1377,7 +1572,7 @@ domain ShopifyCart is {
 
       step from user StoreAdmin "views" page UserInterface.ProductManagement
       step from user StoreAdmin "updates" item ProductPrice
-      step send command ShopifyCart.ShoppingContext.Product.UpdateProductPrice from user StoreAdmin to entity Product
+      step send command ShopifyCart.ShoppingContext.Product.UpdateProductPrice from page UserInterface.ProductManagement to entity Product
       step from entity Product "processes" to entity Product
       step focus user StoreAdmin on page UserInterface.ProductManagement
     }

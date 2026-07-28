@@ -1,13 +1,60 @@
-domain ToDoodles {
+domain ToDoodles is {
+
+  author Reid is {
+    name: "Reid Spencer"
+    email: "reid@ossuminc.com"
+    organization: "Ossum Inc."
+    title: "Chief Architect"
+  } with {
+    briefly as "The author of this example model"
+    described as {
+      |Reid Spencer designs the RIDDL language and writes the example models
+      |that exercise it.
+    }
+  }
+
+
 
   include "DoodleContext/doodle"
   include "ListContext/list"
   include "Application/todoodles"
   include "Epics/epics"
 
-} with {
-  briefly "An application for creating a list of artistic doodles"
-  described as {
-    | TBD
+  connector ListRequests is {
+    from outlet ToDoodles.ToDoodlesApp.ListRequests.ListSubmissions
+    to inlet ToDoodles.List.Intake.Requests
+  } with {
+    briefly as "Carries the artist's requests from the application to the List context"
+    described as {
+      |Like DrawingRequests, this crosses a context boundary and so is
+      |declared at domain scope and made persistent.
+    }
+    option is persistent
   }
+
+  connector DrawingRequests is {
+    from outlet ToDoodles.ToDoodlesApp.DrawingRequests.DrawingSubmissions
+    to inlet ToDoodles.Doodle.Intake.Requests
+  } with {
+    briefly as "Carries the artist's requests from the application to the Doodle context"
+    described as {
+      |This connector crosses a context boundary, so RIDDL 2.0 requires it
+      |to be declared at domain scope and to be persistent: what the user
+      |asked for must not be lost in transit.
+    }
+    option is persistent
+  }
+
+} with {
+  briefly as "An application for creating a list of artistic doodles"
+  described as {
+    |ToDoodles lets a user make small drawings, called doodles, and gather
+    |them into named lists. The domain is deliberately small: it exists to
+    |demonstrate RIDDL rather than to specify a shippable product.
+    |
+    |It is divided into three contexts. Doodle owns the drawings themselves,
+    |List owns the named collections that group them, and ToDoodlesApp is
+    |the application context through which a user reaches both.
+  }
+  by author Reid
 }

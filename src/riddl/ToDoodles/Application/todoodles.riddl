@@ -1,1 +1,131 @@
-context ToDoodlesApp is { ??? }
+application context ToDoodlesApp is {
+
+  record NewDoodleEntry is {
+    title is String
+  } with {
+    briefly as "What the artist types when starting a doodle"
+    described as {
+      |The application collects a title and nothing else; the drawing itself
+      |is made on the canvas.
+    }
+  }
+
+  record DoodleSummary is {
+    title is String,
+    strokes is Natural
+  } with {
+    briefly as "What the application shows about a doodle"
+    described as {
+      |A short summary suitable for a list row.
+    }
+  }
+
+  page Studio is {
+    list Gallery shows record DoodleSummary with {
+      briefly as "The doodles the artist has already made"
+      described as {
+        |One row per doodle, newest first.
+      }
+    }
+    list Confirmation shows record NewDoodleEntry with {
+      briefly as "Echoes back the doodle the artist just named"
+      described as {
+        |Immediately after the form is submitted, the artist sees what they
+        |asked for, before the gallery catches up.
+      }
+    }
+    form StartDoodle acquires record NewDoodleEntry with {
+      briefly as "Where a new doodle is named"
+      described as {
+        |Collects the title, then asks the Doodle context to create it.
+      }
+    }
+  } with {
+    briefly as "The one screen of the ToDoodles application"
+    described as {
+      |Shows the artist what they have drawn and lets them start something
+      |new.
+    }
+  }
+
+  handler StudioHandler is {
+    on command ToDoodles.Doodle.Drawing.CreateDrawing {
+      set field NewDoodleEntry.title to "the title the artist typed"
+      put get from form StartDoodle to list Confirmation
+    }
+  } with {
+    briefly as "Reads what the artist typed and refreshes what they see"
+    described as {
+      |The application boundary. Only an application context may `get` from
+      |an input or `put` to an output, so the screen's own behaviour lives
+      |here rather than in the streamlets.
+    }
+  }
+
+  processor DrawingRequests as source is {
+    outlet DrawingSubmissions is command ToDoodles.Doodle.Drawing.CreateDrawing with {
+      briefly as "Where the application asks for a drawing to be made"
+      described as {
+        |Requests leave the application here and reach the Doodle context
+        |over a domain-scoped connector.
+      }
+    }
+    handler DrawingRequestsHandler is {
+      on command ToDoodles.Doodle.Drawing.CreateDrawing {
+        send command ToDoodles.Doodle.Drawing.CreateDrawing to outlet DrawingSubmissions
+      }
+      on other {
+        do "ignore interactions that do not start a drawing"
+      }
+    } with {
+      briefly as "Turns the artist's naming of a doodle into a command"
+      described as {
+        |Runs when the StartDoodle form is submitted.
+      }
+    }
+  } with {
+    briefly as "The application's outbound path to the Doodle context"
+    described as {
+      |A source streamlet: what the user asked for, on its way into the
+      |domain.
+    }
+  }
+
+  processor ListRequests as source is {
+    outlet ListSubmissions is command ToDoodles.List.DoodleList.CreateList with {
+      briefly as "Where the application asks for a list to be made"
+      described as {
+        |Requests leave the application here and reach the List context over
+        |a domain-scoped connector.
+      }
+    }
+    handler ListRequestsHandler is {
+      on command ToDoodles.List.DoodleList.CreateList {
+        send command ToDoodles.List.DoodleList.CreateList to outlet ListSubmissions
+      }
+      on other {
+        do "ignore interactions that do not start a list"
+      }
+    } with {
+      briefly as "Turns the artist's naming of a list into a command"
+      described as {
+        |Runs when the artist starts a new collection.
+      }
+    }
+  } with {
+    briefly as "The application's outbound path to the List context"
+    described as {
+      |A source streamlet: what the user asked for, on its way into the
+      |domain.
+    }
+  }
+
+} with {
+  briefly as "The application through which a user reaches ToDoodles"
+  described as {
+    |ToDoodlesApp is the only place a user touches this system. It owns the
+    |screens and forwards what the user asks for to the Doodle and List
+    |contexts, which do not talk to users themselves.
+  }
+  option is technology("react.js")
+}

@@ -1,3 +1,205 @@
 context Doodle is {
-  ???
+
+  type DoodleId is Id(ToDoodles.Doodle.Drawing) with {
+    briefly as "Unique identifier for a single doodle"
+    described as {
+      |Identifies one drawing. Defined inside the Doodle context because the
+      |drawings are this context's concern.
+    }
+  }
+
+  record DrawingData is {
+    id is DoodleId,
+    title is String,
+    strokes is Natural
+  } with {
+    briefly as "The stored form of a single doodle"
+    described as {
+      |Everything ToDoodles keeps about one drawing: its identity, the title
+      |the artist gave it, and how many strokes it took to make.
+    }
+  }
+
+
+
+
+
+  entity Drawing is {
+
+    command CreateDrawing is {
+      title is String
+    } with {
+      briefly as "Ask for a new doodle to be started"
+      described as {
+        |Sent when an artist begins a new drawing.
+      }
+    }
+
+    query WhichDrawing is {
+      id is DoodleId
+    } with {
+      briefly as "Ask for the current state of one doodle"
+      described as {
+        |Sent when a reader wants to see a drawing they already know of.
+      }
+    }
+
+    result TheDrawing is {
+      id is DoodleId,
+      title is String
+    } with {
+      briefly as "The answer to a WhichDrawing query"
+      described as {
+        |Carries the identity and title of the requested drawing.
+      }
+    }
+
+    event DrawingCreated is {
+      id is DoodleId,
+      title is String
+    } with {
+      briefly as "A new doodle came into being"
+      described as {
+        |Emitted once a drawing has been recorded.
+      }
+    }
+
+    state DrawingState of record DrawingData with {
+      briefly as "The state of one doodle"
+      described as {
+        |Holds the drawing's data for as long as it exists.
+      }
+    }
+
+    handler DrawingHandler is {
+      on init {
+        set field DrawingState.strokes to "0"
+      }
+      on command CreateDrawing {
+        morph entity Drawing to state DrawingState with record DrawingData
+        send event DrawingCreated to outlet DrawingAnnouncer.Published
+      }
+      on query WhichDrawing {
+        yield result TheDrawing
+      }
+    } with {
+      briefly as "Handles messages addressed to a drawing"
+      described as {
+        |Initializes a new drawing, records the command that creates it, and
+        |answers questions about it.
+      }
+    }
+
+  } with {
+    briefly as "A single artistic doodle"
+    described as {
+      |The Drawing entity is one doodle. It is created once and thereafter
+      |only its title and stroke count change.
+    }
+  }
+
+  processor DrawingAnnouncer as source is {
+    outlet Published is event DrawingCreated with {
+      briefly as "Where the context publishes what happened to its drawings"
+      described as {
+        |Drawing events leave the Doodle context through this outlet so that
+        |other processors may connect to them.
+      }
+    }
+    handler DrawingAnnouncerHandler is {
+      on event DrawingCreated {
+        send event DrawingCreated to outlet DrawingAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a drawing event"
+      }
+    } with {
+      briefly as "Publishes drawing events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The context's publication point for drawing events"
+    described as {
+      |A source streamlet carrying everything the Doodle context wants the
+      |rest of the system to know.
+    }
+  }
+
+  processor Intake as sink is {
+    inlet Requests is command CreateDrawing with {
+      briefly as "Where drawing commands arrive from outside the context"
+      described as {
+        |Everything the Doodle context is asked to do enters here.
+      }
+    }
+    handler IntakeHandler is {
+      on command CreateDrawing {
+        tell command CreateDrawing to entity Drawing
+      }
+    } with {
+      briefly as "Dispatches arriving commands to the right drawing"
+      described as {
+        |Receives commands at the context boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The context's front door for incoming messages"
+    described as {
+      |A sink that receives messages addressed to the Doodle context and
+      |dispatches them to the entity concerned.
+    }
+  }
+
+  repository Drawings is {
+    inlet Recorded is event DrawingCreated with {
+      briefly as "Where drawing events arrive to be persisted"
+      described as {
+        |The repository learns of new drawings through this inlet.
+      }
+    }
+    schema Store is flat
+      of Held as record DrawingData
+    with {
+      briefly as "How drawings are laid out in storage"
+      described as {
+        |A flat schema: one stored row per drawing.
+      }
+    }
+    handler StoreHandler is {
+      on event DrawingCreated {
+        set field DrawingData.title to "the title carried by the event"
+      }
+    } with {
+      briefly as "Keeps storage in step with what happened"
+      described as {
+        |Writes each drawing event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the drawings of this context"
+    described as {
+      |Entities are stateful, so the Doodle context keeps a repository in
+      |which their state outlives any single process.
+    }
+  }
+
+  connector Recording is {
+    from outlet DrawingAnnouncer.Published to inlet Drawings.Recorded
+  } with {
+    briefly as "Carries drawing events to storage"
+    described as {
+      |Connects what the Drawing entity announces to the repository that
+      |records it.
+    }
+  }
+
+} with {
+  briefly as "Owns the doodles themselves"
+  described as {
+    |The Doodle context is responsible for individual drawings: creating
+    |them, naming them, and keeping their contents. It knows nothing about
+    |the lists that gather them, which is the List context's concern.
+  }
 }

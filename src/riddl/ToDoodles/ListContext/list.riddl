@@ -1,3 +1,251 @@
 context List is {
-  ???
+
+  type ListId is Id(ToDoodles.List.DoodleList) with {
+    briefly as "Unique identifier for a doodle list"
+    described as {
+      |Identifies one named collection of doodles. Defined inside the List
+      |context because the lists are this context's concern.
+    }
+  }
+
+  type DoodleKey is String with {
+    briefly as "How this context refers to a doodle it does not own"
+    described as {
+      |The List context stores the identifier of a drawing without depending
+      |on the Doodle context's own identifier type. Contexts do not share
+      |types; they exchange messages.
+    }
+  }
+
+  record DoodleListData is {
+    id is ListId,
+    name is String,
+    entries is many DoodleKey
+  } with {
+    briefly as "The stored form of one named list of doodles"
+    described as {
+      |A list has a name and holds keys identifying the doodles gathered
+      |into it. The drawings themselves belong to the Doodle context.
+    }
+  }
+
+
+
+
+
+
+
+  entity DoodleList is {
+
+    command CreateList is {
+      name is String
+    } with {
+      briefly as "Ask for a new, empty doodle list"
+      described as {
+        |Sent when a user wants somewhere to gather doodles.
+      }
+    }
+
+    command AddDoodleToList is {
+      list is ListId,
+      doodle is DoodleKey
+    } with {
+      briefly as "Put an existing doodle onto a list"
+      described as {
+        |Sent when a user files a drawing under one of their lists.
+      }
+    }
+
+    query WhichList is {
+      id is ListId
+    } with {
+      briefly as "Ask for the current contents of one list"
+      described as {
+        |Sent when a reader wants to see what a list holds.
+      }
+    }
+
+    result TheList is {
+      id is ListId,
+      name is String
+    } with {
+      briefly as "The answer to a WhichList query"
+      described as {
+        |Carries the identity and name of the requested list.
+      }
+    }
+
+    event ListCreated is {
+      id is ListId,
+      name is String
+    } with {
+      briefly as "A new list came into being"
+      described as {
+        |Emitted once an empty list has been recorded.
+      }
+    }
+
+    event DoodleAddedToList is {
+      list is ListId,
+      doodle is DoodleKey
+    } with {
+      briefly as "A doodle joined a list"
+      described as {
+        |Emitted once a drawing has been recorded as a member of a list.
+      }
+    }
+
+    state DoodleListState of record DoodleListData with {
+      briefly as "The state of one doodle list"
+      described as {
+        |Holds the list's name and its members.
+      }
+    }
+
+    handler DoodleListHandler is {
+      on init {
+        set field DoodleListData.name to "untitled"
+      }
+      on command CreateList {
+        morph entity DoodleList to state DoodleListState with record DoodleListData
+        send event ListCreated to outlet ListAnnouncer.Published
+      }
+      on command AddDoodleToList {
+        set field DoodleListData.entries to "the list's members plus this doodle"
+        send event DoodleAddedToList to outlet ListAnnouncer.Published
+      }
+      on query WhichList {
+        yield result TheList
+      }
+    } with {
+      briefly as "Handles messages addressed to a doodle list"
+      described as {
+        |Creates lists, adds members to them, and answers questions about
+        |what they contain.
+      }
+    }
+
+  } with {
+    briefly as "A named collection of doodles"
+    described as {
+      |The DoodleList entity is one list. Lists are created empty and then
+      |gain and lose members over their lifetime.
+    }
+  }
+
+  type ListEvent is one of { event ListCreated or event DoodleAddedToList } with {
+    briefly as "Anything the List context announces"
+    described as {
+      |The alternation of every event this context publishes, so that one
+      |outlet can carry them all.
+    }
+  }
+
+  processor ListAnnouncer as source is {
+    outlet Published is type ListEvent with {
+      briefly as "Where the context publishes what happened to its lists"
+      described as {
+        |List events leave the List context through this outlet so that
+        |other processors may connect to them.
+      }
+    }
+    handler ListAnnouncerHandler is {
+      on event ListCreated {
+        send event ListCreated to outlet ListAnnouncer.Published
+      }
+      on event DoodleAddedToList {
+        send event DoodleAddedToList to outlet ListAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a list event"
+      }
+    } with {
+      briefly as "Publishes list events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The context's publication point for list events"
+    described as {
+      |A source streamlet carrying everything the List context wants the
+      |rest of the system to know.
+    }
+  }
+
+  processor Intake as sink is {
+    inlet Requests is command CreateList with {
+      briefly as "Where list commands arrive from outside the context"
+      described as {
+        |Everything the List context is asked to do enters here.
+      }
+    }
+    handler IntakeHandler is {
+      on command CreateList {
+        tell command CreateList to entity DoodleList
+      }
+    } with {
+      briefly as "Dispatches arriving commands to the right list"
+      described as {
+        |Receives commands at the context boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The context's front door for incoming messages"
+    described as {
+      |A sink that receives messages addressed to the List context and
+      |dispatches them to the entity concerned.
+    }
+  }
+
+  repository Lists is {
+    inlet Recorded is type ListEvent with {
+      briefly as "Where list events arrive to be persisted"
+      described as {
+        |The repository learns of new lists through this inlet.
+      }
+    }
+    schema Store is flat
+      of Held as record DoodleListData
+    with {
+      briefly as "How lists are laid out in storage"
+      described as {
+        |A flat schema: one stored row per list.
+      }
+    }
+    handler StoreHandler is {
+      on event ListCreated {
+        set field DoodleListData.name to "the name carried by the event"
+      }
+    } with {
+      briefly as "Keeps storage in step with what happened"
+      described as {
+        |Writes each list event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the lists of this context"
+    described as {
+      |Entities are stateful, so the List context keeps a repository in
+      |which their state outlives any single process.
+    }
+  }
+
+  connector Recording is {
+    from outlet ListAnnouncer.Published to inlet Lists.Recorded
+  } with {
+    briefly as "Carries list events to storage"
+    described as {
+      |Connects what the context announces to the repository that records
+      |it.
+    }
+  }
+
+} with {
+  briefly as "Owns the lists that gather doodles"
+  described as {
+    |The List context is responsible for the named collections a user files
+    |their doodles into. It refers to drawings only by key, leaving their
+    |contents to the Doodle context.
+  }
 }

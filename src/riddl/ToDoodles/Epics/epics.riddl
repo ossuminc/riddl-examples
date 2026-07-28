@@ -1,4 +1,43 @@
-epic foo is {
-   user bob wants "to forget about life" so that "he can have a nap"
-   ???
+user Artist is "someone who makes doodles and keeps them in lists" with {
+  briefly as "The only kind of person ToDoodles serves"
+  described as {
+    |An artist draws small pictures and files them under names of their own
+    |choosing. ToDoodles has no other roles: there is no administrator and
+    |no reviewer.
+  }
+}
+
+epic MakeAndFileADoodle is {
+
+  user Artist wants to "draw a doodle and file it under a name"
+    so that "the drawing can be found again later"
+
+  case StartADoodle is {
+    user Artist wants to "start a new doodle"
+      so that "there is something to draw on"
+    step focus user Artist on group Studio
+    step take form StartDoodle from user Artist
+    step send command ToDoodles.Doodle.Drawing.CreateDrawing
+      from source ToDoodles.ToDoodlesApp.DrawingRequests to sink ToDoodles.Doodle.Intake
+  } with {
+    briefly as "Starting a doodle from the studio screen"
+    described as {
+      |The artist names a doodle on the studio screen and the application
+      |echoes it back, then turns it into a command for the Doodle context.
+      |
+      |There is deliberately no `show … to …` step here. That step kind is
+      |currently unusable: the parser hardcodes an empty relationship on it
+      |(EpicParser.showOutputStep), so every such step fails the "must have a
+      |non-empty relationship" check no matter how it is written. Filed
+      |against riddl; restore the step once that is fixed.
+    }
+  }
+
+} with {
+  briefly as "How an artist makes a doodle and files it"
+  described as {
+    |The one story ToDoodles tells: an artist arrives at the studio, names a
+    |new doodle, and sees it appear in their gallery. Everything the model
+    |defines exists to serve this.
+  }
 }

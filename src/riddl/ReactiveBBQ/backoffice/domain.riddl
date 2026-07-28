@@ -1,6 +1,61 @@
 domain BackOffice is {
 
-include "SupplyOrder"
-include "MenuPlant"
+  include "SupplyOrder"
+  include "MenuPlant"
 
+  context BackOfficeFrontEnd is {
+
+    processor SupplyRequests as source is {
+      outlet SupplySubmissions is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+        briefly as "Where supply requests leave the front end"
+        described as {
+          |Requests reach the SupplyOrder context over a domain-scoped connector.
+        }
+      }
+      handler SupplyRequestsHandler is {
+        on command BackOffice.SupplyOrder.Supply.OrderSupply {
+          send command BackOffice.SupplyOrder.Supply.OrderSupply to outlet SupplySubmissions
+        }
+        on other {
+          do "ignore requests that are not about supplys"
+        }
+      } with {
+        briefly as "Forwards supply requests into the domain"
+        described as {
+          |Runs when a caller asks for a supply change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to SupplyOrder"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+  } with {
+    briefly as "Where restaurants reach the back office"
+    described as {
+      |Restaurants place supply orders through systems outside this model.
+      |This context stands in for that boundary.
+    }
+  }
+
+  connector SupplyRequests is {
+    from outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.SupplySubmissions
+    to inlet BackOffice.SupplyOrder.IntakeSupply.Requests
+  } with {
+    briefly as "Carries supply requests from the front end to SupplyOrder"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+} with {
+  briefly as "The warehouses and plants behind the restaurants"
+  described as {
+    |The back office keeps the restaurants supplied: it takes their orders
+    |for stock and runs the plant that prepares menu items centrally.
+  }
 }

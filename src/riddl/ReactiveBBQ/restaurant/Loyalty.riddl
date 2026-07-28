@@ -1,85 +1,193 @@
-// #Loyalty
 context Loyalty is {
-  adaptor FromPayment from context Restaurant.Payments is {
-    handler payments is {
-      on event Restaurant.Payments.Paid is {
-        // when event Paid from Payment context occurs
-        // and customer is known in the Paid event
-        // and customer has a loyalty account
-        // then accrue points
-        tell command AccruePoints to entity LoyaltyAccount
-      }
-      on other { error "unexpected message" }
+
+  type LoyaltyId is Id(Restaurant.Loyalty.LoyaltyAccount) with {
+    briefly as "Unique identifier for one loyaltyaccount"
+    described as {
+      |Defined inside Loyalty because loyaltyaccount identity is this context's concern.
     }
-  } with { described as "Adapts loyalty rewards from payments" }
-  type AccruePoints is command {
-    when is TimeStamp,
-    loyaltyAccountId is LoyaltyId,
-    pointsAccrued is Number,
-    fromOrder is OrderId?
-  } with { explained as {
-    |A command that, when received by the Loyalty account, accrues the `pointsAccrued`
-    |number of points to the `loyaltyAccount` provided. Optionally, the order that
-    |generated this
-    |that can be redeemed in the future.
-  }}
-  type PointsAccrued is event {
-    when is TimeStamp,
-    loyaltyId is LoyaltyId,
-    pointsAccrued is Number
-  } with { explained as {
-    |An event that is issued whenever points are accrued.
-    |The event indicates `when` the accrual occurred, the loyalty account it
-    |accrued to, and the number of `pointsAccrued`.
-  }}
-
-  type RedeemPoints is command {
-    ???
-  } with { explained as "This needs some work" }
-
-  type PointsRedeemed is event {
-    when is TimeStamp,
-    customerId is CustomerId,
-    pointsAwarded is Number,
-    toOrder is OrderId
-  } with { explained as {
-  |This event occurs when the customer redeems their accrued points.
-  }}
-  type LoyaltyEvent is one of { PointsAccrued or PointsRedeemed } with { explained as {
-    |This is a type alternation of the events for the LoyaltyAccount entity
-  }}
+  }
 
   entity LoyaltyAccount is {
-    record InitialStateData is { id is LoyaltyId }
-    state InitialState of record LoyaltyAccount.InitialStateData with {
-      explained as {
-        |This state type contains the state values associated with the loyalty
-        |account when it is first created. It only contains the `LoyaltyId` value
-        |that uniquely identifies the account.
-      }
-    }
-    handler foo is { ??? }
-    record ActiveStateData is {
-      id is LoyaltyId,
-      customer is CustomerId,
+
+    command AccruePoints is {
       points is Number,
       accrualRate is Real,
       redemptionRate is Real
-    }
-    state ActiveState of record LoyaltyAccount.ActiveStateData with {
-      explained as {
-        |This state type used when a loyalty account is active
+    } with {
+      briefly as "Ask for a loyaltyaccount to be recorded"
+      described as {
+        |Sent when a customer earned loyalty points.
       }
     }
 
-    handler Inputs is {
-      ???
+    query WhichLoyaltyAccount is {
+      id is Restaurant.Loyalty.LoyaltyId
+    } with {
+      briefly as "Ask for the current state of one loyaltyaccount"
+      described as {
+        |Sent when a reader wants a loyaltyaccount they already know of.
+      }
+    }
+
+    result TheLoyaltyAccount is {
+      id is Restaurant.Loyalty.LoyaltyId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichLoyaltyAccount query"
+      described as {
+        |Carries the identity and a short summary of the loyaltyaccount.
+      }
+    }
+
+    event PointsAccrued is {
+      id is Restaurant.Loyalty.LoyaltyId
+    } with {
+      briefly as "Records that a customer earned loyalty points"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record LoyaltyAccountFields is {
+      id is Restaurant.Loyalty.LoyaltyId,
+      points is Number,
+      accrualRate is Real,
+      redemptionRate is Real
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one loyaltyaccount"
+      described as {
+        |The stored shape of a loyaltyaccount.
+      }
+    }
+
+    initial state LoyaltyAccountState of record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields with {
+      briefly as "The state of one loyaltyaccount"
+      described as {
+        |A loyaltyaccount has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler LoyaltyAccountHandler is {
+      on init {
+        set field Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields.id to "a freshly minted identifier"
+      }
+      on command AccruePoints {
+        morph entity LoyaltyAccount to state LoyaltyAccountState with record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields
+        send event PointsAccrued to outlet LoyaltyAccountAnnouncer.Published
+      }
+      on query WhichLoyaltyAccount {
+        yield result TheLoyaltyAccount
+      }
+    } with {
+      briefly as "Handles messages addressed to a loyaltyaccount"
+      described as {
+        |Records loyaltyaccounts and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single loyaltyaccount at Reactive BBQ"
+    described as {
+      |The entity that remembers that a customer earned loyalty points.
     }
   }
-} with { explained as {
-| This Loyalty bounded context keeps track of reward points for customer
-| loyalty. Each customer is assigned a loyalty number and we track their
-| points and usage. Loyalty points are redeemable for meals and other
-| purchases at restaurants but not redeemable in cash.
-}}
-// #Loyalty
+
+  processor LoyaltyAccountAnnouncer as source is {
+    outlet Published is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
+      briefly as "Where Loyalty publishes what happened to its loyaltyaccounts"
+      described as {
+        |LoyaltyAccount events leave this context through this outlet.
+      }
+    }
+    handler LoyaltyAccountAnnouncerHandler is {
+      on event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued {
+        send event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued to outlet LoyaltyAccountAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a loyaltyaccount event"
+      }
+    } with {
+      briefly as "Publishes loyaltyaccount events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The loyaltyaccount publication point"
+    described as {
+      |A source streamlet carrying what Loyalty wants known elsewhere.
+    }
+  }
+
+  processor IntakeLoyaltyAccount as sink is {
+    inlet Requests is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+      briefly as "Where loyaltyaccount commands arrive from outside"
+      described as {
+        |Everything Loyalty is asked to do about loyaltyaccounts enters here.
+      }
+    }
+    handler IntakeLoyaltyAccountHandler is {
+      on command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
+        tell command Restaurant.Loyalty.LoyaltyAccount.AccruePoints to entity LoyaltyAccount
+      }
+    } with {
+      briefly as "Dispatches arriving loyaltyaccount commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The loyaltyaccount front door"
+    described as {
+      |A sink receiving loyaltyaccount messages addressed to Loyalty.
+    }
+  }
+
+  repository LoyaltyAccountStore is {
+    inlet Recorded is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
+      briefly as "Where loyaltyaccount events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema LoyaltyAccountSchema is flat
+      of Held as record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields
+    with {
+      briefly as "How loyaltyaccounts are laid out in storage"
+      described as {
+        |A flat schema: one stored row per loyaltyaccount.
+      }
+    }
+    handler LoyaltyAccountStoreHandler is {
+      on event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued {
+        set field Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps loyaltyaccount storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the loyaltyaccounts of this context"
+    described as {
+      |Entities are stateful, so Loyalty keeps a repository.
+    }
+  }
+
+  connector RecordingLoyaltyAccount is {
+    from outlet LoyaltyAccountAnnouncer.Published to inlet LoyaltyAccountStore.Recorded
+  } with {
+    briefly as "Carries loyaltyaccount events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns reward points earned by customers"
+  described as {
+    |This Loyalty bounded context keeps track of reward points for customers
+    |and the accrual and redemption of those points.
+  }
+}

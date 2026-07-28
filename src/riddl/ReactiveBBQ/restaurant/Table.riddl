@@ -1,7 +1,190 @@
-context Tables {
-  entity Table {
-    record TableStateData is { ??? }
-    state TableState of record Table.TableStateData
-    handler TableHandler is { ??? }
+context Tables is {
+
+  type TableId is Id(Restaurant.Tables.Table) with {
+    briefly as "Unique identifier for one table"
+    described as {
+      |Defined inside Tables because table identity is this context's concern.
+    }
+  }
+
+  entity Table is {
+
+    command AddTable is {
+      seats is Integer,
+      section is String
+    } with {
+      briefly as "Ask for a table to be recorded"
+      described as {
+        |Sent when a table was put into service.
+      }
+    }
+
+    query WhichTable is {
+      id is Restaurant.Tables.TableId
+    } with {
+      briefly as "Ask for the current state of one table"
+      described as {
+        |Sent when a reader wants a table they already know of.
+      }
+    }
+
+    result TheTable is {
+      id is Restaurant.Tables.TableId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichTable query"
+      described as {
+        |Carries the identity and a short summary of the table.
+      }
+    }
+
+    event TableAdded is {
+      id is Restaurant.Tables.TableId
+    } with {
+      briefly as "Records that a table was put into service"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record TableFields is {
+      id is Restaurant.Tables.TableId,
+      seats is Integer,
+      section is String
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one table"
+      described as {
+        |The stored shape of a table.
+      }
+    }
+
+    initial state TableState of record Restaurant.Tables.Table.TableFields with {
+      briefly as "The state of one table"
+      described as {
+        |A table has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler TableHandler is {
+      on init {
+        set field Restaurant.Tables.Table.TableFields.id to "a freshly minted identifier"
+      }
+      on command AddTable {
+        morph entity Table to state TableState with record Restaurant.Tables.Table.TableFields
+        send event TableAdded to outlet TableAnnouncer.Published
+      }
+      on query WhichTable {
+        yield result TheTable
+      }
+    } with {
+      briefly as "Handles messages addressed to a table"
+      described as {
+        |Records tables and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single table at Reactive BBQ"
+    described as {
+      |The entity that remembers that a table was put into service.
+    }
+  }
+
+  processor TableAnnouncer as source is {
+    outlet Published is event Restaurant.Tables.Table.TableAdded with {
+      briefly as "Where Tables publishes what happened to its tables"
+      described as {
+        |Table events leave this context through this outlet.
+      }
+    }
+    handler TableAnnouncerHandler is {
+      on event Restaurant.Tables.Table.TableAdded {
+        send event Restaurant.Tables.Table.TableAdded to outlet TableAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a table event"
+      }
+    } with {
+      briefly as "Publishes table events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The table publication point"
+    described as {
+      |A source streamlet carrying what Tables wants known elsewhere.
+    }
+  }
+
+  processor IntakeTable as sink is {
+    inlet Requests is command Restaurant.Tables.Table.AddTable with {
+      briefly as "Where table commands arrive from outside"
+      described as {
+        |Everything Tables is asked to do about tables enters here.
+      }
+    }
+    handler IntakeTableHandler is {
+      on command Restaurant.Tables.Table.AddTable {
+        tell command Restaurant.Tables.Table.AddTable to entity Table
+      }
+    } with {
+      briefly as "Dispatches arriving table commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The table front door"
+    described as {
+      |A sink receiving table messages addressed to Tables.
+    }
+  }
+
+  repository TableStore is {
+    inlet Recorded is event Restaurant.Tables.Table.TableAdded with {
+      briefly as "Where table events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema TableSchema is flat
+      of Held as record Restaurant.Tables.Table.TableFields
+    with {
+      briefly as "How tables are laid out in storage"
+      described as {
+        |A flat schema: one stored row per table.
+      }
+    }
+    handler TableStoreHandler is {
+      on event Restaurant.Tables.Table.TableAdded {
+        set field Restaurant.Tables.Table.TableFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps table storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the tables of this context"
+    described as {
+      |Entities are stateful, so Tables keeps a repository.
+    }
+  }
+
+  connector RecordingTable is {
+    from outlet TableAnnouncer.Published to inlet TableStore.Recorded
+  } with {
+    briefly as "Carries table events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns the tables in the dining room"
+  described as {
+    |The Tables context tracks the physical tables a party can be seated at.
   }
 }

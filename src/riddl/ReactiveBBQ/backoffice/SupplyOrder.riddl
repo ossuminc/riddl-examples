@@ -1,8 +1,191 @@
 context SupplyOrder is {
-  ???
+
+  type SupplyId is Id(BackOffice.SupplyOrder.Supply) with {
+    briefly as "Unique identifier for one supply"
+    described as {
+      |Defined inside SupplyOrder because supply identity is this context's concern.
+    }
+  }
+
+  entity Supply is {
+
+    command OrderSupply is {
+      item is String,
+      quantity is Integer
+    } with {
+      briefly as "Ask for a supply to be recorded"
+      described as {
+        |Sent when a restaurant ordered stock from a warehouse.
+      }
+    }
+
+    query WhichSupply is {
+      id is BackOffice.SupplyOrder.SupplyId
+    } with {
+      briefly as "Ask for the current state of one supply"
+      described as {
+        |Sent when a reader wants a supply they already know of.
+      }
+    }
+
+    result TheSupply is {
+      id is BackOffice.SupplyOrder.SupplyId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichSupply query"
+      described as {
+        |Carries the identity and a short summary of the supply.
+      }
+    }
+
+    event SupplyOrdered is {
+      id is BackOffice.SupplyOrder.SupplyId
+    } with {
+      briefly as "Records that a restaurant ordered stock from a warehouse"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record SupplyFields is {
+      id is BackOffice.SupplyOrder.SupplyId,
+      item is String,
+      quantity is Integer
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one supply"
+      described as {
+        |The stored shape of a supply.
+      }
+    }
+
+    initial state SupplyState of record BackOffice.SupplyOrder.Supply.SupplyFields with {
+      briefly as "The state of one supply"
+      described as {
+        |A supply has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler SupplyHandler is {
+      on init {
+        set field BackOffice.SupplyOrder.Supply.SupplyFields.id to "a freshly minted identifier"
+      }
+      on command OrderSupply {
+        morph entity Supply to state SupplyState with record BackOffice.SupplyOrder.Supply.SupplyFields
+        send event SupplyOrdered to outlet SupplyAnnouncer.Published
+      }
+      on query WhichSupply {
+        yield result TheSupply
+      }
+    } with {
+      briefly as "Handles messages addressed to a supply"
+      described as {
+        |Records supplys and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single supply at Reactive BBQ"
+    described as {
+      |The entity that remembers that a restaurant ordered stock from a warehouse.
+    }
+  }
+
+  processor SupplyAnnouncer as source is {
+    outlet Published is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
+      briefly as "Where SupplyOrder publishes what happened to its supplys"
+      described as {
+        |Supply events leave this context through this outlet.
+      }
+    }
+    handler SupplyAnnouncerHandler is {
+      on event BackOffice.SupplyOrder.Supply.SupplyOrdered {
+        send event BackOffice.SupplyOrder.Supply.SupplyOrdered to outlet SupplyAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a supply event"
+      }
+    } with {
+      briefly as "Publishes supply events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The supply publication point"
+    described as {
+      |A source streamlet carrying what SupplyOrder wants known elsewhere.
+    }
+  }
+
+  processor IntakeSupply as sink is {
+    inlet Requests is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+      briefly as "Where supply commands arrive from outside"
+      described as {
+        |Everything SupplyOrder is asked to do about supplys enters here.
+      }
+    }
+    handler IntakeSupplyHandler is {
+      on command BackOffice.SupplyOrder.Supply.OrderSupply {
+        tell command BackOffice.SupplyOrder.Supply.OrderSupply to entity Supply
+      }
+    } with {
+      briefly as "Dispatches arriving supply commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The supply front door"
+    described as {
+      |A sink receiving supply messages addressed to SupplyOrder.
+    }
+  }
+
+  repository SupplyStore is {
+    inlet Recorded is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
+      briefly as "Where supply events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema SupplySchema is flat
+      of Held as record BackOffice.SupplyOrder.Supply.SupplyFields
+    with {
+      briefly as "How supplys are laid out in storage"
+      described as {
+        |A flat schema: one stored row per supply.
+      }
+    }
+    handler SupplyStoreHandler is {
+      on event BackOffice.SupplyOrder.Supply.SupplyOrdered {
+        set field BackOffice.SupplyOrder.Supply.SupplyFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps supply storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the supplys of this context"
+    described as {
+      |Entities are stateful, so SupplyOrder keeps a repository.
+    }
+  }
+
+  connector RecordingSupply is {
+    from outlet SupplyAnnouncer.Published to inlet SupplyStore.Recorded
+  } with {
+    briefly as "Carries supply events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
 } with {
-  explained as {
-  | This context represents the orders that restaurants make to the backoffice
-  | warehouses for their food supplies.
+  briefly as "Owns what restaurants order from the warehouses"
+  described as {
+    |This context represents the orders that restaurants make to the back
+    |office warehouses for their food supplies.
   }
 }

@@ -1,5 +1,60 @@
 domain Corporate is {
 
-include "Marketing"
+  include "Marketing"
 
+  context CorporateFrontEnd is {
+
+    processor CampaignRequests as source is {
+      outlet CampaignSubmissions is command Corporate.Marketing.Campaign.LaunchCampaign with {
+        briefly as "Where campaign requests leave the front end"
+        described as {
+          |Requests reach the Marketing context over a domain-scoped connector.
+        }
+      }
+      handler CampaignRequestsHandler is {
+        on command Corporate.Marketing.Campaign.LaunchCampaign {
+          send command Corporate.Marketing.Campaign.LaunchCampaign to outlet CampaignSubmissions
+        }
+        on other {
+          do "ignore requests that are not about campaigns"
+        }
+      } with {
+        briefly as "Forwards campaign requests into the domain"
+        described as {
+          |Runs when a caller asks for a campaign change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Marketing"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+  } with {
+    briefly as "Where corporate staff reach the marketing systems"
+    described as {
+      |Campaign tooling sits outside this model. This context stands in for
+      |that boundary.
+    }
+  }
+
+  connector CampaignRequests is {
+    from outlet Corporate.CorporateFrontEnd.CampaignRequests.CampaignSubmissions
+    to inlet Corporate.Marketing.IntakeCampaign.Requests
+  } with {
+    briefly as "Carries campaign requests from the front end to Marketing"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+} with {
+  briefly as "The chain's head office"
+  described as {
+    |Corporate handles the web site, marketing, accounting and HR for the
+    |chain as a whole rather than for any one restaurant.
+  }
 }

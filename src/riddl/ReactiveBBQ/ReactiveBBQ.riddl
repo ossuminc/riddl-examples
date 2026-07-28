@@ -1,28 +1,38 @@
 domain ReactiveBBQ is {
 
-author Reid is {
-  name: "Reid Spencer"
-  email: "reid@reactific.com"
-  organization: "Reactific Software LLC"
-  title: "President"
-  url: http://reactific.com/
+  author Reid is {
+    name: "Reid Spencer"
+    email: "reid@ossuminc.com"
+    organization: "Ossum Inc."
+    title: "Chief Architect"
+  } with {
+    briefly as "The author of this example model"
+    described as {
+      |Reid Spencer designs the RIDDL language and writes the example models
+      |that exercise it.
+    }
+  }
+
+  include "restaurant/domain"
+  include "backoffice/domain"
+  include "corporate/domain"
+
+} with {
+  briefly as "The entire Reactive BBQ enterprise"
+  described as {
+    |A domain encapsulating the enterprise named Reactive BBQ, divided into
+    |three subdomains:
+    |
+    |* Restaurant -- handles each of the restaurant locations
+    |* Back Office -- handles all the back office supplies and menus
+    |* Corporate -- handles the corporate web site, marketing, accounting
+    |  and HR
+    |
+    |This definition is designed to be instructive in the RIDDL language. It
+    |uses the case study from the Lightbend Reactive Architecture course as
+    |the basis for defining the domain. That course uses a set of interviews
+    |with Reactive BBQ employees and customers to establish requirements;
+    |this specification is a possible result of analyzing them.
+  }
+  by author Reid
 }
-
-include "restaurant/domain"
-include "backoffice/domain"
-include "corporate/domain"
-
-} with { explained as {
-|{{< figure src="/images/RBBQ.png" >}}
-|A domain to encapsulate the entire enterprise named Reactive BBQ.
-|It is divided into three subdomains:
-|* Restaurant -- handles each of the restaurant locations
-|* Back Office -- handles all the back office supplies and menus
-|* Corporate -- handles the corporate web site, marketing, accounting and HR
-|This domain definition is designed to be instructive in the RIDDL language.
-|It uses the case study from the Lightbend Reactive Architecture course as
-|the basis for defining the domain. The course uses a set of interviews with
-|Reactive BBQ employees and customers to define the requirements. This domain
-|specification is a possible result of analyzing that domain: the Reactive BBQ
-|restaurant.
-}}

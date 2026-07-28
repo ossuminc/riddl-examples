@@ -1,34 +1,466 @@
 domain Restaurant is {
 
-type CustomerId is Id(Restaurant.Customers.Customer) with {
-  explained as "Unique identifier for a customer"
-}
-type OrderId is Id(Restaurant.Orders.Order) with {
-  described as "Unique identifier for a customer's order"
-}
-type LocationId is Id(Restaurant.Locations.Location)
-type LoyaltyId is Id(Restaurant.Loyalty.LoyaltyAccount)
-type OrderViewerId is Id(Restaurant.Kitchen.OrderViewer)
-type ReservationId is Id(Restaurant.Reservations.Reservation)
-type PaymentId is Id(Restaurant.Payments.Payment)
-type ServerId is Id(Restaurant.Servers.Server)
-type TableId is Id(Restaurant.Tables.Table)
+  include "Customer"
+  include "Kitchen"
+  include "Location"
+  include "Loyalty"
+  include "Menu"
+  include "Order"
+  include "Payment"
+  include "Reservation"
+  include "Server"
+  include "Table"
 
-include "Customer"
-include "Kitchen"
-include "Location"
-include "Loyalty"
-include "Menu"
-include "Order"
-include "Payment"
-include "Reservation"
-include "Server"
-include "Table"
+  context RestaurantFrontEnd is {
+
+    processor CustomerRequests as source is {
+      outlet CustomerSubmissions is command Restaurant.Customers.Customer.RegisterCustomer with {
+        briefly as "Where customer requests leave the front end"
+        described as {
+          |Requests reach the Customers context over a domain-scoped connector.
+        }
+      }
+      handler CustomerRequestsHandler is {
+        on command Restaurant.Customers.Customer.RegisterCustomer {
+          send command Restaurant.Customers.Customer.RegisterCustomer to outlet CustomerSubmissions
+        }
+        on other {
+          do "ignore requests that are not about customers"
+        }
+      } with {
+        briefly as "Forwards customer requests into the domain"
+        described as {
+          |Runs when a caller asks for a customer change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Customers"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor TableRequests as source is {
+      outlet TableSubmissions is command Restaurant.Tables.Table.AddTable with {
+        briefly as "Where table requests leave the front end"
+        described as {
+          |Requests reach the Tables context over a domain-scoped connector.
+        }
+      }
+      handler TableRequestsHandler is {
+        on command Restaurant.Tables.Table.AddTable {
+          send command Restaurant.Tables.Table.AddTable to outlet TableSubmissions
+        }
+        on other {
+          do "ignore requests that are not about tables"
+        }
+      } with {
+        briefly as "Forwards table requests into the domain"
+        described as {
+          |Runs when a caller asks for a table change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Tables"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor ServerRequests as source is {
+      outlet ServerSubmissions is command Restaurant.Servers.Server.AddServer with {
+        briefly as "Where server requests leave the front end"
+        described as {
+          |Requests reach the Servers context over a domain-scoped connector.
+        }
+      }
+      handler ServerRequestsHandler is {
+        on command Restaurant.Servers.Server.AddServer {
+          send command Restaurant.Servers.Server.AddServer to outlet ServerSubmissions
+        }
+        on other {
+          do "ignore requests that are not about servers"
+        }
+      } with {
+        briefly as "Forwards server requests into the domain"
+        described as {
+          |Runs when a caller asks for a server change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Servers"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor LocationRequests as source is {
+      outlet LocationSubmissions is command Restaurant.Locations.Location.OpenLocation with {
+        briefly as "Where location requests leave the front end"
+        described as {
+          |Requests reach the Locations context over a domain-scoped connector.
+        }
+      }
+      handler LocationRequestsHandler is {
+        on command Restaurant.Locations.Location.OpenLocation {
+          send command Restaurant.Locations.Location.OpenLocation to outlet LocationSubmissions
+        }
+        on other {
+          do "ignore requests that are not about locations"
+        }
+      } with {
+        briefly as "Forwards location requests into the domain"
+        described as {
+          |Runs when a caller asks for a location change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Locations"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor OrderRequests as source is {
+      outlet OrderSubmissions is command Restaurant.Orders.Order.PlaceOrder with {
+        briefly as "Where order requests leave the front end"
+        described as {
+          |Requests reach the Orders context over a domain-scoped connector.
+        }
+      }
+      handler OrderRequestsHandler is {
+        on command Restaurant.Orders.Order.PlaceOrder {
+          send command Restaurant.Orders.Order.PlaceOrder to outlet OrderSubmissions
+        }
+        on other {
+          do "ignore requests that are not about orders"
+        }
+      } with {
+        briefly as "Forwards order requests into the domain"
+        described as {
+          |Runs when a caller asks for a order change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Orders"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor PaymentRequests as source is {
+      outlet PaymentSubmissions is command Restaurant.Payments.Payment.Pay with {
+        briefly as "Where payment requests leave the front end"
+        described as {
+          |Requests reach the Payments context over a domain-scoped connector.
+        }
+      }
+      handler PaymentRequestsHandler is {
+        on command Restaurant.Payments.Payment.Pay {
+          send command Restaurant.Payments.Payment.Pay to outlet PaymentSubmissions
+        }
+        on other {
+          do "ignore requests that are not about payments"
+        }
+      } with {
+        briefly as "Forwards payment requests into the domain"
+        described as {
+          |Runs when a caller asks for a payment change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Payments"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor ReservationRequests as source is {
+      outlet ReservationSubmissions is command Restaurant.Reservations.Reservation.BookTable with {
+        briefly as "Where reservation requests leave the front end"
+        described as {
+          |Requests reach the Reservations context over a domain-scoped connector.
+        }
+      }
+      handler ReservationRequestsHandler is {
+        on command Restaurant.Reservations.Reservation.BookTable {
+          send command Restaurant.Reservations.Reservation.BookTable to outlet ReservationSubmissions
+        }
+        on other {
+          do "ignore requests that are not about reservations"
+        }
+      } with {
+        briefly as "Forwards reservation requests into the domain"
+        described as {
+          |Runs when a caller asks for a reservation change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Reservations"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor OrderViewerRequests as source is {
+      outlet OrderViewerSubmissions is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
+        briefly as "Where orderviewer requests leave the front end"
+        described as {
+          |Requests reach the Kitchen context over a domain-scoped connector.
+        }
+      }
+      handler OrderViewerRequestsHandler is {
+        on command Restaurant.Kitchen.OrderViewer.ShowOrders {
+          send command Restaurant.Kitchen.OrderViewer.ShowOrders to outlet OrderViewerSubmissions
+        }
+        on other {
+          do "ignore requests that are not about orderviewers"
+        }
+      } with {
+        briefly as "Forwards orderviewer requests into the domain"
+        described as {
+          |Runs when a caller asks for a orderviewer change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Kitchen"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor MenuItemRequests as source is {
+      outlet MenuItemSubmissions is command Restaurant.Menus.MenuItem.AddMenuItem with {
+        briefly as "Where menuitem requests leave the front end"
+        described as {
+          |Requests reach the Menus context over a domain-scoped connector.
+        }
+      }
+      handler MenuItemRequestsHandler is {
+        on command Restaurant.Menus.MenuItem.AddMenuItem {
+          send command Restaurant.Menus.MenuItem.AddMenuItem to outlet MenuItemSubmissions
+        }
+        on other {
+          do "ignore requests that are not about menuitems"
+        }
+      } with {
+        briefly as "Forwards menuitem requests into the domain"
+        described as {
+          |Runs when a caller asks for a menuitem change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Menus"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor MenuRequests as source is {
+      outlet MenuSubmissions is command Restaurant.Menus.Menu.ComposeMenu with {
+        briefly as "Where menu requests leave the front end"
+        described as {
+          |Requests reach the Menus context over a domain-scoped connector.
+        }
+      }
+      handler MenuRequestsHandler is {
+        on command Restaurant.Menus.Menu.ComposeMenu {
+          send command Restaurant.Menus.Menu.ComposeMenu to outlet MenuSubmissions
+        }
+        on other {
+          do "ignore requests that are not about menus"
+        }
+      } with {
+        briefly as "Forwards menu requests into the domain"
+        described as {
+          |Runs when a caller asks for a menu change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Menus"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor LoyaltyAccountRequests as source is {
+      outlet LoyaltyAccountSubmissions is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+        briefly as "Where loyaltyaccount requests leave the front end"
+        described as {
+          |Requests reach the Loyalty context over a domain-scoped connector.
+        }
+      }
+      handler LoyaltyAccountRequestsHandler is {
+        on command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
+          send command Restaurant.Loyalty.LoyaltyAccount.AccruePoints to outlet LoyaltyAccountSubmissions
+        }
+        on other {
+          do "ignore requests that are not about loyaltyaccounts"
+        }
+      } with {
+        briefly as "Forwards loyaltyaccount requests into the domain"
+        described as {
+          |Runs when a caller asks for a loyaltyaccount change.
+        }
+      }
+    } with {
+      briefly as "The front end's outbound path to Loyalty"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+  } with {
+    briefly as "Where staff and diners reach the restaurant systems"
+    described as {
+      |The point-of-sale terminals, the kitchen display and the booking site
+      |all sit outside this model. This context stands in for them, giving
+      |every context's sink something upstream to receive from.
+    }
+  }
+
+  connector CustomerRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.CustomerRequests.CustomerSubmissions
+    to inlet Restaurant.Customers.IntakeCustomer.Requests
+  } with {
+    briefly as "Carries customer requests from the front end to Customers"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector TableRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.TableRequests.TableSubmissions
+    to inlet Restaurant.Tables.IntakeTable.Requests
+  } with {
+    briefly as "Carries table requests from the front end to Tables"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector ServerRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.ServerRequests.ServerSubmissions
+    to inlet Restaurant.Servers.IntakeServer.Requests
+  } with {
+    briefly as "Carries server requests from the front end to Servers"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector LocationRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.LocationRequests.LocationSubmissions
+    to inlet Restaurant.Locations.IntakeLocation.Requests
+  } with {
+    briefly as "Carries location requests from the front end to Locations"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector OrderRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.OrderRequests.OrderSubmissions
+    to inlet Restaurant.Orders.IntakeOrder.Requests
+  } with {
+    briefly as "Carries order requests from the front end to Orders"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector PaymentRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.PaymentRequests.PaymentSubmissions
+    to inlet Restaurant.Payments.IntakePayment.Requests
+  } with {
+    briefly as "Carries payment requests from the front end to Payments"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector ReservationRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.ReservationRequests.ReservationSubmissions
+    to inlet Restaurant.Reservations.IntakeReservation.Requests
+  } with {
+    briefly as "Carries reservation requests from the front end to Reservations"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector OrderViewerRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.OrderViewerSubmissions
+    to inlet Restaurant.Kitchen.IntakeOrderViewer.Requests
+  } with {
+    briefly as "Carries orderviewer requests from the front end to Kitchen"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector MenuItemRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.MenuItemRequests.MenuItemSubmissions
+    to inlet Restaurant.Menus.IntakeMenuItem.Requests
+  } with {
+    briefly as "Carries menuitem requests from the front end to Menus"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector MenuRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.MenuRequests.MenuSubmissions
+    to inlet Restaurant.Menus.IntakeMenu.Requests
+  } with {
+    briefly as "Carries menu requests from the front end to Menus"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector LoyaltyAccountRequests is {
+    from outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountRequests.LoyaltyAccountSubmissions
+    to inlet Restaurant.Loyalty.IntakeLoyaltyAccount.Requests
+  } with {
+    briefly as "Carries loyaltyaccount requests from the front end to Loyalty"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
 
 } with {
-  explained as {
-  |This subdomain pertains to all processes and data associated with a single restaurant location.
-  |It includes several bounded contexts, as noted by the include statements above. To make the entity
-  |Id's ubiquitous for the domain, their type definitions are defined at the domain level.
+  briefly as "One restaurant location and everything that happens in it"
+  described as {
+    |This subdomain pertains to all processes and data associated with a
+    |single restaurant location. It includes several bounded contexts, as
+    |noted by the include statements above.
+    |
+    |Entity identifiers used to be declared here, at domain level, to make
+    |them ubiquitous. RIDDL 2.0 flags a type used by an entity but declared
+    |outside its context, so each context now owns its own identifier type
+    |and the contexts exchange messages rather than sharing types.
   }
 }

@@ -1,7 +1,191 @@
 context Locations is {
+
+  type LocationId is Id(Restaurant.Locations.Location) with {
+    briefly as "Unique identifier for one location"
+    described as {
+      |Defined inside Locations because location identity is this context's concern.
+    }
+  }
+
   entity Location is {
-    record LocationData is { name: String }
-    state LocationState of record Location.LocationData
-    handler LocationHandler is { ??? }
-  } with { explained as "This is a retail store Location" }
+
+    command OpenLocation is {
+      name is String,
+      city is String
+    } with {
+      briefly as "Ask for a location to be recorded"
+      described as {
+        |Sent when a restaurant location opened.
+      }
+    }
+
+    query WhichLocation is {
+      id is Restaurant.Locations.LocationId
+    } with {
+      briefly as "Ask for the current state of one location"
+      described as {
+        |Sent when a reader wants a location they already know of.
+      }
+    }
+
+    result TheLocation is {
+      id is Restaurant.Locations.LocationId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichLocation query"
+      described as {
+        |Carries the identity and a short summary of the location.
+      }
+    }
+
+    event LocationOpened is {
+      id is Restaurant.Locations.LocationId
+    } with {
+      briefly as "Records that a restaurant location opened"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record LocationFields is {
+      id is Restaurant.Locations.LocationId,
+      name is String,
+      city is String
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one location"
+      described as {
+        |The stored shape of a location.
+      }
+    }
+
+    initial state LocationState of record Restaurant.Locations.Location.LocationFields with {
+      briefly as "The state of one location"
+      described as {
+        |A location has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler LocationHandler is {
+      on init {
+        set field Restaurant.Locations.Location.LocationFields.id to "a freshly minted identifier"
+      }
+      on command OpenLocation {
+        morph entity Location to state LocationState with record Restaurant.Locations.Location.LocationFields
+        send event LocationOpened to outlet LocationAnnouncer.Published
+      }
+      on query WhichLocation {
+        yield result TheLocation
+      }
+    } with {
+      briefly as "Handles messages addressed to a location"
+      described as {
+        |Records locations and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single location at Reactive BBQ"
+    described as {
+      |The entity that remembers that a restaurant location opened.
+    }
+  }
+
+  processor LocationAnnouncer as source is {
+    outlet Published is event Restaurant.Locations.Location.LocationOpened with {
+      briefly as "Where Locations publishes what happened to its locations"
+      described as {
+        |Location events leave this context through this outlet.
+      }
+    }
+    handler LocationAnnouncerHandler is {
+      on event Restaurant.Locations.Location.LocationOpened {
+        send event Restaurant.Locations.Location.LocationOpened to outlet LocationAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a location event"
+      }
+    } with {
+      briefly as "Publishes location events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The location publication point"
+    described as {
+      |A source streamlet carrying what Locations wants known elsewhere.
+    }
+  }
+
+  processor IntakeLocation as sink is {
+    inlet Requests is command Restaurant.Locations.Location.OpenLocation with {
+      briefly as "Where location commands arrive from outside"
+      described as {
+        |Everything Locations is asked to do about locations enters here.
+      }
+    }
+    handler IntakeLocationHandler is {
+      on command Restaurant.Locations.Location.OpenLocation {
+        tell command Restaurant.Locations.Location.OpenLocation to entity Location
+      }
+    } with {
+      briefly as "Dispatches arriving location commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The location front door"
+    described as {
+      |A sink receiving location messages addressed to Locations.
+    }
+  }
+
+  repository LocationStore is {
+    inlet Recorded is event Restaurant.Locations.Location.LocationOpened with {
+      briefly as "Where location events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema LocationSchema is flat
+      of Held as record Restaurant.Locations.Location.LocationFields
+    with {
+      briefly as "How locations are laid out in storage"
+      described as {
+        |A flat schema: one stored row per location.
+      }
+    }
+    handler LocationStoreHandler is {
+      on event Restaurant.Locations.Location.LocationOpened {
+        set field Restaurant.Locations.Location.LocationFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps location storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the locations of this context"
+    described as {
+      |Entities are stateful, so Locations keeps a repository.
+    }
+  }
+
+  connector RecordingLocation is {
+    from outlet LocationAnnouncer.Published to inlet LocationStore.Recorded
+  } with {
+    briefly as "Carries location events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns the restaurant locations"
+  described as {
+    |Reactive BBQ is a chain. The Locations context knows about each retail
+    |store: where it is and what it is called.
+  }
 }

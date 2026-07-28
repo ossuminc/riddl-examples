@@ -1,38 +1,193 @@
 context Kitchen is {
-  adaptor FromOrder to context Restaurant.Orders is { ???  }
-  type ReceiveOrder is {
-    items: MenuItemRef+
-  }
-  type OrderViewType is any of { List, Simple, Detailed }
-  entity OrderViewer is {
-    record OrderViewData is { viewType: OrderViewType }
-    state OrderViewerState of record OrderViewData
-    handler input is { ??? }
-  } with {
-    explained as {
-    |## Brief
-    |This is an OrderViewer
-    |## Details
-    |The OrderViewer is the device in the kitchen, probably a touch screen,
-    |that the cooks use to view the sequence of orders to cook.
-    |# See
-    |* "http://foo.com/"
+
+  type OrderViewerId is Id(Restaurant.Kitchen.OrderViewer) with {
+    briefly as "Unique identifier for one orderviewer"
+    described as {
+      |Defined inside Kitchen because orderviewer identity is this context's concern.
     }
-    option is kind("device")
   }
 
-} with { explained as {
-  |> The kitchen is where food is prepared"
-  |The kitchen bounded context provides the ability for the kitchen staff
-  |to interact with orders they are preparing. The kitchen is a client of
-  |the orders bounded context and interacts with that context alone for
-  |the outstanding orders to be prepared. Everything else that happens in
-  |the kitchen is out of scope for the restaurant automation software.
-  |Consequently, this bounded context is pretty minimal.
-  |### Subject-Verb-Object Statements
-  |1. Kitchen displays orders
-  |1. Order is sent to Kitchen for display
-  |1. Order sends order status changes to Kitchen
-  |1. Kitchen ignores drink items on order
-  |1.
-}}
+  entity OrderViewer is {
+
+    command ShowOrders is {
+      viewType is String,
+      station is String
+    } with {
+      briefly as "Ask for a orderviewer to be recorded"
+      described as {
+        |Sent when the kitchen display was refreshed.
+      }
+    }
+
+    query WhichOrderViewer is {
+      id is Restaurant.Kitchen.OrderViewerId
+    } with {
+      briefly as "Ask for the current state of one orderviewer"
+      described as {
+        |Sent when a reader wants a orderviewer they already know of.
+      }
+    }
+
+    result TheOrderViewer is {
+      id is Restaurant.Kitchen.OrderViewerId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichOrderViewer query"
+      described as {
+        |Carries the identity and a short summary of the orderviewer.
+      }
+    }
+
+    event OrdersShown is {
+      id is Restaurant.Kitchen.OrderViewerId
+    } with {
+      briefly as "Records that the kitchen display was refreshed"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record OrderViewerFields is {
+      id is Restaurant.Kitchen.OrderViewerId,
+      viewType is String,
+      station is String
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one orderviewer"
+      described as {
+        |The stored shape of a orderviewer.
+      }
+    }
+
+    initial state OrderViewerState of record Restaurant.Kitchen.OrderViewer.OrderViewerFields with {
+      briefly as "The state of one orderviewer"
+      described as {
+        |A orderviewer has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler OrderViewerHandler is {
+      on init {
+        set field Restaurant.Kitchen.OrderViewer.OrderViewerFields.id to "a freshly minted identifier"
+      }
+      on command ShowOrders {
+        morph entity OrderViewer to state OrderViewerState with record Restaurant.Kitchen.OrderViewer.OrderViewerFields
+        send event OrdersShown to outlet OrderViewerAnnouncer.Published
+      }
+      on query WhichOrderViewer {
+        yield result TheOrderViewer
+      }
+    } with {
+      briefly as "Handles messages addressed to a orderviewer"
+      described as {
+        |Records orderviewers and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single orderviewer at Reactive BBQ"
+    described as {
+      |The entity that remembers that the kitchen display was refreshed.
+    }
+  }
+
+  processor OrderViewerAnnouncer as source is {
+    outlet Published is event Restaurant.Kitchen.OrderViewer.OrdersShown with {
+      briefly as "Where Kitchen publishes what happened to its orderviewers"
+      described as {
+        |OrderViewer events leave this context through this outlet.
+      }
+    }
+    handler OrderViewerAnnouncerHandler is {
+      on event Restaurant.Kitchen.OrderViewer.OrdersShown {
+        send event Restaurant.Kitchen.OrderViewer.OrdersShown to outlet OrderViewerAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a orderviewer event"
+      }
+    } with {
+      briefly as "Publishes orderviewer events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The orderviewer publication point"
+    described as {
+      |A source streamlet carrying what Kitchen wants known elsewhere.
+    }
+  }
+
+  processor IntakeOrderViewer as sink is {
+    inlet Requests is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
+      briefly as "Where orderviewer commands arrive from outside"
+      described as {
+        |Everything Kitchen is asked to do about orderviewers enters here.
+      }
+    }
+    handler IntakeOrderViewerHandler is {
+      on command Restaurant.Kitchen.OrderViewer.ShowOrders {
+        tell command Restaurant.Kitchen.OrderViewer.ShowOrders to entity OrderViewer
+      }
+    } with {
+      briefly as "Dispatches arriving orderviewer commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The orderviewer front door"
+    described as {
+      |A sink receiving orderviewer messages addressed to Kitchen.
+    }
+  }
+
+  repository OrderViewerStore is {
+    inlet Recorded is event Restaurant.Kitchen.OrderViewer.OrdersShown with {
+      briefly as "Where orderviewer events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema OrderViewerSchema is flat
+      of Held as record Restaurant.Kitchen.OrderViewer.OrderViewerFields
+    with {
+      briefly as "How orderviewers are laid out in storage"
+      described as {
+        |A flat schema: one stored row per orderviewer.
+      }
+    }
+    handler OrderViewerStoreHandler is {
+      on event Restaurant.Kitchen.OrderViewer.OrdersShown {
+        set field Restaurant.Kitchen.OrderViewer.OrderViewerFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps orderviewer storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the orderviewers of this context"
+    described as {
+      |Entities are stateful, so Kitchen keeps a repository.
+    }
+  }
+
+  connector RecordingOrderViewer is {
+    from outlet OrderViewerAnnouncer.Published to inlet OrderViewerStore.Recorded
+  } with {
+    briefly as "Carries orderviewer events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns the cooks' view of outstanding orders"
+  described as {
+    |The kitchen is a client of the Orders context and interacts with that
+    |context alone for the outstanding orders to be prepared. Everything
+    |else that happens in the kitchen is out of scope for the restaurant
+    |automation software, so this context is deliberately minimal.
+  }
+}

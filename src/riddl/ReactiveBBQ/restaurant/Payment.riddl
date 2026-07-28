@@ -1,35 +1,193 @@
 context Payments is {
-    type PaymentKind = any of { CreditCard, DebitCard, Cash, BitCoin, Hours }
 
-    type Pay = command {
-      orderId is OrderId,
-      amount is Number,
-      tip is Number,
-      kind is PaymentKind,
-      when is TimeStamp
+  type PaymentId is Id(Restaurant.Payments.Payment) with {
+    briefly as "Unique identifier for one payment"
+    described as {
+      |Defined inside Payments because payment identity is this context's concern.
     }
-
-    type Paid = event {
-      orderId is OrderId,
-      amount is Number,
-      tip is Number,
-      kind is PaymentKind
-    }
+  }
 
   entity Payment is {
-    record PaymentStateValue is {
-        orderId is OrderId,
-        orderAmount is Number,
-        tipAmount is Number?,
-        cardToken is String?,
-        customerIds is CustomerId?
+
+    command Pay is {
+      orderAmount is Number,
+      tipAmount is Number,
+      cardToken is String
+    } with {
+      briefly as "Ask for a payment to be recorded"
+      described as {
+        |Sent when a customer paid for their order.
+      }
     }
-    state PaymentState of record Payment.PaymentStateValue
-    handler foo is { ??? }
+
+    query WhichPayment is {
+      id is Restaurant.Payments.PaymentId
+    } with {
+      briefly as "Ask for the current state of one payment"
+      described as {
+        |Sent when a reader wants a payment they already know of.
+      }
+    }
+
+    result ThePayment is {
+      id is Restaurant.Payments.PaymentId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichPayment query"
+      described as {
+        |Carries the identity and a short summary of the payment.
+      }
+    }
+
+    event Paid is {
+      id is Restaurant.Payments.PaymentId
+    } with {
+      briefly as "Records that a customer paid for their order"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record PaymentFields is {
+      id is Restaurant.Payments.PaymentId,
+      orderAmount is Number,
+      tipAmount is Number,
+      cardToken is String
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one payment"
+      described as {
+        |The stored shape of a payment.
+      }
+    }
+
+    initial state PaymentState of record Restaurant.Payments.Payment.PaymentFields with {
+      briefly as "The state of one payment"
+      described as {
+        |A payment has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler PaymentHandler is {
+      on init {
+        set field Restaurant.Payments.Payment.PaymentFields.id to "a freshly minted identifier"
+      }
+      on command Pay {
+        morph entity Payment to state PaymentState with record Restaurant.Payments.Payment.PaymentFields
+        send event Paid to outlet PaymentAnnouncer.Published
+      }
+      on query WhichPayment {
+        yield result ThePayment
+      }
+    } with {
+      briefly as "Handles messages addressed to a payment"
+      described as {
+        |Records payments and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single payment at Reactive BBQ"
+    described as {
+      |The entity that remembers that a customer paid for their order.
+    }
   }
+
+  processor PaymentAnnouncer as source is {
+    outlet Published is event Restaurant.Payments.Payment.Paid with {
+      briefly as "Where Payments publishes what happened to its payments"
+      described as {
+        |Payment events leave this context through this outlet.
+      }
+    }
+    handler PaymentAnnouncerHandler is {
+      on event Restaurant.Payments.Payment.Paid {
+        send event Restaurant.Payments.Payment.Paid to outlet PaymentAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a payment event"
+      }
+    } with {
+      briefly as "Publishes payment events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The payment publication point"
+    described as {
+      |A source streamlet carrying what Payments wants known elsewhere.
+    }
+  }
+
+  processor IntakePayment as sink is {
+    inlet Requests is command Restaurant.Payments.Payment.Pay with {
+      briefly as "Where payment commands arrive from outside"
+      described as {
+        |Everything Payments is asked to do about payments enters here.
+      }
+    }
+    handler IntakePaymentHandler is {
+      on command Restaurant.Payments.Payment.Pay {
+        tell command Restaurant.Payments.Payment.Pay to entity Payment
+      }
+    } with {
+      briefly as "Dispatches arriving payment commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The payment front door"
+    described as {
+      |A sink receiving payment messages addressed to Payments.
+    }
+  }
+
+  repository PaymentStore is {
+    inlet Recorded is event Restaurant.Payments.Payment.Paid with {
+      briefly as "Where payment events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema PaymentSchema is flat
+      of Held as record Restaurant.Payments.Payment.PaymentFields
+    with {
+      briefly as "How payments are laid out in storage"
+      described as {
+        |A flat schema: one stored row per payment.
+      }
+    }
+    handler PaymentStoreHandler is {
+      on event Restaurant.Payments.Payment.Paid {
+        set field Restaurant.Payments.Payment.PaymentFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps payment storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the payments of this context"
+    described as {
+      |Entities are stateful, so Payments keeps a repository.
+    }
+  }
+
+  connector RecordingPayment is {
+    from outlet PaymentAnnouncer.Published to inlet PaymentStore.Recorded
+  } with {
+    briefly as "Carries payment events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
 } with {
-  option is aggregate
-  explained as {
-    | The Payment bounded context deals with receiving payments from customers for their orders.
+  briefly as "Owns the taking of money for orders"
+  described as {
+    |The Payment bounded context deals with receiving payments from
+    |customers for their orders.
   }
 }

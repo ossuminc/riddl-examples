@@ -1,7 +1,190 @@
-context Servers {
-  entity Server {
-    record ServerStateData is { id is ServerId }
-    state ServerState of record Server.ServerStateData
-    handler ServerHandler is { ??? }
+context Servers is {
+
+  type ServerId is Id(Restaurant.Servers.Server) with {
+    briefly as "Unique identifier for one server"
+    described as {
+      |Defined inside Servers because server identity is this context's concern.
+    }
+  }
+
+  entity Server is {
+
+    command AddServer is {
+      name is String,
+      section is String
+    } with {
+      briefly as "Ask for a server to be recorded"
+      described as {
+        |Sent when a server joined the roster.
+      }
+    }
+
+    query WhichServer is {
+      id is Restaurant.Servers.ServerId
+    } with {
+      briefly as "Ask for the current state of one server"
+      described as {
+        |Sent when a reader wants a server they already know of.
+      }
+    }
+
+    result TheServer is {
+      id is Restaurant.Servers.ServerId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichServer query"
+      described as {
+        |Carries the identity and a short summary of the server.
+      }
+    }
+
+    event ServerAdded is {
+      id is Restaurant.Servers.ServerId
+    } with {
+      briefly as "Records that a server joined the roster"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record ServerFields is {
+      id is Restaurant.Servers.ServerId,
+      name is String,
+      section is String
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one server"
+      described as {
+        |The stored shape of a server.
+      }
+    }
+
+    initial state ServerState of record Restaurant.Servers.Server.ServerFields with {
+      briefly as "The state of one server"
+      described as {
+        |A server has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler ServerHandler is {
+      on init {
+        set field Restaurant.Servers.Server.ServerFields.id to "a freshly minted identifier"
+      }
+      on command AddServer {
+        morph entity Server to state ServerState with record Restaurant.Servers.Server.ServerFields
+        send event ServerAdded to outlet ServerAnnouncer.Published
+      }
+      on query WhichServer {
+        yield result TheServer
+      }
+    } with {
+      briefly as "Handles messages addressed to a server"
+      described as {
+        |Records servers and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single server at Reactive BBQ"
+    described as {
+      |The entity that remembers that a server joined the roster.
+    }
+  }
+
+  processor ServerAnnouncer as source is {
+    outlet Published is event Restaurant.Servers.Server.ServerAdded with {
+      briefly as "Where Servers publishes what happened to its servers"
+      described as {
+        |Server events leave this context through this outlet.
+      }
+    }
+    handler ServerAnnouncerHandler is {
+      on event Restaurant.Servers.Server.ServerAdded {
+        send event Restaurant.Servers.Server.ServerAdded to outlet ServerAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a server event"
+      }
+    } with {
+      briefly as "Publishes server events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The server publication point"
+    described as {
+      |A source streamlet carrying what Servers wants known elsewhere.
+    }
+  }
+
+  processor IntakeServer as sink is {
+    inlet Requests is command Restaurant.Servers.Server.AddServer with {
+      briefly as "Where server commands arrive from outside"
+      described as {
+        |Everything Servers is asked to do about servers enters here.
+      }
+    }
+    handler IntakeServerHandler is {
+      on command Restaurant.Servers.Server.AddServer {
+        tell command Restaurant.Servers.Server.AddServer to entity Server
+      }
+    } with {
+      briefly as "Dispatches arriving server commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The server front door"
+    described as {
+      |A sink receiving server messages addressed to Servers.
+    }
+  }
+
+  repository ServerStore is {
+    inlet Recorded is event Restaurant.Servers.Server.ServerAdded with {
+      briefly as "Where server events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema ServerSchema is flat
+      of Held as record Restaurant.Servers.Server.ServerFields
+    with {
+      briefly as "How servers are laid out in storage"
+      described as {
+        |A flat schema: one stored row per server.
+      }
+    }
+    handler ServerStoreHandler is {
+      on event Restaurant.Servers.Server.ServerAdded {
+        set field Restaurant.Servers.Server.ServerFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps server storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the servers of this context"
+    described as {
+      |Entities are stateful, so Servers keeps a repository.
+    }
+  }
+
+  connector RecordingServer is {
+    from outlet ServerAnnouncer.Published to inlet ServerStore.Recorded
+  } with {
+    briefly as "Carries server events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns the waiting staff"
+  described as {
+    |The Servers context tracks who is working and which section they cover.
   }
 }

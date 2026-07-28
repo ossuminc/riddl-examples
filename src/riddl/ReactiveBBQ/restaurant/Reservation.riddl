@@ -1,16 +1,195 @@
 context Reservations is {
+
+  type ReservationId is Id(Restaurant.Reservations.Reservation) with {
+    briefly as "Unique identifier for one reservation"
+    described as {
+      |Defined inside Reservations because reservation identity is this context's concern.
+    }
+  }
+
   entity Reservation is {
-    record ReservationValue is {
+
+    command BookTable is {
       partyName is String,
       phoneNumber is String,
-      location is Id(Restaurant.Locations.Location),
       time is Time,
       date is Date
+    } with {
+      briefly as "Ask for a reservation to be recorded"
+      described as {
+        |Sent when a party reserved a table.
+      }
     }
-    state reservation of record Restaurant.Reservations.Reservation.ReservationValue
-    handler ofInputs is {}
+
+    query WhichReservation is {
+      id is Restaurant.Reservations.ReservationId
+    } with {
+      briefly as "Ask for the current state of one reservation"
+      described as {
+        |Sent when a reader wants a reservation they already know of.
+      }
+    }
+
+    result TheReservation is {
+      id is Restaurant.Reservations.ReservationId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichReservation query"
+      described as {
+        |Carries the identity and a short summary of the reservation.
+      }
+    }
+
+    event TableBooked is {
+      id is Restaurant.Reservations.ReservationId
+    } with {
+      briefly as "Records that a party reserved a table"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record ReservationFields is {
+      id is Restaurant.Reservations.ReservationId,
+      partyName is String,
+      phoneNumber is String,
+      time is Time,
+      date is Date
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one reservation"
+      described as {
+        |The stored shape of a reservation.
+      }
+    }
+
+    initial state ReservationState of record Restaurant.Reservations.Reservation.ReservationFields with {
+      briefly as "The state of one reservation"
+      described as {
+        |A reservation has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler ReservationHandler is {
+      on init {
+        set field Restaurant.Reservations.Reservation.ReservationFields.id to "a freshly minted identifier"
+      }
+      on command BookTable {
+        morph entity Reservation to state ReservationState with record Restaurant.Reservations.Reservation.ReservationFields
+        send event TableBooked to outlet ReservationAnnouncer.Published
+      }
+      on query WhichReservation {
+        yield result TheReservation
+      }
+    } with {
+      briefly as "Handles messages addressed to a reservation"
+      described as {
+        |Records reservations and answers questions about them.
+      }
+    }
+
   } with {
-   option aggregate
+    briefly as "A single reservation at Reactive BBQ"
+    described as {
+      |The entity that remembers that a party reserved a table.
+    }
+  }
+
+  processor ReservationAnnouncer as source is {
+    outlet Published is event Restaurant.Reservations.Reservation.TableBooked with {
+      briefly as "Where Reservations publishes what happened to its reservations"
+      described as {
+        |Reservation events leave this context through this outlet.
+      }
+    }
+    handler ReservationAnnouncerHandler is {
+      on event Restaurant.Reservations.Reservation.TableBooked {
+        send event Restaurant.Reservations.Reservation.TableBooked to outlet ReservationAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a reservation event"
+      }
+    } with {
+      briefly as "Publishes reservation events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The reservation publication point"
+    described as {
+      |A source streamlet carrying what Reservations wants known elsewhere.
+    }
+  }
+
+  processor IntakeReservation as sink is {
+    inlet Requests is command Restaurant.Reservations.Reservation.BookTable with {
+      briefly as "Where reservation commands arrive from outside"
+      described as {
+        |Everything Reservations is asked to do about reservations enters here.
+      }
+    }
+    handler IntakeReservationHandler is {
+      on command Restaurant.Reservations.Reservation.BookTable {
+        tell command Restaurant.Reservations.Reservation.BookTable to entity Reservation
+      }
+    } with {
+      briefly as "Dispatches arriving reservation commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The reservation front door"
+    described as {
+      |A sink receiving reservation messages addressed to Reservations.
+    }
+  }
+
+  repository ReservationStore is {
+    inlet Recorded is event Restaurant.Reservations.Reservation.TableBooked with {
+      briefly as "Where reservation events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema ReservationSchema is flat
+      of Held as record Restaurant.Reservations.Reservation.ReservationFields
+    with {
+      briefly as "How reservations are laid out in storage"
+      described as {
+        |A flat schema: one stored row per reservation.
+      }
+    }
+    handler ReservationStoreHandler is {
+      on event Restaurant.Reservations.Reservation.TableBooked {
+        set field Restaurant.Reservations.Reservation.ReservationFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps reservation storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the reservations of this context"
+    described as {
+      |Entities are stateful, so Reservations keeps a repository.
+    }
+  }
+
+  connector RecordingReservation is {
+    from outlet ReservationAnnouncer.Published to inlet ReservationStore.Recorded
+  } with {
+    briefly as "Carries reservation events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns bookings made ahead of arrival"
+  described as {
+    |The Reservations context holds a party's intention to dine at a given
+    |time, before any order exists.
   }
 }
-// #Reservation

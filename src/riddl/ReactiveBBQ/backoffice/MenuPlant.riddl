@@ -1,1 +1,28 @@
-type Foo = Integer
+context MenuPlant is {
+
+  type BatchSize is Integer with {
+    briefly as "How many portions one production run yields"
+    described as {
+      |The plant prepares menu items centrally in batches before shipping
+      |them to the restaurants.
+    }
+  }
+
+  type PlantSchedule is {
+    item is String,
+    batch is BatchSize
+  } with {
+    briefly as "What the plant intends to make and in what quantity"
+    described as {
+      |A line of the production plan.
+    }
+  }
+
+} with {
+  briefly as "Central preparation of menu items"
+  described as {
+    |The plant makes in bulk what it would be wasteful for each restaurant
+    |to make individually. It has no entities of its own in this model; it
+    |is here to show a context that is all types and no behaviour.
+  }
+}

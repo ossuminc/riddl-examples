@@ -1,15 +1,191 @@
 context Orders is {
-  entity Order is {
-    record OrderStateData is {
-      orderId is OrderId,
-      customerId is CustomerId
+
+  type OrderId is Id(Restaurant.Orders.Order) with {
+    briefly as "Unique identifier for one order"
+    described as {
+      |Defined inside Orders because order identity is this context's concern.
     }
-    state OrderState of record Order.OrderStateData
-    handler foo  is { ??? }
   }
+
+  entity Order is {
+
+    command PlaceOrder is {
+      customerName is String,
+      total is Number
+    } with {
+      briefly as "Ask for a order to be recorded"
+      described as {
+        |Sent when a customer placed an order.
+      }
+    }
+
+    query WhichOrder is {
+      id is Restaurant.Orders.OrderId
+    } with {
+      briefly as "Ask for the current state of one order"
+      described as {
+        |Sent when a reader wants a order they already know of.
+      }
+    }
+
+    result TheOrder is {
+      id is Restaurant.Orders.OrderId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichOrder query"
+      described as {
+        |Carries the identity and a short summary of the order.
+      }
+    }
+
+    event OrderPlaced is {
+      id is Restaurant.Orders.OrderId
+    } with {
+      briefly as "Records that a customer placed an order"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record OrderFields is {
+      id is Restaurant.Orders.OrderId,
+      customerName is String,
+      total is Number
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one order"
+      described as {
+        |The stored shape of a order.
+      }
+    }
+
+    initial state OrderState of record Restaurant.Orders.Order.OrderFields with {
+      briefly as "The state of one order"
+      described as {
+        |A order has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler OrderHandler is {
+      on init {
+        set field Restaurant.Orders.Order.OrderFields.id to "a freshly minted identifier"
+      }
+      on command PlaceOrder {
+        morph entity Order to state OrderState with record Restaurant.Orders.Order.OrderFields
+        send event OrderPlaced to outlet OrderAnnouncer.Published
+      }
+      on query WhichOrder {
+        yield result TheOrder
+      }
+    } with {
+      briefly as "Handles messages addressed to a order"
+      described as {
+        |Records orders and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single order at Reactive BBQ"
+    described as {
+      |The entity that remembers that a customer placed an order.
+    }
+  }
+
+  processor OrderAnnouncer as source is {
+    outlet Published is event Restaurant.Orders.Order.OrderPlaced with {
+      briefly as "Where Orders publishes what happened to its orders"
+      described as {
+        |Order events leave this context through this outlet.
+      }
+    }
+    handler OrderAnnouncerHandler is {
+      on event Restaurant.Orders.Order.OrderPlaced {
+        send event Restaurant.Orders.Order.OrderPlaced to outlet OrderAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a order event"
+      }
+    } with {
+      briefly as "Publishes order events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The order publication point"
+    described as {
+      |A source streamlet carrying what Orders wants known elsewhere.
+    }
+  }
+
+  processor IntakeOrder as sink is {
+    inlet Requests is command Restaurant.Orders.Order.PlaceOrder with {
+      briefly as "Where order commands arrive from outside"
+      described as {
+        |Everything Orders is asked to do about orders enters here.
+      }
+    }
+    handler IntakeOrderHandler is {
+      on command Restaurant.Orders.Order.PlaceOrder {
+        tell command Restaurant.Orders.Order.PlaceOrder to entity Order
+      }
+    } with {
+      briefly as "Dispatches arriving order commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The order front door"
+    described as {
+      |A sink receiving order messages addressed to Orders.
+    }
+  }
+
+  repository OrderStore is {
+    inlet Recorded is event Restaurant.Orders.Order.OrderPlaced with {
+      briefly as "Where order events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema OrderSchema is flat
+      of Held as record Restaurant.Orders.Order.OrderFields
+    with {
+      briefly as "How orders are laid out in storage"
+      described as {
+        |A flat schema: one stored row per order.
+      }
+    }
+    handler OrderStoreHandler is {
+      on event Restaurant.Orders.Order.OrderPlaced {
+        set field Restaurant.Orders.Order.OrderFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps order storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the orders of this context"
+    described as {
+      |Entities are stateful, so Orders keeps a repository.
+    }
+  }
+
+  connector RecordingOrder is {
+    from outlet OrderAnnouncer.Published to inlet OrderStore.Recorded
+  } with {
+    briefly as "Carries order events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
 } with {
-  explained as {
-   | This bounded context defines the handling of restaurant orders.
+  briefly as "Owns what a customer asked to eat"
+  described as {
+    |This bounded context defines the handling of restaurant orders: what
+    |was ordered, by whom, and how far along it is.
   }
-  option is aggregate
 }

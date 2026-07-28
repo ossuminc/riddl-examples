@@ -1,11 +1,191 @@
 context Customers is {
+
+  type CustomerId is Id(Restaurant.Customers.Customer) with {
+    briefly as "Unique identifier for one customer"
+    described as {
+      |Defined inside Customers because customer identity is this context's concern.
+    }
+  }
+
   entity Customer is {
-    record mainType is { id is CustomerId }
-    state main of record mainType
-    handler input is { ??? }
-  } with { explained as {
-  | An entity for customers that tracks the state changes of the entity.
-  }}
-} with { explained as {
-| Customer context represents the customer of the Reactive BBQ.
-}}
+
+    command RegisterCustomer is {
+      name is String,
+      phone is String
+    } with {
+      briefly as "Ask for a customer to be recorded"
+      described as {
+        |Sent when a diner registered with the restaurant.
+      }
+    }
+
+    query WhichCustomer is {
+      id is Restaurant.Customers.CustomerId
+    } with {
+      briefly as "Ask for the current state of one customer"
+      described as {
+        |Sent when a reader wants a customer they already know of.
+      }
+    }
+
+    result TheCustomer is {
+      id is Restaurant.Customers.CustomerId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichCustomer query"
+      described as {
+        |Carries the identity and a short summary of the customer.
+      }
+    }
+
+    event CustomerRegistered is {
+      id is Restaurant.Customers.CustomerId
+    } with {
+      briefly as "Records that a diner registered with the restaurant"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record CustomerFields is {
+      id is Restaurant.Customers.CustomerId,
+      name is String,
+      phone is String
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one customer"
+      described as {
+        |The stored shape of a customer.
+      }
+    }
+
+    initial state CustomerState of record Restaurant.Customers.Customer.CustomerFields with {
+      briefly as "The state of one customer"
+      described as {
+        |A customer has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler CustomerHandler is {
+      on init {
+        set field Restaurant.Customers.Customer.CustomerFields.id to "a freshly minted identifier"
+      }
+      on command RegisterCustomer {
+        morph entity Customer to state CustomerState with record Restaurant.Customers.Customer.CustomerFields
+        send event CustomerRegistered to outlet CustomerAnnouncer.Published
+      }
+      on query WhichCustomer {
+        yield result TheCustomer
+      }
+    } with {
+      briefly as "Handles messages addressed to a customer"
+      described as {
+        |Records customers and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single customer at Reactive BBQ"
+    described as {
+      |The entity that remembers that a diner registered with the restaurant.
+    }
+  }
+
+  processor CustomerAnnouncer as source is {
+    outlet Published is event Restaurant.Customers.Customer.CustomerRegistered with {
+      briefly as "Where Customers publishes what happened to its customers"
+      described as {
+        |Customer events leave this context through this outlet.
+      }
+    }
+    handler CustomerAnnouncerHandler is {
+      on event Restaurant.Customers.Customer.CustomerRegistered {
+        send event Restaurant.Customers.Customer.CustomerRegistered to outlet CustomerAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a customer event"
+      }
+    } with {
+      briefly as "Publishes customer events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The customer publication point"
+    described as {
+      |A source streamlet carrying what Customers wants known elsewhere.
+    }
+  }
+
+  processor IntakeCustomer as sink is {
+    inlet Requests is command Restaurant.Customers.Customer.RegisterCustomer with {
+      briefly as "Where customer commands arrive from outside"
+      described as {
+        |Everything Customers is asked to do about customers enters here.
+      }
+    }
+    handler IntakeCustomerHandler is {
+      on command Restaurant.Customers.Customer.RegisterCustomer {
+        tell command Restaurant.Customers.Customer.RegisterCustomer to entity Customer
+      }
+    } with {
+      briefly as "Dispatches arriving customer commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The customer front door"
+    described as {
+      |A sink receiving customer messages addressed to Customers.
+    }
+  }
+
+  repository CustomerStore is {
+    inlet Recorded is event Restaurant.Customers.Customer.CustomerRegistered with {
+      briefly as "Where customer events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema CustomerSchema is flat
+      of Held as record Restaurant.Customers.Customer.CustomerFields
+    with {
+      briefly as "How customers are laid out in storage"
+      described as {
+        |A flat schema: one stored row per customer.
+      }
+    }
+    handler CustomerStoreHandler is {
+      on event Restaurant.Customers.Customer.CustomerRegistered {
+        set field Restaurant.Customers.Customer.CustomerFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps customer storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the customers of this context"
+    described as {
+      |Entities are stateful, so Customers keeps a repository.
+    }
+  }
+
+  connector RecordingCustomer is {
+    from outlet CustomerAnnouncer.Published to inlet CustomerStore.Recorded
+  } with {
+    briefly as "Carries customer events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns the people who eat at Reactive BBQ"
+  described as {
+    |The Customers context knows who a customer is and how to reach them.
+    |It does not know what they ordered; that belongs to Orders.
+  }
+}

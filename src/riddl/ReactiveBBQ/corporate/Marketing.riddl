@@ -1,1 +1,191 @@
-context Marketing is { ??? }
+context Marketing is {
+
+  type CampaignId is Id(Corporate.Marketing.Campaign) with {
+    briefly as "Unique identifier for one campaign"
+    described as {
+      |Defined inside Marketing because campaign identity is this context's concern.
+    }
+  }
+
+  entity Campaign is {
+
+    command LaunchCampaign is {
+      title is String,
+      budget is Number
+    } with {
+      briefly as "Ask for a campaign to be recorded"
+      described as {
+        |Sent when a marketing campaign was launched.
+      }
+    }
+
+    query WhichCampaign is {
+      id is Corporate.Marketing.CampaignId
+    } with {
+      briefly as "Ask for the current state of one campaign"
+      described as {
+        |Sent when a reader wants a campaign they already know of.
+      }
+    }
+
+    result TheCampaign is {
+      id is Corporate.Marketing.CampaignId,
+      summary is String
+    } with {
+      briefly as "The answer to a WhichCampaign query"
+      described as {
+        |Carries the identity and a short summary of the campaign.
+      }
+    }
+
+    event CampaignLaunched is {
+      id is Corporate.Marketing.CampaignId
+    } with {
+      briefly as "Records that a marketing campaign was launched"
+      described as {
+        |Emitted once the change has been accepted.
+      }
+    }
+
+    record CampaignFields is {
+      id is Corporate.Marketing.CampaignId,
+      title is String,
+      budget is Number
+    } with {
+      briefly as "Everything Reactive BBQ keeps about one campaign"
+      described as {
+        |The stored shape of a campaign.
+      }
+    }
+
+    initial state CampaignState of record Corporate.Marketing.Campaign.CampaignFields with {
+      briefly as "The state of one campaign"
+      described as {
+        |A campaign has a single state; its fields change but its kind does not.
+      }
+    }
+
+    handler CampaignHandler is {
+      on init {
+        set field Corporate.Marketing.Campaign.CampaignFields.id to "a freshly minted identifier"
+      }
+      on command LaunchCampaign {
+        morph entity Campaign to state CampaignState with record Corporate.Marketing.Campaign.CampaignFields
+        send event CampaignLaunched to outlet CampaignAnnouncer.Published
+      }
+      on query WhichCampaign {
+        yield result TheCampaign
+      }
+    } with {
+      briefly as "Handles messages addressed to a campaign"
+      described as {
+        |Records campaigns and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single campaign at Reactive BBQ"
+    described as {
+      |The entity that remembers that a marketing campaign was launched.
+    }
+  }
+
+  processor CampaignAnnouncer as source is {
+    outlet Published is event Corporate.Marketing.Campaign.CampaignLaunched with {
+      briefly as "Where Marketing publishes what happened to its campaigns"
+      described as {
+        |Campaign events leave this context through this outlet.
+      }
+    }
+    handler CampaignAnnouncerHandler is {
+      on event Corporate.Marketing.Campaign.CampaignLaunched {
+        send event Corporate.Marketing.Campaign.CampaignLaunched to outlet CampaignAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not a campaign event"
+      }
+    } with {
+      briefly as "Publishes campaign events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The campaign publication point"
+    described as {
+      |A source streamlet carrying what Marketing wants known elsewhere.
+    }
+  }
+
+  processor IntakeCampaign as sink is {
+    inlet Requests is command Corporate.Marketing.Campaign.LaunchCampaign with {
+      briefly as "Where campaign commands arrive from outside"
+      described as {
+        |Everything Marketing is asked to do about campaigns enters here.
+      }
+    }
+    handler IntakeCampaignHandler is {
+      on command Corporate.Marketing.Campaign.LaunchCampaign {
+        tell command Corporate.Marketing.Campaign.LaunchCampaign to entity Campaign
+      }
+    } with {
+      briefly as "Dispatches arriving campaign commands"
+      described as {
+        |Receives commands at the boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The campaign front door"
+    described as {
+      |A sink receiving campaign messages addressed to Marketing.
+    }
+  }
+
+  repository CampaignStore is {
+    inlet Recorded is event Corporate.Marketing.Campaign.CampaignLaunched with {
+      briefly as "Where campaign events arrive to be persisted"
+      described as {
+        |The repository learns of changes through this inlet.
+      }
+    }
+    schema CampaignSchema is flat
+      of Held as record Corporate.Marketing.Campaign.CampaignFields
+    with {
+      briefly as "How campaigns are laid out in storage"
+      described as {
+        |A flat schema: one stored row per campaign.
+      }
+    }
+    handler CampaignStoreHandler is {
+      on event Corporate.Marketing.Campaign.CampaignLaunched {
+        set field Corporate.Marketing.Campaign.CampaignFields.id to "the identifier carried by the event"
+      }
+    } with {
+      briefly as "Keeps campaign storage in step with what happened"
+      described as {
+        |Writes each event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the campaigns of this context"
+    described as {
+      |Entities are stateful, so Marketing keeps a repository.
+    }
+  }
+
+  connector RecordingCampaign is {
+    from outlet CampaignAnnouncer.Published to inlet CampaignStore.Recorded
+  } with {
+    briefly as "Carries campaign events to storage"
+    described as {
+      |Connects what the context announces to what records it.
+    }
+  }
+
+} with {
+  briefly as "Owns campaigns run on behalf of the chain"
+  described as {
+    |The Marketing context holds the campaigns corporate runs to bring
+    |diners into the restaurants.
+  }
+}

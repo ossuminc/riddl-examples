@@ -1,211 +1,1283 @@
 domain dokn is {
-    type Address = {
-        line1: String,
-        line2: String,
-        line3: String,
-        line4: String,
-        city: String,
-        province: String,
-        country: String,
-        postalCode: String
+
+  author Reid is {
+    name: "Reid Spencer"
+    email: "reid@ossuminc.com"
+    organization: "Ossum Inc."
+    title: "Chief Architect"
+  } with {
+    briefly as "The author of this example model"
+    described as {
+      |Reid Spencer designs the RIDDL language and writes the example models
+      |that exercise it.
     }
-    type MobileNumber = Pattern("\\(([0-9]{3})\\)([0-9]{3})-([0-9]{4})")
-
-    type EmailAddress = Pattern(
-       "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
-    )
-    type LoadingMethod = any of { dock, tailgate, forklift, none }
-    type CompanyId = Id(dokn.Companies.Company)
-    type DriverId = MobileNumber
-    type NoteId = Id(dokn.Notes.Note)
-    type MediaId is Id(dokn.Media.Medium)
-    type LocationId is Id(dokn.Locations.Location)
-    type NoteList is reference to entity dokn.Notes.Note
-
-    context Companies is {
-        processor events as flow is {
-          inlet CompanyEvents_in is event dokn.Companies.Company.CompanyEvent
-          outlet CompanyEvents_out is event dokn.Companies.Company.CompanyEvent
-        }
-        connector CompanyEvents is {
-          from outlet CompanyEvents_out to inlet CompanyEvents_in
-        }
-
-        entity Company is {
-
-            type AddCompany is command {
-              mailingAddress: Address,
-              primaryContactName: String,
-              primaryContactPhone: MobileNumber,
-              primaryContactEmail: EmailAddress
-            }
-            event CompanyAdded is { when: TimeStamp }
-            type CompanyEvent is one of { event CompanyAdded }
-
-            record fields is {
-              companyId: CompanyId,
-              mailingAddress: Address,
-              primaryContactName: String,
-              primaryContactPhone: MobileNumber,
-              primaryContactEmail: EmailAddress
-            }
-            state CompanyBase of record Company.fields
-            handler CompanyBaseHandler is {
-                on command AddCompany {
-                    send event CompanyAdded to outlet CompanyEvents_out
-                }
-            }
-        } with {
-          option event-sourced option available
-        }
-    }
-
-    context Drivers is {
-        processor DriverMessages as flow is {
-          inlet Driver_in is type DriverCommands
-          outlet Driver_out is type DriverEvents
-        }
-
-        entity Driver is {
-
-            type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId }
-            type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
-
-            type RemoveDriverFromCompany is command { mobile: MobileNumber, companyId: CompanyId }
-            type DriverRemovedFromCompany is event { mobile: MobileNumber, companyId: CompanyId }
-
-            type PlaceDriverOnDuty is command { mobile: MobileNumber }
-
-            type DriverCommands is one of { AddDriverToCompany,
-                RemoveDriverFromCompany, PlaceDriverOnDuty }
-
-            type DriverEvents is one of { DriverAddedToCompany,
-               DriverRemovedFromCompany }
-
-            record fields is {
-              driverId: DriverId,
-              name: String,
-              onDutyTime: TimeStamp,
-              companyId: CompanyId
-            }
-            state DriverBase of record Driver.fields
-            handler DriverBaseHandler is {
-                on command AddDriverToCompany {
-                  send event DriverAddedToCompany to inlet Driver_out
-                }
-                on command RemoveDriverFromCompany {
-                  send event DriverRemovedFromCompany to inlet Driver_out
-                }
-            }
-        } with {
-            option event-sourced option available
-        }
-    }
-
-    context Notes is {
-        entity Note is {
-            record fields is {
-              noteId: NoteId,
-              locationId: type LocationId,
-              companyId: type CompanyId,
-              text: String,
-              upvoteCount: Integer,
-              downvoteCount: Integer,
-              approved: Boolean
-            }
-            state NoteBase of record Note.fields
-            handler NoteBaseHandler is { ??? }
-        } with {
-          option event-sourced option available
-        }
-    }
-
-    context Media is {
-        entity Medium is {
-            record fields is {
-              mediaId: MediaId,
-              path: String,
-              companyId: CompanyId
-            }
-            state MediaBase of record Medium.fields
-            handler MediaBaseHandler is { ??? }
-        } with {
-          option consistent
-        }
-
-    }
-
-    context Locations is {
-        entity Location is {
-
-            type AddDeliveryLocation is command  {
-              geohash: Location, label: String
-            }
-            type DeliveryLocationAdded is event  { ??? }
-
-            type ChangeLocationName is command { newName: String }
-            type LocationNameChanged is event { newName: String }
-
-            type ReportTicketReceived is command { ??? }
-            type TicketReportedAtLocation is event { ??? }
-
-            type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
-            type NotesForLocationModified is event { note: String }
-
-            type LocationAddressReceived is event { newAddress: dokn.Address }
-
-            type getLocationDetails is query  { ??? }
-            type LocationDetails is result  { ??? }
-
-            type getLocationNotes is query { cid: CompanyId }
-            type LocationNotes is result { notes: NoteList }
-
-            record fields is {
-              locationId: type LocationId,
-              geohash:  Location,
-              label: String ,
-              address: type Address,
-              notes: type NoteList,
-              ticketCount: Integer,
-              loadingMethod: type LoadingMethod
-            }
-            state LocationBase of record Location.fields
-            handler Base is {
-              on command Location.AddDeliveryLocation {
-                send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
-              }
-              on command ChangeLocationName {
-                send event Location.LocationNameChanged to inlet CompanyEvents_in
-              }
-              on command ReportTicketReceived {
-                send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
-              }
-              on command ModifyNotesAtLocation {
-                send event Location.NotesForLocationModified to inlet CompanyEvents_in
-              }
-              on event Location.LocationAddressReceived {
-                set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
-              }
-              on query Location.getLocationDetails {
-                send result Location.LocationDetails to inlet Driver_in
-              }
-              on query Location.getLocationNotes {
-                send result Location.LocationNotes to outlet Driver_out
-              }
-            }
-        } with {
-          option event-sourced option available
-        }
-    }
-} with {
-  explained as {
-    |The dokn domain is the starting point for a simple application which allows
-    |delivery drivers to capture notes about delivery locations to create
-    |efficiency for future deliveries. The main Entities within this domain are:
-    |*Driver - a person who delivers parcels and freight deliveries to a
-    |specific location.
-    |*Location - A specific geographic location to which a driver delivers to.
-    |*Note - Drivers capture notes about delivering to a specific location.
-    |i.e. Accepts deliveries at loading dock C. Ask for Mike (555-123-4567)
   }
+
+  context Companies is {
+
+    type CompanyId is Id(dokn.Companies.Company) with {
+      briefly as "Unique identifier for one company"
+      described as {
+        |Defined inside Companies because company identity is this context's concern.
+      }
+    }
+
+    type Address is {
+      line1 is String,
+      city is String,
+      province is String,
+      country is String,
+      postalCode is String
+    } with {
+      briefly as "A postal address as Companies understands it"
+      described as {
+        |Each context keeps its own address shape. Contexts do not share
+        |types in RIDDL 2.0; they exchange messages.
+      }
+    }
+
+    type MobileNumber is Pattern("\\(([0-9]{3})\\)([0-9]{3})-([0-9]{4})") with {
+      briefly as "A North American mobile number"
+      described as {
+        |Written as (nnn)nnn-nnnn.
+      }
+    }
+
+    type EmailAddress is Pattern("^[a-zA-Z0-9_+&*-]+@[a-zA-Z0-9-]+\\.[a-zA-Z]{2,7}") with {
+      briefly as "An email address"
+      described as {
+        |Loosely checked; delivery is the only real test.
+      }
+    }
+
+    entity Company is {
+
+      command AddCompany is {
+        mailingAddress is dokn.Companies.Address,
+        primaryContactName is String,
+        primaryContactPhone is dokn.Companies.MobileNumber,
+        primaryContactEmail is dokn.Companies.EmailAddress
+      } with {
+        briefly as "Ask for a company to be recorded"
+        described as {
+          |Sent when a company joined the network.
+        }
+      }
+
+      query WhichCompany is {
+        id is dokn.Companies.CompanyId
+      } with {
+        briefly as "Ask for the current state of one company"
+        described as {
+          |Sent when a reader wants a company they already know of.
+        }
+      }
+
+      result TheCompany is {
+        id is dokn.Companies.CompanyId,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichCompany query"
+        described as {
+          |Carries the identity and a short summary of the company.
+        }
+      }
+
+      event CompanyAdded is {
+        id is dokn.Companies.CompanyId
+      } with {
+        briefly as "Records that a company joined the network"
+        described as {
+          |Emitted once the change has been accepted.
+        }
+      }
+
+      record fields is {
+        id is dokn.Companies.CompanyId,
+        mailingAddress is dokn.Companies.Address,
+        primaryContactName is String,
+        primaryContactPhone is dokn.Companies.MobileNumber,
+        primaryContactEmail is dokn.Companies.EmailAddress
+      } with {
+        briefly as "Everything dokn keeps about one company"
+        described as {
+          |The stored shape of a company.
+        }
+      }
+
+      initial state CompanyBase of record dokn.Companies.Company.fields with {
+        briefly as "The state of one company"
+        described as {
+          |A company has a single state; its fields change but its kind does not.
+        }
+      }
+
+      handler CompanyHandler is {
+        on init {
+          set field dokn.Companies.Company.fields.id to "a freshly minted identifier"
+        }
+        on command AddCompany {
+          morph entity Company to state CompanyBase with record dokn.Companies.Company.fields
+          send event CompanyAdded to outlet CompanyAnnouncer.Published
+        }
+        on query WhichCompany {
+          yield result TheCompany
+        }
+      } with {
+        briefly as "Handles messages addressed to a company"
+        described as {
+          |Records companys and answers questions about them.
+        }
+      }
+
+    } with {
+      option event-sourced
+      option available
+      briefly as "A single company known to dokn"
+      described as {
+        |The entity that remembers that a company joined the network.
+      }
+    }
+
+    processor CompanyAnnouncer as source is {
+      outlet Published is event dokn.Companies.Company.CompanyAdded with {
+        briefly as "Where Companies publishes what happened"
+        described as {
+          |Company events leave this context through this outlet.
+        }
+      }
+      handler CompanyAnnouncerHandler is {
+        on event dokn.Companies.Company.CompanyAdded {
+          send event dokn.Companies.Company.CompanyAdded to outlet CompanyAnnouncer.Published
+        }
+        on other {
+          do "ignore anything that is not a company event"
+        }
+      } with {
+        briefly as "Publishes company events"
+        described as {
+          |Puts each event the entity announced onto the outlet.
+        }
+      }
+    } with {
+      briefly as "The context's publication point"
+      described as {
+        |A source streamlet carrying what Companies wants known elsewhere.
+      }
+    }
+
+    processor IntakeCompany as sink is {
+      inlet Requests is command dokn.Companies.Company.AddCompany with {
+        briefly as "Where company commands arrive from outside"
+        described as {
+          |Everything Companies is asked to do enters here.
+        }
+      }
+      handler IntakeCompanyHandler is {
+        on command dokn.Companies.Company.AddCompany {
+          tell command dokn.Companies.Company.AddCompany to entity Company
+        }
+      } with {
+        briefly as "Dispatches arriving commands"
+        described as {
+          |Receives commands at the boundary and forwards them.
+        }
+      }
+    } with {
+      briefly as "The context's front door"
+      described as {
+        |A sink receiving messages addressed to Companies.
+      }
+    }
+
+    repository CompanyStore is {
+      inlet Recorded is event dokn.Companies.Company.CompanyAdded with {
+        briefly as "Where company events arrive to be persisted"
+        described as {
+          |The repository learns of changes through this inlet.
+        }
+      }
+      schema Store is flat
+        of Held as record dokn.Companies.Company.fields
+      with {
+        briefly as "How companys are laid out in storage"
+        described as {
+          |A flat schema: one stored row per company.
+        }
+      }
+      handler CompanyStoreHandler is {
+        on event dokn.Companies.Company.CompanyAdded {
+          set field dokn.Companies.Company.fields.id to "the identifier carried by the event"
+        }
+      } with {
+        briefly as "Keeps storage in step with what happened"
+        described as {
+          |Writes each event into the store.
+        }
+      }
+    } with {
+      briefly as "Persists the companys of this context"
+      described as {
+        |Entities are stateful, so Companies keeps a repository.
+      }
+    }
+
+    connector RecordingCompany is {
+      from outlet CompanyAnnouncer.Published to inlet CompanyStore.Recorded
+    } with {
+      briefly as "Carries company events to storage"
+      described as {
+        |Connects what the context announces to what records it.
+      }
+    }
+
+  } with {
+    briefly as "Owns the companys dokn knows about"
+    described as {
+      |The Companies context is responsible for companys: recording them,
+      |changing them, and answering questions about them.
+    }
+  }
+
+  context Drivers is {
+
+    type DriverId is Id(dokn.Drivers.Driver) with {
+      briefly as "Unique identifier for one driver"
+      described as {
+        |Defined inside Drivers because driver identity is this context's concern.
+      }
+    }
+
+    type MobileNumber is Pattern("\\(([0-9]{3})\\)([0-9]{3})-([0-9]{4})") with {
+      briefly as "A North American mobile number"
+      described as {
+        |Written as (nnn)nnn-nnnn.
+      }
+    }
+
+    entity Driver is {
+
+      command AddDriverToCompany is {
+        name is String,
+        mobile is dokn.Drivers.MobileNumber,
+        onDutyTime is TimeStamp
+      } with {
+        briefly as "Ask for a driver to be recorded"
+        described as {
+          |Sent when a driver joined a company.
+        }
+      }
+
+      query WhichDriver is {
+        id is dokn.Drivers.DriverId
+      } with {
+        briefly as "Ask for the current state of one driver"
+        described as {
+          |Sent when a reader wants a driver they already know of.
+        }
+      }
+
+      result TheDriver is {
+        id is dokn.Drivers.DriverId,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichDriver query"
+        described as {
+          |Carries the identity and a short summary of the driver.
+        }
+      }
+
+      event DriverAddedToCompany is {
+        id is dokn.Drivers.DriverId
+      } with {
+        briefly as "Records that a driver joined a company"
+        described as {
+          |Emitted once the change has been accepted.
+        }
+      }
+
+      record fields is {
+        id is dokn.Drivers.DriverId,
+        name is String,
+        mobile is dokn.Drivers.MobileNumber,
+        onDutyTime is TimeStamp
+      } with {
+        briefly as "Everything dokn keeps about one driver"
+        described as {
+          |The stored shape of a driver.
+        }
+      }
+
+      initial state DriverBase of record dokn.Drivers.Driver.fields with {
+        briefly as "The state of one driver"
+        described as {
+          |A driver has a single state; its fields change but its kind does not.
+        }
+      }
+
+      handler DriverHandler is {
+        on init {
+          set field dokn.Drivers.Driver.fields.id to "a freshly minted identifier"
+        }
+        on command AddDriverToCompany {
+          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.fields
+          send event DriverAddedToCompany to outlet DriverAnnouncer.Published
+        }
+        on query WhichDriver {
+          yield result TheDriver
+        }
+      } with {
+        briefly as "Handles messages addressed to a driver"
+        described as {
+          |Records drivers and answers questions about them.
+        }
+      }
+
+    } with {
+      option event-sourced
+      option available
+      briefly as "A single driver known to dokn"
+      described as {
+        |The entity that remembers that a driver joined a company.
+      }
+    }
+
+    processor DriverAnnouncer as source is {
+      outlet Published is event dokn.Drivers.Driver.DriverAddedToCompany with {
+        briefly as "Where Drivers publishes what happened"
+        described as {
+          |Driver events leave this context through this outlet.
+        }
+      }
+      handler DriverAnnouncerHandler is {
+        on event dokn.Drivers.Driver.DriverAddedToCompany {
+          send event dokn.Drivers.Driver.DriverAddedToCompany to outlet DriverAnnouncer.Published
+        }
+        on other {
+          do "ignore anything that is not a driver event"
+        }
+      } with {
+        briefly as "Publishes driver events"
+        described as {
+          |Puts each event the entity announced onto the outlet.
+        }
+      }
+    } with {
+      briefly as "The context's publication point"
+      described as {
+        |A source streamlet carrying what Drivers wants known elsewhere.
+      }
+    }
+
+    processor IntakeDriver as sink is {
+      inlet Requests is command dokn.Drivers.Driver.AddDriverToCompany with {
+        briefly as "Where driver commands arrive from outside"
+        described as {
+          |Everything Drivers is asked to do enters here.
+        }
+      }
+      handler IntakeDriverHandler is {
+        on command dokn.Drivers.Driver.AddDriverToCompany {
+          tell command dokn.Drivers.Driver.AddDriverToCompany to entity Driver
+        }
+      } with {
+        briefly as "Dispatches arriving commands"
+        described as {
+          |Receives commands at the boundary and forwards them.
+        }
+      }
+    } with {
+      briefly as "The context's front door"
+      described as {
+        |A sink receiving messages addressed to Drivers.
+      }
+    }
+
+    repository DriverStore is {
+      inlet Recorded is event dokn.Drivers.Driver.DriverAddedToCompany with {
+        briefly as "Where driver events arrive to be persisted"
+        described as {
+          |The repository learns of changes through this inlet.
+        }
+      }
+      schema Store is flat
+        of Held as record dokn.Drivers.Driver.fields
+      with {
+        briefly as "How drivers are laid out in storage"
+        described as {
+          |A flat schema: one stored row per driver.
+        }
+      }
+      handler DriverStoreHandler is {
+        on event dokn.Drivers.Driver.DriverAddedToCompany {
+          set field dokn.Drivers.Driver.fields.id to "the identifier carried by the event"
+        }
+      } with {
+        briefly as "Keeps storage in step with what happened"
+        described as {
+          |Writes each event into the store.
+        }
+      }
+    } with {
+      briefly as "Persists the drivers of this context"
+      described as {
+        |Entities are stateful, so Drivers keeps a repository.
+      }
+    }
+
+    connector RecordingDriver is {
+      from outlet DriverAnnouncer.Published to inlet DriverStore.Recorded
+    } with {
+      briefly as "Carries driver events to storage"
+      described as {
+        |Connects what the context announces to what records it.
+      }
+    }
+
+  } with {
+    briefly as "Owns the drivers dokn knows about"
+    described as {
+      |The Drivers context is responsible for drivers: recording them,
+      |changing them, and answering questions about them.
+    }
+  }
+
+  context Notes is {
+
+    type NoteId is Id(dokn.Notes.Note) with {
+      briefly as "Unique identifier for one note"
+      described as {
+        |Defined inside Notes because note identity is this context's concern.
+      }
+    }
+
+    entity Note is {
+
+      command CaptureNote is {
+        text is String,
+        upvoteCount is Integer,
+        downvoteCount is Integer,
+        approved is Boolean
+      } with {
+        briefly as "Ask for a note to be recorded"
+        described as {
+          |Sent when a driver wrote a note about a location.
+        }
+      }
+
+      query WhichNote is {
+        id is dokn.Notes.NoteId
+      } with {
+        briefly as "Ask for the current state of one note"
+        described as {
+          |Sent when a reader wants a note they already know of.
+        }
+      }
+
+      result TheNote is {
+        id is dokn.Notes.NoteId,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichNote query"
+        described as {
+          |Carries the identity and a short summary of the note.
+        }
+      }
+
+      event NoteCaptured is {
+        id is dokn.Notes.NoteId
+      } with {
+        briefly as "Records that a driver wrote a note about a location"
+        described as {
+          |Emitted once the change has been accepted.
+        }
+      }
+
+      record fields is {
+        id is dokn.Notes.NoteId,
+        text is String,
+        upvoteCount is Integer,
+        downvoteCount is Integer,
+        approved is Boolean
+      } with {
+        briefly as "Everything dokn keeps about one note"
+        described as {
+          |The stored shape of a note.
+        }
+      }
+
+      initial state NoteBase of record dokn.Notes.Note.fields with {
+        briefly as "The state of one note"
+        described as {
+          |A note has a single state; its fields change but its kind does not.
+        }
+      }
+
+      handler NoteHandler is {
+        on init {
+          set field dokn.Notes.Note.fields.id to "a freshly minted identifier"
+        }
+        on command CaptureNote {
+          morph entity Note to state NoteBase with record dokn.Notes.Note.fields
+          send event NoteCaptured to outlet NoteAnnouncer.Published
+        }
+        on query WhichNote {
+          yield result TheNote
+        }
+      } with {
+        briefly as "Handles messages addressed to a note"
+        described as {
+          |Records notes and answers questions about them.
+        }
+      }
+
+    } with {
+      option event-sourced
+      option available
+      briefly as "A single note known to dokn"
+      described as {
+        |The entity that remembers that a driver wrote a note about a location.
+      }
+    }
+
+    processor NoteAnnouncer as source is {
+      outlet Published is event dokn.Notes.Note.NoteCaptured with {
+        briefly as "Where Notes publishes what happened"
+        described as {
+          |Note events leave this context through this outlet.
+        }
+      }
+      handler NoteAnnouncerHandler is {
+        on event dokn.Notes.Note.NoteCaptured {
+          send event dokn.Notes.Note.NoteCaptured to outlet NoteAnnouncer.Published
+        }
+        on other {
+          do "ignore anything that is not a note event"
+        }
+      } with {
+        briefly as "Publishes note events"
+        described as {
+          |Puts each event the entity announced onto the outlet.
+        }
+      }
+    } with {
+      briefly as "The context's publication point"
+      described as {
+        |A source streamlet carrying what Notes wants known elsewhere.
+      }
+    }
+
+    processor IntakeNote as sink is {
+      inlet Requests is command dokn.Notes.Note.CaptureNote with {
+        briefly as "Where note commands arrive from outside"
+        described as {
+          |Everything Notes is asked to do enters here.
+        }
+      }
+      handler IntakeNoteHandler is {
+        on command dokn.Notes.Note.CaptureNote {
+          tell command dokn.Notes.Note.CaptureNote to entity Note
+        }
+      } with {
+        briefly as "Dispatches arriving commands"
+        described as {
+          |Receives commands at the boundary and forwards them.
+        }
+      }
+    } with {
+      briefly as "The context's front door"
+      described as {
+        |A sink receiving messages addressed to Notes.
+      }
+    }
+
+    repository NoteStore is {
+      inlet Recorded is event dokn.Notes.Note.NoteCaptured with {
+        briefly as "Where note events arrive to be persisted"
+        described as {
+          |The repository learns of changes through this inlet.
+        }
+      }
+      schema Store is flat
+        of Held as record dokn.Notes.Note.fields
+      with {
+        briefly as "How notes are laid out in storage"
+        described as {
+          |A flat schema: one stored row per note.
+        }
+      }
+      handler NoteStoreHandler is {
+        on event dokn.Notes.Note.NoteCaptured {
+          set field dokn.Notes.Note.fields.id to "the identifier carried by the event"
+        }
+      } with {
+        briefly as "Keeps storage in step with what happened"
+        described as {
+          |Writes each event into the store.
+        }
+      }
+    } with {
+      briefly as "Persists the notes of this context"
+      described as {
+        |Entities are stateful, so Notes keeps a repository.
+      }
+    }
+
+    connector RecordingNote is {
+      from outlet NoteAnnouncer.Published to inlet NoteStore.Recorded
+    } with {
+      briefly as "Carries note events to storage"
+      described as {
+        |Connects what the context announces to what records it.
+      }
+    }
+
+  } with {
+    briefly as "Owns the notes dokn knows about"
+    described as {
+      |The Notes context is responsible for notes: recording them,
+      |changing them, and answering questions about them.
+    }
+  }
+
+  context Media is {
+
+    type MediaId is Id(dokn.Media.Medium) with {
+      briefly as "Unique identifier for one medium"
+      described as {
+        |Defined inside Media because medium identity is this context's concern.
+      }
+    }
+
+    entity Medium is {
+
+      command StoreMedium is {
+        path is String
+      } with {
+        briefly as "Ask for a medium to be recorded"
+        described as {
+          |Sent when a photograph or document was filed.
+        }
+      }
+
+      query WhichMedium is {
+        id is dokn.Media.MediaId
+      } with {
+        briefly as "Ask for the current state of one medium"
+        described as {
+          |Sent when a reader wants a medium they already know of.
+        }
+      }
+
+      result TheMedium is {
+        id is dokn.Media.MediaId,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichMedium query"
+        described as {
+          |Carries the identity and a short summary of the medium.
+        }
+      }
+
+      event MediumStored is {
+        id is dokn.Media.MediaId
+      } with {
+        briefly as "Records that a photograph or document was filed"
+        described as {
+          |Emitted once the change has been accepted.
+        }
+      }
+
+      record fields is {
+        id is dokn.Media.MediaId,
+        path is String
+      } with {
+        briefly as "Everything dokn keeps about one medium"
+        described as {
+          |The stored shape of a medium.
+        }
+      }
+
+      initial state MediumBase of record dokn.Media.Medium.fields with {
+        briefly as "The state of one medium"
+        described as {
+          |A medium has a single state; its fields change but its kind does not.
+        }
+      }
+
+      handler MediumHandler is {
+        on init {
+          set field dokn.Media.Medium.fields.id to "a freshly minted identifier"
+        }
+        on command StoreMedium {
+          morph entity Medium to state MediumBase with record dokn.Media.Medium.fields
+          send event MediumStored to outlet MediumAnnouncer.Published
+        }
+        on query WhichMedium {
+          yield result TheMedium
+        }
+      } with {
+        briefly as "Handles messages addressed to a medium"
+        described as {
+          |Records mediums and answers questions about them.
+        }
+      }
+
+    } with {
+      option event-sourced
+      option available
+      briefly as "A single medium known to dokn"
+      described as {
+        |The entity that remembers that a photograph or document was filed.
+      }
+    }
+
+    processor MediumAnnouncer as source is {
+      outlet Published is event dokn.Media.Medium.MediumStored with {
+        briefly as "Where Media publishes what happened"
+        described as {
+          |Medium events leave this context through this outlet.
+        }
+      }
+      handler MediumAnnouncerHandler is {
+        on event dokn.Media.Medium.MediumStored {
+          send event dokn.Media.Medium.MediumStored to outlet MediumAnnouncer.Published
+        }
+        on other {
+          do "ignore anything that is not a medium event"
+        }
+      } with {
+        briefly as "Publishes medium events"
+        described as {
+          |Puts each event the entity announced onto the outlet.
+        }
+      }
+    } with {
+      briefly as "The context's publication point"
+      described as {
+        |A source streamlet carrying what Media wants known elsewhere.
+      }
+    }
+
+    processor IntakeMedium as sink is {
+      inlet Requests is command dokn.Media.Medium.StoreMedium with {
+        briefly as "Where medium commands arrive from outside"
+        described as {
+          |Everything Media is asked to do enters here.
+        }
+      }
+      handler IntakeMediumHandler is {
+        on command dokn.Media.Medium.StoreMedium {
+          tell command dokn.Media.Medium.StoreMedium to entity Medium
+        }
+      } with {
+        briefly as "Dispatches arriving commands"
+        described as {
+          |Receives commands at the boundary and forwards them.
+        }
+      }
+    } with {
+      briefly as "The context's front door"
+      described as {
+        |A sink receiving messages addressed to Media.
+      }
+    }
+
+    repository MediumStore is {
+      inlet Recorded is event dokn.Media.Medium.MediumStored with {
+        briefly as "Where medium events arrive to be persisted"
+        described as {
+          |The repository learns of changes through this inlet.
+        }
+      }
+      schema Store is flat
+        of Held as record dokn.Media.Medium.fields
+      with {
+        briefly as "How mediums are laid out in storage"
+        described as {
+          |A flat schema: one stored row per medium.
+        }
+      }
+      handler MediumStoreHandler is {
+        on event dokn.Media.Medium.MediumStored {
+          set field dokn.Media.Medium.fields.id to "the identifier carried by the event"
+        }
+      } with {
+        briefly as "Keeps storage in step with what happened"
+        described as {
+          |Writes each event into the store.
+        }
+      }
+    } with {
+      briefly as "Persists the mediums of this context"
+      described as {
+        |Entities are stateful, so Media keeps a repository.
+      }
+    }
+
+    connector RecordingMedium is {
+      from outlet MediumAnnouncer.Published to inlet MediumStore.Recorded
+    } with {
+      briefly as "Carries medium events to storage"
+      described as {
+        |Connects what the context announces to what records it.
+      }
+    }
+
+  } with {
+    briefly as "Owns the mediums dokn knows about"
+    described as {
+      |The Media context is responsible for mediums: recording them,
+      |changing them, and answering questions about them.
+    }
+  }
+
+  context Locations is {
+
+    type LocationId is Id(dokn.Locations.Location) with {
+      briefly as "Unique identifier for one location"
+      described as {
+        |Defined inside Locations because location identity is this context's concern.
+      }
+    }
+
+    type Address is {
+      line1 is String,
+      city is String,
+      province is String,
+      country is String,
+      postalCode is String
+    } with {
+      briefly as "A postal address as Locations understands it"
+      described as {
+        |Each context keeps its own address shape. Contexts do not share
+        |types in RIDDL 2.0; they exchange messages.
+      }
+    }
+
+    type LoadingMethod is any of { dock, tailgate, forklift, none } with {
+      briefly as "How freight is moved on and off a vehicle"
+      described as {
+        |Drivers need to know this before they arrive.
+      }
+    }
+
+    entity Location is {
+
+      command AddDeliveryLocation is {
+        label is String,
+        address is dokn.Locations.Address,
+        ticketCount is Integer,
+        loadingMethod is dokn.Locations.LoadingMethod
+      } with {
+        briefly as "Ask for a location to be recorded"
+        described as {
+          |Sent when a delivery location was added.
+        }
+      }
+
+      query WhichLocation is {
+        id is dokn.Locations.LocationId
+      } with {
+        briefly as "Ask for the current state of one location"
+        described as {
+          |Sent when a reader wants a location they already know of.
+        }
+      }
+
+      result TheLocation is {
+        id is dokn.Locations.LocationId,
+        summary is String
+      } with {
+        briefly as "The answer to a WhichLocation query"
+        described as {
+          |Carries the identity and a short summary of the location.
+        }
+      }
+
+      event DeliveryLocationAdded is {
+        id is dokn.Locations.LocationId
+      } with {
+        briefly as "Records that a delivery location was added"
+        described as {
+          |Emitted once the change has been accepted.
+        }
+      }
+
+      record fields is {
+        id is dokn.Locations.LocationId,
+        label is String,
+        address is dokn.Locations.Address,
+        ticketCount is Integer,
+        loadingMethod is dokn.Locations.LoadingMethod
+      } with {
+        briefly as "Everything dokn keeps about one location"
+        described as {
+          |The stored shape of a location.
+        }
+      }
+
+      initial state LocationBase of record dokn.Locations.Location.fields with {
+        briefly as "The state of one location"
+        described as {
+          |A location has a single state; its fields change but its kind does not.
+        }
+      }
+
+      handler LocationHandler is {
+        on init {
+          set field dokn.Locations.Location.fields.id to "a freshly minted identifier"
+        }
+        on command AddDeliveryLocation {
+          morph entity Location to state LocationBase with record dokn.Locations.Location.fields
+          send event DeliveryLocationAdded to outlet LocationAnnouncer.Published
+        }
+        on query WhichLocation {
+          yield result TheLocation
+        }
+      } with {
+        briefly as "Handles messages addressed to a location"
+        described as {
+          |Records locations and answers questions about them.
+        }
+      }
+
+    } with {
+      option event-sourced
+      option available
+      briefly as "A single location known to dokn"
+      described as {
+        |The entity that remembers that a delivery location was added.
+      }
+    }
+
+    processor LocationAnnouncer as source is {
+      outlet Published is event dokn.Locations.Location.DeliveryLocationAdded with {
+        briefly as "Where Locations publishes what happened"
+        described as {
+          |Location events leave this context through this outlet.
+        }
+      }
+      handler LocationAnnouncerHandler is {
+        on event dokn.Locations.Location.DeliveryLocationAdded {
+          send event dokn.Locations.Location.DeliveryLocationAdded to outlet LocationAnnouncer.Published
+        }
+        on other {
+          do "ignore anything that is not a location event"
+        }
+      } with {
+        briefly as "Publishes location events"
+        described as {
+          |Puts each event the entity announced onto the outlet.
+        }
+      }
+    } with {
+      briefly as "The context's publication point"
+      described as {
+        |A source streamlet carrying what Locations wants known elsewhere.
+      }
+    }
+
+    processor IntakeLocation as sink is {
+      inlet Requests is command dokn.Locations.Location.AddDeliveryLocation with {
+        briefly as "Where location commands arrive from outside"
+        described as {
+          |Everything Locations is asked to do enters here.
+        }
+      }
+      handler IntakeLocationHandler is {
+        on command dokn.Locations.Location.AddDeliveryLocation {
+          tell command dokn.Locations.Location.AddDeliveryLocation to entity Location
+        }
+      } with {
+        briefly as "Dispatches arriving commands"
+        described as {
+          |Receives commands at the boundary and forwards them.
+        }
+      }
+    } with {
+      briefly as "The context's front door"
+      described as {
+        |A sink receiving messages addressed to Locations.
+      }
+    }
+
+    repository LocationStore is {
+      inlet Recorded is event dokn.Locations.Location.DeliveryLocationAdded with {
+        briefly as "Where location events arrive to be persisted"
+        described as {
+          |The repository learns of changes through this inlet.
+        }
+      }
+      schema Store is flat
+        of Held as record dokn.Locations.Location.fields
+      with {
+        briefly as "How locations are laid out in storage"
+        described as {
+          |A flat schema: one stored row per location.
+        }
+      }
+      handler LocationStoreHandler is {
+        on event dokn.Locations.Location.DeliveryLocationAdded {
+          set field dokn.Locations.Location.fields.id to "the identifier carried by the event"
+        }
+      } with {
+        briefly as "Keeps storage in step with what happened"
+        described as {
+          |Writes each event into the store.
+        }
+      }
+    } with {
+      briefly as "Persists the locations of this context"
+      described as {
+        |Entities are stateful, so Locations keeps a repository.
+      }
+    }
+
+    connector RecordingLocation is {
+      from outlet LocationAnnouncer.Published to inlet LocationStore.Recorded
+    } with {
+      briefly as "Carries location events to storage"
+      described as {
+        |Connects what the context announces to what records it.
+      }
+    }
+
+  } with {
+    briefly as "Owns the locations dokn knows about"
+    described as {
+      |The Locations context is responsible for locations: recording them,
+      |changing them, and answering questions about them.
+    }
+  }
+
+  context Intake is {
+
+    processor CompanyRequests as source is {
+      outlet CompanySubmissions is command dokn.Companies.Company.AddCompany with {
+        briefly as "Where company requests leave the gateway"
+        described as {
+          |Requests reach the Companies context over a domain-scoped connector.
+        }
+      }
+      handler CompanyRequestsHandler is {
+        on command dokn.Companies.Company.AddCompany {
+          send command dokn.Companies.Company.AddCompany to outlet CompanySubmissions
+        }
+        on other {
+          do "ignore requests that are not about companys"
+        }
+      } with {
+        briefly as "Forwards company requests into the domain"
+        described as {
+          |Runs when a caller asks dokn to record a company.
+        }
+      }
+    } with {
+      briefly as "The gateway's outbound path to Companies"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor DriverRequests as source is {
+      outlet DriverSubmissions is command dokn.Drivers.Driver.AddDriverToCompany with {
+        briefly as "Where driver requests leave the gateway"
+        described as {
+          |Requests reach the Drivers context over a domain-scoped connector.
+        }
+      }
+      handler DriverRequestsHandler is {
+        on command dokn.Drivers.Driver.AddDriverToCompany {
+          send command dokn.Drivers.Driver.AddDriverToCompany to outlet DriverSubmissions
+        }
+        on other {
+          do "ignore requests that are not about drivers"
+        }
+      } with {
+        briefly as "Forwards driver requests into the domain"
+        described as {
+          |Runs when a caller asks dokn to record a driver.
+        }
+      }
+    } with {
+      briefly as "The gateway's outbound path to Drivers"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor NoteRequests as source is {
+      outlet NoteSubmissions is command dokn.Notes.Note.CaptureNote with {
+        briefly as "Where note requests leave the gateway"
+        described as {
+          |Requests reach the Notes context over a domain-scoped connector.
+        }
+      }
+      handler NoteRequestsHandler is {
+        on command dokn.Notes.Note.CaptureNote {
+          send command dokn.Notes.Note.CaptureNote to outlet NoteSubmissions
+        }
+        on other {
+          do "ignore requests that are not about notes"
+        }
+      } with {
+        briefly as "Forwards note requests into the domain"
+        described as {
+          |Runs when a caller asks dokn to record a note.
+        }
+      }
+    } with {
+      briefly as "The gateway's outbound path to Notes"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor MediumRequests as source is {
+      outlet MediumSubmissions is command dokn.Media.Medium.StoreMedium with {
+        briefly as "Where medium requests leave the gateway"
+        described as {
+          |Requests reach the Media context over a domain-scoped connector.
+        }
+      }
+      handler MediumRequestsHandler is {
+        on command dokn.Media.Medium.StoreMedium {
+          send command dokn.Media.Medium.StoreMedium to outlet MediumSubmissions
+        }
+        on other {
+          do "ignore requests that are not about mediums"
+        }
+      } with {
+        briefly as "Forwards medium requests into the domain"
+        described as {
+          |Runs when a caller asks dokn to record a medium.
+        }
+      }
+    } with {
+      briefly as "The gateway's outbound path to Media"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+    processor LocationRequests as source is {
+      outlet LocationSubmissions is command dokn.Locations.Location.AddDeliveryLocation with {
+        briefly as "Where location requests leave the gateway"
+        described as {
+          |Requests reach the Locations context over a domain-scoped connector.
+        }
+      }
+      handler LocationRequestsHandler is {
+        on command dokn.Locations.Location.AddDeliveryLocation {
+          send command dokn.Locations.Location.AddDeliveryLocation to outlet LocationSubmissions
+        }
+        on other {
+          do "ignore requests that are not about locations"
+        }
+      } with {
+        briefly as "Forwards location requests into the domain"
+        described as {
+          |Runs when a caller asks dokn to record a location.
+        }
+      }
+    } with {
+      briefly as "The gateway's outbound path to Locations"
+      described as {
+        |A source streamlet: what a caller asked for, on its way in.
+      }
+    }
+
+  } with {
+    briefly as "Where requests from outside dokn arrive"
+    described as {
+      |dokn has no user interface of its own; drivers reach it through a
+      |mobile application that is out of scope here. This gateway context
+      |stands in for that boundary, giving every context's sink something
+      |upstream to receive from. RIDDL 2.0 names the role explicitly with
+      |the `gateway` context intention.
+    }
+  }
+
+  connector CompanyRequests is {
+    from outlet dokn.Intake.CompanyRequests.CompanySubmissions
+    to inlet dokn.Companies.IntakeCompany.Requests
+  } with {
+    briefly as "Carries company requests from the gateway to Companies"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector DriverRequests is {
+    from outlet dokn.Intake.DriverRequests.DriverSubmissions
+    to inlet dokn.Drivers.IntakeDriver.Requests
+  } with {
+    briefly as "Carries driver requests from the gateway to Drivers"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector NoteRequests is {
+    from outlet dokn.Intake.NoteRequests.NoteSubmissions
+    to inlet dokn.Notes.IntakeNote.Requests
+  } with {
+    briefly as "Carries note requests from the gateway to Notes"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector MediumRequests is {
+    from outlet dokn.Intake.MediumRequests.MediumSubmissions
+    to inlet dokn.Media.IntakeMedium.Requests
+  } with {
+    briefly as "Carries medium requests from the gateway to Media"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+  connector LocationRequests is {
+    from outlet dokn.Intake.LocationRequests.LocationSubmissions
+    to inlet dokn.Locations.IntakeLocation.Requests
+  } with {
+    briefly as "Carries location requests from the gateway to Locations"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and
+      |made persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
+} with {
+  briefly as "Delivery drivers capturing what they learn about locations"
+  described as {
+    |The dokn domain is the starting point for a simple application which
+    |allows delivery drivers to capture notes about delivery locations to
+    |create efficiency for future deliveries. The main entities are:
+    |
+    |* Driver - a person who delivers parcels and freight to a location.
+    |* Location - a specific geographic place a driver delivers to.
+    |* Note - what drivers record about delivering to a location, e.g.
+    |  "Accepts deliveries at loading dock C. Ask for Mike (555-123-4567)".
+    |* Company - the business a driver delivers on behalf of.
+    |* Medium - a photograph or document filed against a location.
+    |
+    |Each context owns its identifiers and value types. RIDDL 2.0 flags a
+    |type used by an entity but declared outside its context, so the shared
+    |domain-level types this model began with now live in the contexts that
+    |use them, and references are fully qualified because RIDDL resolves
+    |names across the whole model rather than per context.
+  }
+  by author Reid
 }

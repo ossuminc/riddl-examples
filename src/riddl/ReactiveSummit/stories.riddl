@@ -1,11 +1,36 @@
-// Stub file for stories
-user Attendee is "A conference attendee"
+user Attendee is "A conference attendee keeping a list of things to do" with {
+  briefly as "The only kind of person this model serves"
+  described as {
+    |An attendee writes down what they mean to do during the conference and
+    |ticks items off as they go.
+  }
+}
 
 epic Stories is {
-  user Attendee wants to "manage their to-do items" so that "they can track tasks"
+
+  user Attendee wants to "manage their to-do items"
+    so that "they can track what they still mean to do"
 
   case ManageTasks is {
-    user Attendee wants to "add a task" so that "they can remember what to do"
-    ???
+    user Attendee wants to "add a task"
+      so that "they can remember what to do"
+    step focus user Attendee on group MainPage
+    step take form EnterToDoItem from user Attendee
+    step send command ReactiveSummit.ToDoList.ToDoItem.AddItem
+      from source ReactiveSummit.ToDoListUI.ItemRequests
+      to sink ReactiveSummit.ToDoList.Intake
+  } with {
+    briefly as "Adding a task from the main screen"
+    described as {
+      |The attendee writes an item on the main page. The application echoes
+      |it back and turns it into a command for the ToDoList context.
+    }
+  }
+
+} with {
+  briefly as "How an attendee keeps track of what they mean to do"
+  described as {
+    |The story this model tells: an attendee arrives at the one screen, adds
+    |items, and ticks them off. Everything defined here serves that.
   }
 }

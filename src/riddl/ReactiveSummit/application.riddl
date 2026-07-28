@@ -1,20 +1,105 @@
-type ToDoContent is {
-  itemId is Id(ToDoList.ToDoItem),
-  itemDescription is String,
-  expectedCompletion is TimeStamp?
-}
-
-type ToDoItemInput is {
-  content is ToDoContent
-}
-
 application context ToDoListUI is {
-  // UI elements using valid group syntax
-  page MainPage is {
-    list ListOfToDoItems shows type ToDoContent
-    form EnterToDoItem acquires type ToDoItemInput
-    button MarkItemDone activates type ToDoContent
+
+  record ToDoContent is {
+    itemDescription is String,
+    expectedCompletion is TimeStamp?
+  } with {
+    briefly as "What the application shows about one item"
+    described as {
+      |Enough to draw a row: the text the attendee wrote and, if they gave
+      |one, the date they mean to finish by.
+    }
   }
+
+  record ToDoItemInput is {
+    content is ToDoContent
+  } with {
+    briefly as "What the attendee types when adding an item"
+    described as {
+      |Collected by the EnterToDoItem form.
+    }
+  }
+
+  page MainPage is {
+    list ListOfToDoItems shows record ToDoContent with {
+      briefly as "The attendee's outstanding items"
+      described as {
+        |One row per item still to be done.
+      }
+    }
+    list JustEntered shows record ToDoItemInput with {
+      briefly as "Echoes back the item just entered"
+      described as {
+        |Confirms what was typed before the main list catches up.
+      }
+    }
+    form EnterToDoItem acquires record ToDoItemInput with {
+      briefly as "Where a new item is written down"
+      described as {
+        |Collects the description, then asks the ToDoList context to add it.
+      }
+    }
+    button MarkItemDone activates record ToDoContent with {
+      briefly as "Ticks an item off"
+      described as {
+        |Asks the ToDoList context to complete the item on this row.
+      }
+    }
+  } with {
+    briefly as "The one screen of the to-do application"
+    described as {
+      |Shows what is outstanding and lets the attendee add to it or tick
+      |things off.
+    }
+  }
+
+  handler MainPageHandler is {
+    on command ReactiveSummit.ToDoList.ToDoItem.AddItem {
+      put get from form EnterToDoItem to list JustEntered
+    }
+  } with {
+    briefly as "Reads what the attendee typed and refreshes what they see"
+    described as {
+      |Only an application context may `get` from an input or `put` to an
+      |output, so the screen's own behaviour lives here.
+    }
+  }
+
+  processor ItemRequests as source is {
+    outlet Submissions is command ReactiveSummit.ToDoList.ToDoItem.AddItem with {
+      briefly as "Where the application sends work into the domain"
+      described as {
+        |Requests leave the application here and reach the ToDoList context
+        |over a domain-scoped connector.
+      }
+    }
+    handler ItemRequestsHandler is {
+      on command ReactiveSummit.ToDoList.ToDoItem.AddItem {
+        send command ReactiveSummit.ToDoList.ToDoItem.AddItem to outlet Submissions
+      }
+      on other {
+        do "ignore interactions that do not add an item"
+      }
+    } with {
+      briefly as "Turns what the attendee does into domain commands"
+      described as {
+        |Runs when the EnterToDoItem form is submitted.
+      }
+    }
+  } with {
+    briefly as "The application's outbound path to the ToDoList context"
+    described as {
+      |A source streamlet: what the user asked for, on its way into the
+      |domain.
+    }
+  }
+
 } with {
+  briefly as "The application through which an attendee reaches their list"
+  described as {
+    |ToDoListUI is the only place an attendee touches this system. RIDDL 2.0
+    |requires the application intention on any context holding UI groups,
+    |and confines user interaction to the application boundary.
+  }
   option is technology("react.js")
 }

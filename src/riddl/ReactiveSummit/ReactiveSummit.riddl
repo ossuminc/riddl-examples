@@ -1,10 +1,36 @@
 domain ReactiveSummit is {
 
-include "application"
-include "stories"
-include "entities"
+  author Reid is {
+    name: "Reid Spencer"
+    email: "reid@ossuminc.com"
+    organization: "Ossum Inc."
+    title: "Chief Architect"
+  } with {
+    briefly as "The author of this example model"
+    described as {
+      |Reid Spencer designs the RIDDL language and writes the example models
+      |that exercise it.
+    }
+  }
+
+  include "application"
+  include "stories"
+  include "entities"
+
+  connector ItemRequests is {
+    from outlet ReactiveSummit.ToDoListUI.ItemRequests.Submissions
+    to inlet ReactiveSummit.ToDoList.Intake.Requests
+  } with {
+    briefly as "Carries the attendee's requests from the application to the domain"
+    described as {
+      |This connector crosses a context boundary, so RIDDL 2.0 requires it
+      |to be declared at domain scope and to be persistent.
+    }
+    option is persistent
+  }
 
 } with {
   briefly as "An example domain for Reactive Summit"
   described in file "ReactiveSummit.md"
+  by author Reid
 }

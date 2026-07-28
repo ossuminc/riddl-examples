@@ -1,34 +1,303 @@
 context ToDoList is {
 
-  command AddItem is { content is ReactiveSummit.ToDoContent }
-  event ItemAdded is { content is ReactiveSummit.ToDoContent }
-  event ItemRejected is { id is Id(ToDoItem), message is String }
-  command CompleteItem is { id is Id(ToDoItem) }
-  event ItemCompleted is { id is Id(ToDoItem) }
+  type ItemId is Id(ReactiveSummit.ToDoList.ToDoItem) with {
+    briefly as "Unique identifier for one to-do item"
+    described as {
+      |Identifies a single item on an attendee's list. Defined inside this
+      |context because the items are its concern.
+    }
+  }
+
+  record ItemContent is {
+    itemId is ItemId,
+    itemDescription is String,
+    expectedCompletion is TimeStamp?
+  } with {
+    briefly as "What a to-do item says"
+    described as {
+      |The description an attendee wrote and, optionally, when they expect
+      |to be finished with it.
+    }
+  }
 
   entity ToDoItem is {
-    record ActiveState is {
-      content is ReactiveSummit.ToDoContent,
-      createdAt is TimeStamp
+
+    command AddItem is {
+      content is ItemContent
+    } with {
+      briefly as "Ask for a new item to be put on the list"
+      described as {
+        |Sent when an attendee writes down something to do.
+      }
     }
-    state Active of record ActiveState
-    handler InputHandler is {
-      on command ToDoList.AddItem is {
-        // when id of content does not exist
-        // then create new ToDoItem from content
-        tell event ItemAdded to entity ToDoItem
+
+    command CompleteItem is {
+      id is ItemId
+    } with {
+      briefly as "Mark an item as finished"
+      described as {
+        |Sent when an attendee ticks an item off.
+      }
+    }
+
+    query WhichItem is {
+      id is ItemId
+    } with {
+      briefly as "Ask for the current state of one item"
+      described as {
+        |Sent when a reader wants to see an item they already know of.
+      }
+    }
+
+    result TheItem is {
+      id is ItemId,
+      itemDescription is String
+    } with {
+      briefly as "The answer to a WhichItem query"
+      described as {
+        |Carries the identity and description of the requested item.
+      }
+    }
+
+    event ItemAdded is {
+      content is ItemContent
+    } with {
+      briefly as "An item joined the list"
+      described as {
+        |Emitted once a new item has been recorded.
+      }
+    }
+
+    event ItemCompleted is {
+      id is ItemId
+    } with {
+      briefly as "An item was finished"
+      described as {
+        |Emitted once an item has moved to the Completed state.
+      }
+    }
+
+    record ActiveState is {
+      content is ItemContent,
+      createdAt is TimeStamp
+    } with {
+      briefly as "The state of an item still to be done"
+      described as {
+        |What the item says and when it was written down.
       }
     }
 
     record CompletedState is {
-      content is ReactiveSummit.ToDoContent,
+      content is ItemContent,
       createdAt is TimeStamp,
       completedAt is TimeStamp
+    } with {
+      briefly as "The state of an item already done"
+      described as {
+        |As ActiveState, plus when the attendee finished it.
+      }
     }
-    state Completed of record CompletedState
+
+    initial state Active of record ActiveState with {
+      briefly as "Where an item begins"
+      described as {
+        |Every item starts active and stays so until completed.
+      }
+    }
+
+    state Completed of record CompletedState with {
+      briefly as "Where an item ends"
+      described as {
+        |An item becomes completed once and does not return.
+      }
+    }
+
+    handler InputHandler is {
+      on init {
+        set field ActiveState.createdAt to "the moment the item was written"
+      }
+      on command AddItem {
+        morph entity ToDoItem to state Active with record ActiveState
+        send event ItemAdded to outlet ItemAnnouncer.Published
+      }
+      on command CompleteItem {
+        morph entity ToDoItem to state Completed with record CompletedState
+        send event ItemCompleted to outlet ItemAnnouncer.Published
+      }
+      on query WhichItem {
+        yield result TheItem
+      }
+    } with {
+      briefly as "Handles messages addressed to a to-do item"
+      described as {
+        |Adds items, completes them, and answers questions about them.
+      }
+    }
+
+  } with {
+    briefly as "A single thing an attendee means to do"
+    described as {
+      |The ToDoItem entity moves once, from Active to Completed, and is
+      |readable at any point along the way.
+    }
+  }
+
+  type ItemEvent is one of {
+    event ToDoItem.ItemAdded or event ToDoItem.ItemCompleted
+  } with {
+    briefly as "Anything this context announces about its items"
+    described as {
+      |The alternation of every event the context publishes, so one outlet
+      |can carry them all.
+    }
+  }
+
+  processor ItemAnnouncer as source is {
+    outlet Published is type ItemEvent with {
+      briefly as "Where the context publishes what happened to its items"
+      described as {
+        |Item events leave the ToDoList context through this outlet.
+      }
+    }
+    handler ItemAnnouncerHandler is {
+      on event ToDoItem.ItemAdded {
+        send event ToDoItem.ItemAdded to outlet ItemAnnouncer.Published
+      }
+      on other {
+        do "ignore anything that is not an item event"
+      }
+    } with {
+      briefly as "Publishes item events"
+      described as {
+        |Puts each event the entity announced onto the outlet.
+      }
+    }
+  } with {
+    briefly as "The context's publication point for item events"
+    described as {
+      |A source streamlet carrying everything this context wants the rest of
+      |the system to know.
+    }
+  }
+
+  processor Intake as sink is {
+    inlet Requests is command ToDoItem.AddItem with {
+      briefly as "Where item commands arrive from outside the context"
+      described as {
+        |Everything the ToDoList context is asked to do enters here.
+      }
+    }
+    handler IntakeHandler is {
+      on command ToDoItem.AddItem {
+        tell command ToDoItem.AddItem to entity ToDoItem
+      }
+    } with {
+      briefly as "Dispatches arriving commands to the right item"
+      described as {
+        |Receives commands at the context boundary and forwards them.
+      }
+    }
+  } with {
+    briefly as "The context's front door for incoming messages"
+    described as {
+      |A sink that receives messages addressed to ToDoList and dispatches
+      |them to the entity concerned.
+    }
+  }
+
+  repository Items is {
+    inlet Recorded is type ItemEvent with {
+      briefly as "Where item events arrive to be persisted"
+      described as {
+        |The repository learns of item changes through this inlet.
+      }
+    }
+    schema Store is flat
+      of Held as record ItemContent
+    with {
+      briefly as "How items are laid out in storage"
+      described as {
+        |A flat schema: one stored row per item.
+      }
+    }
+    handler StoreHandler is {
+      on event ToDoItem.ItemAdded {
+        set field ItemContent.itemDescription to "the description carried by the event"
+      }
+    } with {
+      briefly as "Keeps storage in step with what happened"
+      described as {
+        |Writes each item event into the store.
+      }
+    }
+  } with {
+    briefly as "Persists the items of this context"
+    described as {
+      |Entities are stateful, so ToDoList keeps a repository in which their
+      |state outlives any single process.
+    }
   }
 
   projector ToDoItems is {
-    ???
+    updates repository Items
+    record ItemView is {
+      itemDescription is String,
+      done is Boolean
+    } with {
+      briefly as "The read model of one item"
+      described as {
+        |What a list needs in order to draw a row: the text, and whether it
+        |has been ticked off.
+      }
+    }
+    command RecordView is {
+      view is ItemView
+    } with {
+      briefly as "Hand a refreshed row to the repository"
+      described as {
+        |Carries the projected view so it can be persisted. This also gives
+        |ItemView a use as a field type rather than only as a path.
+      }
+    }
+    handler ProjectionHandler is {
+      on event ToDoItem.ItemAdded {
+        set field ItemView.done to "false"
+        tell command RecordView to repository Items
+      }
+      on event ToDoItem.ItemCompleted {
+        set field ItemView.done to "true"
+        tell command RecordView to repository Items
+      }
+    } with {
+      briefly as "Keeps the read model in step with the events"
+      described as {
+        |A projector is event-only in RIDDL 2.0; it may not take commands or
+        |queries.
+      }
+    }
+  } with {
+    briefly as "The read model of the attendee's list"
+    described as {
+      |Projects item events into a shape the application can display without
+      |querying each entity in turn.
+    }
+  }
+
+  connector Recording is {
+    from outlet ItemAnnouncer.Published to inlet Items.Recorded
+  } with {
+    briefly as "Carries item events to storage"
+    described as {
+      |Connects what the context announces to the repository that records
+      |it.
+    }
+  }
+
+} with {
+  briefly as "Owns the attendees' to-do items"
+  described as {
+    |The ToDoList context is responsible for the items themselves: adding
+    |them, completing them, and remembering them. It does not talk to
+    |users; the ToDoListUI application does that.
   }
 }

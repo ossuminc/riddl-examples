@@ -1459,6 +1459,27 @@ domain ShopifyCart is {
         on command ShopifyCart.ShoppingContext.Cart.AddToCart {
           tell command ShopifyCart.ShoppingContext.Cart.AddToCart to entity Cart
         }
+        on command ShopifyCart.ShoppingContext.Cart.RemoveFromCart {
+          tell command ShopifyCart.ShoppingContext.Cart.RemoveFromCart to entity Cart
+        }
+        on command ShopifyCart.ShoppingContext.Cart.UpdateQuantity {
+          tell command ShopifyCart.ShoppingContext.Cart.UpdateQuantity to entity Cart
+        }
+        on command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout {
+          tell command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout to entity ShopifyCart.ShoppingContext.Checkout
+        }
+        on command ShopifyCart.ShoppingContext.Checkout.SelectPaymentMethod {
+          tell command ShopifyCart.ShoppingContext.Checkout.SelectPaymentMethod to entity ShopifyCart.ShoppingContext.Checkout
+        }
+        on command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout {
+          tell command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout to entity ShopifyCart.ShoppingContext.Checkout
+        }
+        on command ShopifyCart.ShoppingContext.Product.UpdateProductPrice {
+          tell command ShopifyCart.ShoppingContext.Product.UpdateProductPrice to entity Product
+        }
+        on command ShopifyCart.ShoppingContext.Product.UpdateInventory {
+          tell command ShopifyCart.ShoppingContext.Product.UpdateInventory to entity Product
+        }
       } with {
         briefly as "Dispatches arriving commands"
         described as {
@@ -1800,8 +1821,9 @@ domain ShopifyCart is {
 
       step from user Customer "views" page UserInterface.Payment
       step from user Customer "enters" form UserInterface.Payment.PaymentDetailsEntry
-      step send command SelectPaymentMethod from form
-        UserInterface.Payment.PaymentDetailsEntry to entity ShopifyCart.ShoppingContext.Checkout
+      step send command SelectPaymentMethod
+        from source ShopifyCart.UserInterface.ShopperRequests
+        to sink ShopifyCart.ShoppingContext.ShoppingIntake
       step from entity ShopifyCart.ShoppingContext.Checkout "validates" to entity ShopifyCart.ShoppingContext.Checkout
       step from user Customer "confirms" page UserInterface.Payment
       step send command CompleteCheckout from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake

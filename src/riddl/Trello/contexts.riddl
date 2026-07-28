@@ -432,6 +432,18 @@ context WorkspaceManagement is {
       }
     }
 
+    event WorkspaceMemberAdded is {
+      id is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "Records that someone was admitted to a workspace"
+      described as {
+        |Emitted when a member gains access to the workspace's boards.
+        |Distinct from WorkspaceCreated because admission happens many
+        |times over a workspace's life, and other contexts care about it
+        |separately.
+      }
+    }
+
     event WorkspaceCreated is {
       id is Trello.WorkspaceManagement.WorkspaceId
     } with {
@@ -469,7 +481,7 @@ context WorkspaceManagement is {
       }
       on command AddWorkspaceMember {
         morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
-        send event WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+        send event WorkspaceMemberAdded to outlet WorkspaceManagementAnnouncer.Published
       }
       on command UpdateWorkspaceSettings {
         morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
@@ -493,7 +505,8 @@ context WorkspaceManagement is {
   }
 
   type WorkspaceManagementEvent is one of {
-    event Trello.WorkspaceManagement.Workspace.WorkspaceCreated
+    event Trello.WorkspaceManagement.Workspace.WorkspaceCreated or
+    event Trello.WorkspaceManagement.Workspace.WorkspaceMemberAdded
   } with {
     briefly as "Anything WorkspaceManagement announces"
     described as {

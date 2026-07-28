@@ -9,7 +9,7 @@ src/riddl/
 ├── ReactiveBBQ/       # Restaurant domain example
 ├── ReactiveSummit/    # Conference/event domain example
 ├── ShopifyCart/       # E-commerce cart example
-├── Trello/            # Project management example (needs rebuild)
+├── Trello/            # Kanban example (rebuilt for 2.0)
 ├── ToDoodles/         # To-do list example
 ├── FooBar*/           # Simple test cases
 └── dokn/              # Logistics domain example
@@ -17,24 +17,32 @@ src/riddl/
 
 ## Validation
 
-Stage the compiler first (`riddlc` is a `CrossModule(JVM, Native)`,
-so the JVM launcher lands under `riddlc/jvm/`):
+Validate the whole corpus with the committed harness:
 
 ```bash
-cd ../riddl && sbt riddlc/stage
+bin/validate-corpus.sh          # summary table; exits 1 if not clean
+bin/validate-corpus.sh -v       # with every message
+bin/validate-corpus.sh dokn     # one example
 ```
 
-Then validate:
-```bash
-/Users/reid/Code/ossuminc/riddl/riddlc/jvm/target/universal/stage/bin/riddlc validate <file.riddl>
-```
+It uses the 2.0 release candidate at `../bin/riddlc` and passes warning
+flags explicitly, because the `.conf` files must not be trusted to show
+everything — they previously set `hide-warnings` and
+`hide-missing-warnings`.
 
-Prefer validating from a `.conf` entry point rather than an
-individual `.riddl` file — a corrupted entry point severs the
-`include` chain, and per-file checks will not notice.
+**The corpus is expected to stay at zero** errors, deprecations, missing
+warnings and completeness warnings. `[style]` and `[usage]` are out of
+scope and reported only. `FooBarSameDomain` is excluded by design: it
+defines one type name twice so the ambiguity detector has something to
+catch, and 2.0 made that an error, so it cannot be both a fixture and
+clean.
 
-- **Errors (red)** must be fixed
-- **Warnings (yellow)** and **missing (green)** are acceptable
+For a single file: `../bin/riddlc -a -G=true -P validate <file>.riddl`.
+`-P` adds a remediation tip to each message, and the messages name the
+exact missing piece — read them literally rather than inferring.
+
+NOTE: there are no Scala sources in this repo. `riddlc` is the test.
+
 
 ## RIDDL Syntax Reference
 
@@ -62,7 +70,7 @@ has drifted from the canonical copy above.
 - `morph entity_ref to state_ref with message_ref`
 - `become entity_ref to handler_ref`
 
-**Handler rules (RIDDL 2.0, `release/2` — unreleased)**:
+**Handler rules (RIDDL 2.0)**:
 - Every non-empty **adaptor** handler must have an `on other` clause,
   else a validation ERROR. Form:
   `on other { error "unexpected message" }` (the `is` is optional).
@@ -87,7 +95,8 @@ has drifted from the canonical copy above.
 
 - **sbt**: 2.0.3
 - **sbt-ossuminc**: 3.0.3
-- **RIDDL**: 1.31.0
+- **RIDDL**: 1.31.0 (library); the 2.0 release candidate at
+  `../bin/riddlc` is what validates the models
 - **Scala**: 3.8.4 (sbt-ossuminc default)
 
 Configured in `build.sbt` as:
@@ -112,16 +121,3 @@ This project is on sbt-ossuminc 3.x / sbt 2, so `build.sbt` and
 `With.typical` applies the `Header` helper, which inserts SPDX
 copyright headers into Scala sources on compile — expect it to touch
 files you did not edit.
-
-## Known Broken: Scala test sources
-
-`src/test/scala/**` does not compile. It targets a long-gone RIDDL
-API — `commands.CommandPlugin`, `testkit.ValidatingTest`,
-`language.CommonOptions` — none of which exist at 1.31.0
-(`CommonOptions` moved to `com.ossuminc.riddl.command`). This
-predates the 3.0.3 upgrade; before it, the build failed earlier still
-with `Flag -deprecation set repeatedly`.
-
-`sbt test` therefore fails. It is not a regression, and the examples
-themselves are unaffected — they are validated by `riddlc`, not by
-these tests.

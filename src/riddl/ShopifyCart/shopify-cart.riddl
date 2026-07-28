@@ -2,6 +2,12 @@ domain ShopifyCart is {
   author Claude is {
     name is "Anthropic Claude"
     email is "support@anthropic.com"
+  } with {
+    briefly as "The author of this example model"
+    described as {
+      |Written with Claude, Anthropic's assistant, as an exercise in
+      |modelling a familiar e-commerce domain in RIDDL.
+    }
   }
 
   // Define Boolean type for UI components
@@ -135,12 +141,6 @@ domain ShopifyCart is {
     // Product Entity
     entity Product is {
 
-      type ProductIdentity is Id(ShopifyCart.ShoppingContext.Product) with {
-        briefly as "This entity's own identity type"
-        described as {
-          |RIDDL 2.0 wants each entity to declare the Id type that names it.
-        }
-      }
 
       query WhichProduct is {
         id is ProductIdentity
@@ -313,12 +313,6 @@ domain ShopifyCart is {
     // Cart Entity
     entity Cart is {
 
-      type CartIdentity is Id(ShopifyCart.ShoppingContext.Cart) with {
-        briefly as "This entity's own identity type"
-        described as {
-          |RIDDL 2.0 wants each entity to declare the Id type that names it.
-        }
-      }
 
       query WhichCart is {
         id is CartIdentity
@@ -966,12 +960,6 @@ domain ShopifyCart is {
     // Checkout Process
     entity Checkout is {
 
-      type CheckoutIdentity is Id(ShopifyCart.ShoppingContext.Checkout) with {
-        briefly as "This entity's own identity type"
-        described as {
-          |RIDDL 2.0 wants each entity to declare the Id type that names it.
-        }
-      }
 
       query WhichCheckout is {
         id is CheckoutIdentity
@@ -1146,6 +1134,13 @@ domain ShopifyCart is {
     // Repository for Cart data
     repository CartRepository is {
 
+      inlet Recorded is type ShoppingEvent with {
+        briefly as "Where shopping events arrive to be persisted"
+        described as {
+          |The repository learns of changes through this inlet.
+        }
+      }
+
       schema CartData is relational of
         cart as Cart
         link cartItems as field Cart.items.id to field Product.id
@@ -1159,6 +1154,10 @@ domain ShopifyCart is {
 
       // Message handlers
       handler CartRepositoryHandler is {
+        on event ShopifyCart.ShoppingContext.Cart.CartCreated {
+          set field CartRecord.cartId to "the cart identifier carried by the event"
+        }
+
         on event CartCreated is {
           do "Create new cart record in Cart repository"
         }
@@ -1384,6 +1383,25 @@ domain ShopifyCart is {
         | across multiple services.
       }
     }
+    type ProductIdentity is Id(ShopifyCart.ShoppingContext.Product) with {
+      briefly as "This entity's own identity type"
+      described as {
+        |RIDDL 2.0 wants each entity to declare the Id type that names it.
+      }
+    }
+    type CartIdentity is Id(ShopifyCart.ShoppingContext.Cart) with {
+      briefly as "This entity's own identity type"
+      described as {
+        |RIDDL 2.0 wants each entity to declare the Id type that names it.
+      }
+    }
+    type CheckoutIdentity is Id(ShopifyCart.ShoppingContext.Checkout) with {
+      briefly as "This entity's own identity type"
+      described as {
+        |RIDDL 2.0 wants each entity to declare the Id type that names it.
+      }
+    }
+
     type ShoppingEvent is one of {
       event ShopifyCart.ShoppingContext.Cart.CartCreated or event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated
     } with {
@@ -1421,8 +1439,17 @@ domain ShopifyCart is {
       }
     }
 
+    connector Announcing is {
+      from outlet ShoppingAnnouncer.Published to inlet CartRepository.Recorded
+    } with {
+      briefly as "Carries shopping events to the cart store"
+      described as {
+        |Connects what the context announces to what records it.
+      }
+    }
+
     processor ShoppingIntake as sink is {
-      inlet Requests is command ShopifyCart.ShoppingContext.Cart.AddToCart with {
+      inlet Requests is type ShopifyCart.ShopperCommand with {
         briefly as "Where shopping commands arrive from the application"
         described as {
           |Everything the application asks the domain to do enters here.
@@ -1456,6 +1483,36 @@ domain ShopifyCart is {
     }
   }
 
+  type ShopperCommand is one of {
+    command ShopifyCart.ShoppingContext.Cart.AddToCart or
+    command ShopifyCart.ShoppingContext.Cart.RemoveFromCart or
+    command ShopifyCart.ShoppingContext.Cart.UpdateQuantity or
+    command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout or
+    command ShopifyCart.ShoppingContext.Checkout.SelectPaymentMethod or
+    command ShopifyCart.ShoppingContext.Checkout.CompleteCheckout or
+    command ShopifyCart.ShoppingContext.Product.UpdateProductPrice or
+    command ShopifyCart.ShoppingContext.Product.UpdateInventory
+  } with {
+    briefly as "Everything a page can ask the domain to do"
+    described as {
+      |One alternation so a single outlet, inlet and connector can carry
+      |every command the application raises. Each epic step is witnessed by
+      |that one path rather than needing a connector apiece.
+    }
+  }
+
+  connector ShopperRequests is {
+    from outlet ShopifyCart.UserInterface.ShopperRequests.Submissions
+    to inlet ShopifyCart.ShoppingContext.ShoppingIntake.Requests
+  } with {
+    briefly as "Carries shopper requests from the application to the domain"
+    described as {
+      |Crosses a context boundary, so it is declared at domain scope and made
+      |persistent as RIDDL 2.0 requires.
+    }
+    option is persistent
+  }
+
   // User definitions for epics
 
   user Customer is "A shopper who wants to purchase items from the store"
@@ -1485,6 +1542,34 @@ domain ShopifyCart is {
 
 
   application context UserInterface is {
+
+    processor ShopperRequests as source is {
+      outlet Submissions is type ShopifyCart.ShopperCommand with {
+        briefly as "Where the application sends work into the domain"
+        described as {
+          |Requests leave the application here and reach ShoppingContext over
+          |a domain-scoped connector.
+        }
+      }
+      handler ShopperRequestsHandler is {
+        on command ShopifyCart.ShoppingContext.Cart.AddToCart {
+          send command ShopifyCart.ShoppingContext.Cart.AddToCart to outlet Submissions
+        }
+        on other {
+          do "ignore interactions that do not reach the domain"
+        }
+      } with {
+        briefly as "Forwards shopper requests into the domain"
+        described as {
+          |Runs when a page raises a command.
+        }
+      }
+    } with {
+      briefly as "The application's outbound path to ShoppingContext"
+      described as {
+        |A source streamlet: what the shopper asked for, on its way in.
+      }
+    }
 
     handler InteractionRouter is {
       on command ShopifyCart.ShoppingContext.Cart.AddToCart {
@@ -1624,7 +1709,7 @@ domain ShopifyCart is {
       user Customer wants to "add products to cart" so that "they can purchase them later"
 
       step from user Customer "views" page UserInterface.ProductDetails
-      step send command AddToCart from page UserInterface.ProductDetails to entity Cart
+      step send command AddToCart from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -1645,7 +1730,7 @@ domain ShopifyCart is {
 
       step from user Customer "views" page UserInterface.ShoppingCart
       // FIXED: Ambiguous reference by using fully qualified path
-      step send command ShopifyCart.ShoppingContext.Cart.UpdateQuantity from page UserInterface.ShoppingCart to entity Cart
+      step send command ShopifyCart.ShoppingContext.Cart.UpdateQuantity from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -1662,7 +1747,7 @@ domain ShopifyCart is {
        so that "they can change their mind about purchases"
 
       step from user Customer "views" page UserInterface.ShoppingCart
-      step send command RemoveFromCart from page UserInterface.ShoppingCart to entity Cart
+      step send command RemoveFromCart from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -1696,7 +1781,7 @@ domain ShopifyCart is {
       // FIXED: Ambiguous reference by using renamed UI component
       step from user Customer "clicks" button UserInterface.ShoppingCart.CheckoutBtn
       // FIXED: Ambiguous references by using fully qualified paths
-      step send command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout from page UserInterface.ShoppingCart to entity ShopifyCart.ShoppingContext.Checkout
+      step send command ShopifyCart.ShoppingContext.Checkout.InitiateCheckout from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
       // FIXED: Ambiguous references by using fully qualified paths and renamed UI component
       step from entity ShopifyCart.ShoppingContext.Checkout "processes" to page UserInterface.CheckoutPage
       // FIXED: Ambiguous reference by using renamed UI component
@@ -1719,7 +1804,7 @@ domain ShopifyCart is {
         UserInterface.Payment.PaymentDetailsEntry to entity ShopifyCart.ShoppingContext.Checkout
       step from entity ShopifyCart.ShoppingContext.Checkout "validates" to entity ShopifyCart.ShoppingContext.Checkout
       step from user Customer "confirms" page UserInterface.Payment
-      step send command CompleteCheckout from page UserInterface.Payment to entity ShopifyCart.ShoppingContext.Checkout
+      step send command CompleteCheckout from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
       step from entity ShopifyCart.ShoppingContext.Checkout "processes" to saga CheckoutProcess
       step focus user Customer on page UserInterface.CheckoutCompletedPage
     }
@@ -1752,7 +1837,7 @@ domain ShopifyCart is {
 
       step from user StoreAdmin "views" page UserInterface.ProductManagement
       step from user StoreAdmin "updates" form InventoryQuantity
-      step send command ShopifyCart.ShoppingContext.Product.UpdateInventory from page UserInterface.ProductManagement to entity Product
+      step send command ShopifyCart.ShoppingContext.Product.UpdateInventory from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
       step from entity Product "processes" to entity Product
       step focus user StoreAdmin on page UserInterface.ProductManagement
     }
@@ -1771,7 +1856,7 @@ domain ShopifyCart is {
 
       step from user StoreAdmin "views" page UserInterface.ProductManagement
       step from user StoreAdmin "updates" item ProductPrice
-      step send command ShopifyCart.ShoppingContext.Product.UpdateProductPrice from page UserInterface.ProductManagement to entity Product
+      step send command ShopifyCart.ShoppingContext.Product.UpdateProductPrice from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
       step from entity Product "processes" to entity Product
       step focus user StoreAdmin on page UserInterface.ProductManagement
     }

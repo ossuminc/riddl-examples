@@ -1,7 +1,7 @@
 context Locations is {
   entity Location is {
     record LocationData is { name: String }
-    state LocationState of Location.LocationData
+    state LocationState of record Location.LocationData
     handler LocationHandler is { ??? }
   } with { explained as "This is a retail store Location" }
 }

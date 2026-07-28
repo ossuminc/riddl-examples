@@ -1,7 +1,7 @@
 context Servers {
   entity Server {
-    type ServerStateData is Nothing
-    state ServerState of type Server.ServerStateData
+    record ServerStateData is { id is ServerId }
+    state ServerState of record Server.ServerStateData
     handler ServerHandler is { ??? }
   }
 }

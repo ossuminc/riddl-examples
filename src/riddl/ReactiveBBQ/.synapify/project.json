@@ -1,0 +1,14 @@
+{
+  "name": "ReactiveBBQ",
+  "version": "1.0.0",
+  "entryPoint": "ReactiveBBQ.riddl",
+  "createdAt": "2026-03-06T18:08:36.994Z",
+  "lastModified": "2026-03-06T18:43:59.559Z",
+  "riddlVersion": "0.57.0",
+  "settings": {
+    "autoSave": true,
+    "autoSaveDelaySeconds": 15,
+    "autoFormat": true,
+    "gitEnabled": true
+  }
+}

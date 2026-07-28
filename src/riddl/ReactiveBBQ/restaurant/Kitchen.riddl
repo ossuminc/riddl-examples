@@ -5,8 +5,8 @@ context Kitchen is {
   }
   type OrderViewType is any of { List, Simple, Detailed }
   entity OrderViewer is {
-    type OrderViewData is { viewType: OrderViewType }
-    state OrderViewerState of OrderViewData
+    record OrderViewData is { viewType: OrderViewType }
+    state OrderViewerState of record OrderViewData
     handler input is { ??? }
   } with {
     explained as {

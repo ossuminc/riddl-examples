@@ -8,7 +8,7 @@ type ToDoItemInput is {
   content is ToDoContent
 }
 
-context ToDoListUI is {
+application context ToDoListUI is {
   // UI elements using valid group syntax
   page MainPage is {
     list ListOfToDoItems shows type ToDoContent

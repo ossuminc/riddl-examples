@@ -50,8 +50,8 @@ context Loyalty is {
   }}
 
   entity LoyaltyAccount is {
-    type InitialStateData is { id is LoyaltyId }
-    state InitialState of LoyaltyAccount.InitialStateData with {
+    record InitialStateData is { id is LoyaltyId }
+    state InitialState of record LoyaltyAccount.InitialStateData with {
       explained as {
         |This state type contains the state values associated with the loyalty
         |account when it is first created. It only contains the `LoyaltyId` value
@@ -66,7 +66,7 @@ context Loyalty is {
       accrualRate is Real,
       redemptionRate is Real
     }
-    state ActiveState of LoyaltyAccount.ActiveStateData with {
+    state ActiveState of record LoyaltyAccount.ActiveStateData with {
       explained as {
         |This state type used when a loyalty account is active
       }

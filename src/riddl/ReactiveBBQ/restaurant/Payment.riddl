@@ -17,14 +17,14 @@ context Payments is {
     }
 
   entity Payment is {
-    type PaymentStateValue is {
+    record PaymentStateValue is {
         orderId is OrderId,
         orderAmount is Number,
         tipAmount is Number?,
         cardToken is String?,
         customerIds is CustomerId?
     }
-    state PaymentState of type Payment.PaymentStateValue
+    state PaymentState of record Payment.PaymentStateValue
     handler foo is { ??? }
   }
 } with {

@@ -7,7 +7,7 @@ context Menus is {
       description: String,
       price: Amount
     }
-    state MenuItemState of MenuItem.MenuItemStateData
+    state MenuItemState of record MenuItem.MenuItemStateData
     handler MenuItemHandler is { ??? }
   }
 
@@ -20,7 +20,7 @@ context Menus is {
     type CorporateItemId = Pattern("")
 
     record MenuStateData is  { items: many MenuItemRef }
-    state MenuState of Menu.MenuStateData
+    state MenuState of record Menu.MenuStateData
     handler MenuHandler is { ??? }
   }
 }

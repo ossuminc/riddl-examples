@@ -1,7 +1,7 @@
 context Customers is {
   entity Customer is {
-    type mainType is Nothing
-    state main of mainType
+    record mainType is { id is CustomerId }
+    state main of record mainType
     handler input is { ??? }
   } with { explained as {
   | An entity for customers that tracks the state changes of the entity.

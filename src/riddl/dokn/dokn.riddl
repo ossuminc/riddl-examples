@@ -183,7 +183,7 @@ domain dokn is {
         }
       }
       handler IntakeCompanyHandler is {
-        on other {
+        on command dokn.Companies.Company.AddCompany {
           tell command dokn.Companies.Company.AddCompany to entity Company
         }
       } with {
@@ -397,7 +397,7 @@ domain dokn is {
         }
       }
       handler IntakeDriverHandler is {
-        on other {
+        on command dokn.Drivers.Driver.AddDriverToCompany {
           tell command dokn.Drivers.Driver.AddDriverToCompany to entity Driver
         }
       } with {
@@ -594,7 +594,7 @@ domain dokn is {
         }
       }
       handler IntakeNoteHandler is {
-        on other {
+        on command dokn.Notes.Note.CaptureNote {
           tell command dokn.Notes.Note.CaptureNote to entity Note
         }
       } with {
@@ -785,7 +785,7 @@ domain dokn is {
         }
       }
       handler IntakeMediumHandler is {
-        on other {
+        on command dokn.Media.Medium.StoreMedium {
           tell command dokn.Media.Medium.StoreMedium to entity Medium
         }
       } with {
@@ -1003,7 +1003,7 @@ domain dokn is {
         }
       }
       handler IntakeLocationHandler is {
-        on other {
+        on command dokn.Locations.Location.AddDeliveryLocation {
           tell command dokn.Locations.Location.AddDeliveryLocation to entity Location
         }
       } with {
@@ -1078,8 +1078,11 @@ domain dokn is {
         }
       }
       handler CompanyRequestsHandler is {
-        on other {
+        on command dokn.Companies.Company.AddCompany {
           send command dokn.Companies.Company.AddCompany to outlet CompanySubmissions
+        }
+        on other {
+          do "ignore requests that are not about companys"
         }
       } with {
         briefly as "Forwards company requests into the domain"
@@ -1102,8 +1105,11 @@ domain dokn is {
         }
       }
       handler DriverRequestsHandler is {
-        on other {
+        on command dokn.Drivers.Driver.AddDriverToCompany {
           send command dokn.Drivers.Driver.AddDriverToCompany to outlet DriverSubmissions
+        }
+        on other {
+          do "ignore requests that are not about drivers"
         }
       } with {
         briefly as "Forwards driver requests into the domain"
@@ -1126,8 +1132,11 @@ domain dokn is {
         }
       }
       handler NoteRequestsHandler is {
-        on other {
+        on command dokn.Notes.Note.CaptureNote {
           send command dokn.Notes.Note.CaptureNote to outlet NoteSubmissions
+        }
+        on other {
+          do "ignore requests that are not about notes"
         }
       } with {
         briefly as "Forwards note requests into the domain"
@@ -1150,8 +1159,11 @@ domain dokn is {
         }
       }
       handler MediumRequestsHandler is {
-        on other {
+        on command dokn.Media.Medium.StoreMedium {
           send command dokn.Media.Medium.StoreMedium to outlet MediumSubmissions
+        }
+        on other {
+          do "ignore requests that are not about mediums"
         }
       } with {
         briefly as "Forwards medium requests into the domain"
@@ -1174,8 +1186,11 @@ domain dokn is {
         }
       }
       handler LocationRequestsHandler is {
-        on other {
+        on command dokn.Locations.Location.AddDeliveryLocation {
           send command dokn.Locations.Location.AddDeliveryLocation to outlet LocationSubmissions
+        }
+        on other {
+          do "ignore requests that are not about locations"
         }
       } with {
         briefly as "Forwards location requests into the domain"

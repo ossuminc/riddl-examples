@@ -50,9 +50,9 @@ domain dokn is {
       }
     }
 
-    entity Company is {
+    event-sourced available entity Company is {
 
-      command AddCompany is {
+      command AddCompany yields event CompanyAdded is {
         mailingAddress is dokn.Companies.Address,
         primaryContactName is String,
         primaryContactPhone is dokn.Companies.MobileNumber,
@@ -113,12 +113,13 @@ domain dokn is {
       }
 
       handler CompanyHandler is {
-        on init {
-          set field dokn.Companies.Company.fields.id to "a freshly minted identifier"
-        }
         on command AddCompany {
-          morph entity Company to state CompanyBase with record dokn.Companies.Company.fields
+          yield event CompanyAdded
           send event CompanyAdded to outlet CompanyAnnouncer.Published
+        }
+        on event CompanyAdded {
+          morph entity Company to state CompanyBase with record dokn.Companies.Company.fields
+          set field dokn.Companies.Company.fields.id to "the identifier carried by the event"
         }
         on query WhichCompany {
           yield result TheCompany
@@ -131,8 +132,6 @@ domain dokn is {
       }
 
     } with {
-      option event-sourced
-      option available
       briefly as "A single company known to dokn"
       described as {
         |The entity that remembers that a company joined the network.
@@ -167,6 +166,16 @@ domain dokn is {
     }
 
     processor IntakeCompany as sink is {
+    inlet Failures is record Riddl.GeneratorError with {
+      option error-sink
+      briefly as "Where hard errors go"
+      described as {
+        |RIDDL 2.0 wants every domain to name a destination for failures no
+        |handler can recover from. An error-sink inlet is infrastructure
+        |rather than dataflow, so it does not count toward this processor's
+        |arity.
+      }
+    }
       inlet Requests is command dokn.Companies.Company.AddCompany with {
         briefly as "Where company commands arrive from outside"
         described as {
@@ -174,7 +183,7 @@ domain dokn is {
         }
       }
       handler IntakeCompanyHandler is {
-        on command dokn.Companies.Company.AddCompany {
+        on other {
           tell command dokn.Companies.Company.AddCompany to entity Company
         }
       } with {
@@ -222,6 +231,18 @@ domain dokn is {
       }
     }
 
+    connector ErrorReporting is {
+      from outlet Riddl.ForeverEmpty.void to inlet dokn.Companies.IntakeCompany.Failures
+    } with {
+      briefly as "Terminates the error-sink inlet"
+      described as {
+        |Nothing in this model produces a GeneratorError — those come from
+        |generators at runtime, not from anything the model declares. The
+        |predefined ForeverEmpty source exists for exactly this: a port that
+        |must be connected but has no modelled producer.
+      }
+    }
+
     connector RecordingCompany is {
       from outlet CompanyAnnouncer.Published to inlet CompanyStore.Recorded
     } with {
@@ -255,9 +276,9 @@ domain dokn is {
       }
     }
 
-    entity Driver is {
+    event-sourced available entity Driver is {
 
-      command AddDriverToCompany is {
+      command AddDriverToCompany yields event DriverAddedToCompany is {
         name is String,
         mobile is dokn.Drivers.MobileNumber,
         onDutyTime is TimeStamp
@@ -316,12 +337,13 @@ domain dokn is {
       }
 
       handler DriverHandler is {
-        on init {
-          set field dokn.Drivers.Driver.fields.id to "a freshly minted identifier"
-        }
         on command AddDriverToCompany {
-          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.fields
+          yield event DriverAddedToCompany
           send event DriverAddedToCompany to outlet DriverAnnouncer.Published
+        }
+        on event DriverAddedToCompany {
+          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.fields
+          set field dokn.Drivers.Driver.fields.id to "the identifier carried by the event"
         }
         on query WhichDriver {
           yield result TheDriver
@@ -334,8 +356,6 @@ domain dokn is {
       }
 
     } with {
-      option event-sourced
-      option available
       briefly as "A single driver known to dokn"
       described as {
         |The entity that remembers that a driver joined a company.
@@ -377,7 +397,7 @@ domain dokn is {
         }
       }
       handler IntakeDriverHandler is {
-        on command dokn.Drivers.Driver.AddDriverToCompany {
+        on other {
           tell command dokn.Drivers.Driver.AddDriverToCompany to entity Driver
         }
       } with {
@@ -451,9 +471,9 @@ domain dokn is {
       }
     }
 
-    entity Note is {
+    event-sourced available entity Note is {
 
-      command CaptureNote is {
+      command CaptureNote yields event NoteCaptured is {
         text is String,
         upvoteCount is Integer,
         downvoteCount is Integer,
@@ -514,12 +534,13 @@ domain dokn is {
       }
 
       handler NoteHandler is {
-        on init {
-          set field dokn.Notes.Note.fields.id to "a freshly minted identifier"
-        }
         on command CaptureNote {
-          morph entity Note to state NoteBase with record dokn.Notes.Note.fields
+          yield event NoteCaptured
           send event NoteCaptured to outlet NoteAnnouncer.Published
+        }
+        on event NoteCaptured {
+          morph entity Note to state NoteBase with record dokn.Notes.Note.fields
+          set field dokn.Notes.Note.fields.id to "the identifier carried by the event"
         }
         on query WhichNote {
           yield result TheNote
@@ -532,8 +553,6 @@ domain dokn is {
       }
 
     } with {
-      option event-sourced
-      option available
       briefly as "A single note known to dokn"
       described as {
         |The entity that remembers that a driver wrote a note about a location.
@@ -575,7 +594,7 @@ domain dokn is {
         }
       }
       handler IntakeNoteHandler is {
-        on command dokn.Notes.Note.CaptureNote {
+        on other {
           tell command dokn.Notes.Note.CaptureNote to entity Note
         }
       } with {
@@ -649,9 +668,9 @@ domain dokn is {
       }
     }
 
-    entity Medium is {
+    event-sourced available entity Medium is {
 
-      command StoreMedium is {
+      command StoreMedium yields event MediumStored is {
         path is String
       } with {
         briefly as "Ask for a medium to be recorded"
@@ -706,12 +725,13 @@ domain dokn is {
       }
 
       handler MediumHandler is {
-        on init {
-          set field dokn.Media.Medium.fields.id to "a freshly minted identifier"
-        }
         on command StoreMedium {
-          morph entity Medium to state MediumBase with record dokn.Media.Medium.fields
+          yield event MediumStored
           send event MediumStored to outlet MediumAnnouncer.Published
+        }
+        on event MediumStored {
+          morph entity Medium to state MediumBase with record dokn.Media.Medium.fields
+          set field dokn.Media.Medium.fields.id to "the identifier carried by the event"
         }
         on query WhichMedium {
           yield result TheMedium
@@ -724,8 +744,6 @@ domain dokn is {
       }
 
     } with {
-      option event-sourced
-      option available
       briefly as "A single medium known to dokn"
       described as {
         |The entity that remembers that a photograph or document was filed.
@@ -767,7 +785,7 @@ domain dokn is {
         }
       }
       handler IntakeMediumHandler is {
-        on command dokn.Media.Medium.StoreMedium {
+        on other {
           tell command dokn.Media.Medium.StoreMedium to entity Medium
         }
       } with {
@@ -862,9 +880,9 @@ domain dokn is {
       }
     }
 
-    entity Location is {
+    event-sourced available entity Location is {
 
-      command AddDeliveryLocation is {
+      command AddDeliveryLocation yields event DeliveryLocationAdded is {
         label is String,
         address is dokn.Locations.Address,
         ticketCount is Integer,
@@ -925,12 +943,13 @@ domain dokn is {
       }
 
       handler LocationHandler is {
-        on init {
-          set field dokn.Locations.Location.fields.id to "a freshly minted identifier"
-        }
         on command AddDeliveryLocation {
-          morph entity Location to state LocationBase with record dokn.Locations.Location.fields
+          yield event DeliveryLocationAdded
           send event DeliveryLocationAdded to outlet LocationAnnouncer.Published
+        }
+        on event DeliveryLocationAdded {
+          morph entity Location to state LocationBase with record dokn.Locations.Location.fields
+          set field dokn.Locations.Location.fields.id to "the identifier carried by the event"
         }
         on query WhichLocation {
           yield result TheLocation
@@ -943,8 +962,6 @@ domain dokn is {
       }
 
     } with {
-      option event-sourced
-      option available
       briefly as "A single location known to dokn"
       described as {
         |The entity that remembers that a delivery location was added.
@@ -986,7 +1003,7 @@ domain dokn is {
         }
       }
       handler IntakeLocationHandler is {
-        on command dokn.Locations.Location.AddDeliveryLocation {
+        on other {
           tell command dokn.Locations.Location.AddDeliveryLocation to entity Location
         }
       } with {
@@ -1061,11 +1078,8 @@ domain dokn is {
         }
       }
       handler CompanyRequestsHandler is {
-        on command dokn.Companies.Company.AddCompany {
-          send command dokn.Companies.Company.AddCompany to outlet CompanySubmissions
-        }
         on other {
-          do "ignore requests that are not about companys"
+          send command dokn.Companies.Company.AddCompany to outlet CompanySubmissions
         }
       } with {
         briefly as "Forwards company requests into the domain"
@@ -1088,11 +1102,8 @@ domain dokn is {
         }
       }
       handler DriverRequestsHandler is {
-        on command dokn.Drivers.Driver.AddDriverToCompany {
-          send command dokn.Drivers.Driver.AddDriverToCompany to outlet DriverSubmissions
-        }
         on other {
-          do "ignore requests that are not about drivers"
+          send command dokn.Drivers.Driver.AddDriverToCompany to outlet DriverSubmissions
         }
       } with {
         briefly as "Forwards driver requests into the domain"
@@ -1115,11 +1126,8 @@ domain dokn is {
         }
       }
       handler NoteRequestsHandler is {
-        on command dokn.Notes.Note.CaptureNote {
-          send command dokn.Notes.Note.CaptureNote to outlet NoteSubmissions
-        }
         on other {
-          do "ignore requests that are not about notes"
+          send command dokn.Notes.Note.CaptureNote to outlet NoteSubmissions
         }
       } with {
         briefly as "Forwards note requests into the domain"
@@ -1142,11 +1150,8 @@ domain dokn is {
         }
       }
       handler MediumRequestsHandler is {
-        on command dokn.Media.Medium.StoreMedium {
-          send command dokn.Media.Medium.StoreMedium to outlet MediumSubmissions
-        }
         on other {
-          do "ignore requests that are not about mediums"
+          send command dokn.Media.Medium.StoreMedium to outlet MediumSubmissions
         }
       } with {
         briefly as "Forwards medium requests into the domain"
@@ -1169,11 +1174,8 @@ domain dokn is {
         }
       }
       handler LocationRequestsHandler is {
-        on command dokn.Locations.Location.AddDeliveryLocation {
-          send command dokn.Locations.Location.AddDeliveryLocation to outlet LocationSubmissions
-        }
         on other {
-          do "ignore requests that are not about locations"
+          send command dokn.Locations.Location.AddDeliveryLocation to outlet LocationSubmissions
         }
       } with {
         briefly as "Forwards location requests into the domain"

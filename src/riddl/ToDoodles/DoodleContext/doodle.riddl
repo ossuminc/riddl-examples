@@ -128,6 +128,16 @@ context Doodle is {
   }
 
   processor Intake as sink is {
+    inlet Failures is record Riddl.GeneratorError with {
+      option error-sink
+      briefly as "Where hard errors go"
+      described as {
+        |RIDDL 2.0 wants every domain to name a destination for failures it
+        |cannot handle. An error-sink inlet is infrastructure rather than
+        |dataflow, so it does not count toward this processor's arity and
+        |needs no connector.
+      }
+    }
     inlet Requests is command CreateDrawing with {
       briefly as "Where drawing commands arrive from outside the context"
       described as {
@@ -182,6 +192,18 @@ context Doodle is {
     described as {
       |Entities are stateful, so the Doodle context keeps a repository in
       |which their state outlives any single process.
+    }
+  }
+
+  connector ErrorReporting is {
+    from outlet Riddl.ForeverEmpty.void to inlet ToDoodles.Doodle.Intake.Failures
+  } with {
+    briefly as "Terminates the error-sink inlet"
+    described as {
+      |Nothing in this model produces a GeneratorError — those come from
+      |generators at runtime, not from anything the model declares. The
+      |predefined ForeverEmpty source exists for exactly this: a port that
+      |must be connected but has no modelled producer.
     }
   }
 

@@ -286,6 +286,16 @@ context UserManagement is {
   }
 
   processor UserManagementIntake as sink is {
+  inlet Failures is record Riddl.GeneratorError with {
+    option error-sink
+    briefly as "Where hard errors go"
+    described as {
+      |RIDDL 2.0 wants every domain to name a destination for failures no
+      |handler can recover from. An error-sink inlet is infrastructure
+      |rather than dataflow, so it does not count toward this processor's
+      |arity.
+    }
+  }
     inlet Requests is type Trello.UserManagement.UserManagementCommand with {
       briefly as "Where commands arrive from the application"
       described as {
@@ -354,6 +364,18 @@ context UserManagement is {
     briefly as "Persists what this context owns"
     described as {
       |Entities are stateful, so UserManagement keeps a repository.
+    }
+  }
+
+  connector ErrorReporting is {
+    from outlet Riddl.ForeverEmpty.void to inlet Trello.UserManagement.UserManagementIntake.Failures
+  } with {
+    briefly as "Terminates the error-sink inlet"
+    described as {
+      |Nothing in this model produces a GeneratorError — those come from
+      |generators at runtime, not from anything the model declares. The
+      |predefined ForeverEmpty source exists for exactly this: a port that
+      |must be connected but has no modelled producer.
     }
   }
 

@@ -118,6 +118,16 @@ context Customers is {
   }
 
   processor IntakeCustomer as sink is {
+  inlet Failures is record Riddl.GeneratorError with {
+    option error-sink
+    briefly as "Where hard errors go"
+    described as {
+      |RIDDL 2.0 wants every domain to name a destination for failures no
+      |handler can recover from. An error-sink inlet is infrastructure
+      |rather than dataflow, so it does not count toward this processor's
+      |arity.
+    }
+  }
     inlet Requests is command Restaurant.Customers.Customer.RegisterCustomer with {
       briefly as "Where customer commands arrive from outside"
       described as {
@@ -170,6 +180,18 @@ context Customers is {
     briefly as "Persists the customers of this context"
     described as {
       |Entities are stateful, so Customers keeps a repository.
+    }
+  }
+
+  connector ErrorReportingRestaurant is {
+    from outlet Riddl.ForeverEmpty.void to inlet Restaurant.Customers.IntakeCustomer.Failures
+  } with {
+    briefly as "Terminates the error-sink inlet"
+    described as {
+      |Nothing in this model produces a GeneratorError — those come from
+      |generators at runtime, not from anything the model declares. The
+      |predefined ForeverEmpty source exists for exactly this: a port that
+      |must be connected but has no modelled producer.
     }
   }
 

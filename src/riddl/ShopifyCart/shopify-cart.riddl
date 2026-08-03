@@ -1439,6 +1439,18 @@ domain ShopifyCart is {
       }
     }
 
+    connector ErrorReporting is {
+      from outlet Riddl.ForeverEmpty.void to inlet ShopifyCart.ShoppingContext.ShoppingIntake.Failures
+    } with {
+      briefly as "Terminates the error-sink inlet"
+      described as {
+        |Nothing in this model produces a GeneratorError — those come from
+        |generators at runtime, not from anything the model declares. The
+        |predefined ForeverEmpty source exists for exactly this: a port that
+        |must be connected but has no modelled producer.
+      }
+    }
+
     connector Announcing is {
       from outlet ShoppingAnnouncer.Published to inlet CartRepository.Recorded
     } with {
@@ -1449,6 +1461,16 @@ domain ShopifyCart is {
     }
 
     processor ShoppingIntake as sink is {
+    inlet Failures is record Riddl.GeneratorError with {
+      option error-sink
+      briefly as "Where hard errors go"
+      described as {
+        |RIDDL 2.0 wants every domain to name a destination for failures no
+        |handler can recover from. An error-sink inlet is infrastructure
+        |rather than dataflow, so it does not count toward this processor's
+        |arity.
+      }
+    }
       inlet Requests is type ShopifyCart.ShopperCommand with {
         briefly as "Where shopping commands arrive from the application"
         described as {

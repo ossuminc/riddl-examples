@@ -120,6 +120,34 @@ Remaining work:
 
 ---
 
+## Session 2026-08-05: close the rc.9-54 gap and the epic criterion
+
+### Dependency pin caught up to the staged binary
+
+`build.sbt:21` moved `2.0.0-rc.9-48-fdc5c171` → `2.0.0-rc.9-54-64b7b413`,
+matching `../bin/riddlc`. The point of pinning a local build is that the
+library and the validating binary are the same commit; they had drifted
+six commits apart.
+
+Pure bump, as BACKLOG predicted — nothing else moved. Verified by
+resolution, not by a green `compile`, because this repo has no Scala
+sources and `compile` would succeed against a stale classpath:
+
+```
+sbt "show Compile/dependencyClasspath" | grep riddl
+  riddl-lib_3      2.0.0-rc.9-54-64b7b413
+  riddl-utils_3    2.0.0-rc.9-54-64b7b413
+  riddl-language_3 2.0.0-rc.9-54-64b7b413
+  riddl-passes_3   2.0.0-rc.9-54-64b7b413
+```
+
+**Note for the next bump:** the corpus does not consult `build.sbt` at
+all — `bin/validate-corpus.sh` shells out to `../bin/riddlc`. Re-running
+it after a version-string change re-proves the previous result and tells
+you nothing about the bump. Check the resolved classpath instead.
+
+---
+
 ## Completed: Migrate to sbt 2 (2026-07-25)
 
 Jumped sbt-ossuminc **1.4.0 → 3.0.3**, which crosses the sbt 1 → sbt

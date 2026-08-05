@@ -146,6 +146,49 @@ all — `bin/validate-corpus.sh` shells out to `../bin/riddlc`. Re-running
 it after a version-string change re-proves the previous result and tells
 you nothing about the bump. Check the resolved classpath instead.
 
+### The epic + event-sourced gap is now covered
+
+dokn gained a `user Dispatcher` and one epic, `CompanyOnboarding`, with two
+cases. Each case has a single step of the shape:
+
+```riddl
+step send command dokn.Companies.Company.AddCompany
+  from source dokn.Intake.CompanyRequests
+  to sink dokn.Companies.IntakeCompany
+```
+
+That closes the acceptance criterion riddl could not verify when it fixed
+the `yields`-in-streamlets defect: *an epic step sending an event-sourced
+entity's command to a sink validates and is witnessed.* Nothing in the
+corpus held both halves — dokn had the event-sourced entities and no
+epics; Trello, ShopifyCart and ReactiveBBQ had epics and no event-sourced
+entities. That gap is exactly where the original bug survived.
+
+**The positive control is the point.** A clean run proves nothing on its
+own, because a silent check and a satisfied check look identical. So the
+step was deliberately misdirected to the wrong sink first:
+
+```
+to sink dokn.Media.IntakeMedium
+  → [completeness] use-case 'RegisterACompany' step '…' is not witnessed:
+    the receiver 'dokn.Media.IntakeMedium' has no
+    'on dokn.Companies.Company.AddCompany' clause
+```
+
+The check fires. Restored to the right sink, dokn is back to 0/0/0/0, so
+the step is genuinely witnessed rather than merely un-warned. Do this
+whenever "it validates clean" is the whole claim.
+
+Round-tripped through `riddlc prettify -s true`: epic, user, both cases
+and the step survive, and the emitted file re-validates at zero
+completeness — so the writer preserves the wiring, not just the text.
+
+**Counting trap.** `grep -c '\[style\]'` over riddlc output counts one too
+many: riddlc emits a `[style] Style Message Count: N` summary line that
+matches the same pattern. That is where an apparent 34 → 35 "drift" came
+from this session. dokn's real style count is unchanged at 34, and the
+epic added none.
+
 ---
 
 ## Completed: Migrate to sbt 2 (2026-07-25)

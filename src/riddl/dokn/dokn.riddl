@@ -1216,6 +1216,64 @@ domain dokn is {
     }
   }
 
+  user Dispatcher is "Someone who signs a delivery company up to dokn" with {
+    briefly as "The user who onboards a company and its drivers"
+    described as {
+      |Drivers use dokn through a mobile application that is out of scope
+      |here. Before any of them can capture a note, somebody has to register
+      |the company they deliver for and attach them to it. That is this
+      |user's job.
+    }
+  }
+
+  epic CompanyOnboarding is {
+
+    user Dispatcher wants to "register a delivery company and its drivers"
+      so that "those drivers can start capturing notes against locations"
+
+    case RegisterACompany is {
+      user Dispatcher wants to "record a new delivery company"
+        so that "drivers have an employer to be attached to"
+      step send command dokn.Companies.Company.AddCompany
+        from source dokn.Intake.CompanyRequests
+        to sink dokn.Companies.IntakeCompany
+    } with {
+      briefly as "A company request crossing the gateway into Companies"
+      described as {
+        |This is the case that exists to be exercised rather than to teach.
+        |`AddCompany` is a command of an event-sourced entity, so it declares
+        |`yields event CompanyAdded`, and this step hands it to a sink. That
+        |pairing — an epic step carrying an event-sourced entity's command to
+        |a streamlet — is the one combination the `yields`-in-streamlets
+        |defect could hide in, because no model held both halves at once.
+      }
+    }
+
+    case AttachADriver is {
+      user Dispatcher wants to "attach a driver to a registered company"
+        so that "the driver's notes are recorded against the right employer"
+      step send command dokn.Drivers.Driver.AddDriverToCompany
+        from source dokn.Intake.DriverRequests
+        to sink dokn.Drivers.IntakeDriver
+    } with {
+      briefly as "A driver request crossing the gateway into Drivers"
+      described as {
+        |The same shape a second time, through a different context, so the
+        |coverage does not rest on one path.
+      }
+    }
+
+  } with {
+    briefly as "How a delivery company and its drivers reach dokn"
+    described as {
+      |dokn's only epic. It exists to keep an epic step pointed at an
+      |event-sourced entity's command, which is why it is deliberately thin:
+      |two steps, both of them a command travelling from the gateway source
+      |to the owning context's sink.
+    }
+    by author Reid
+  }
+
   connector CompanyRequests is {
     from outlet dokn.Intake.CompanyRequests.CompanySubmissions
     to inlet dokn.Companies.IntakeCompany.Requests

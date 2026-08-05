@@ -2,16 +2,16 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-04**, by running the commands, not from memory.
+**Last verified: 2026-08-05**, by running the commands, not from memory.
 
-**Repo state.** On `main`, working tree clean, **0 commits unpushed**.
-`main` and `release/2` are both at `4c28809`; `release/1` sits at
-`5e2ce0d` holding the pre-2.0 corpus. All three are pushed.
+**Repo state.** On `main`, working tree clean. **3 commits unpushed** —
+the rc.9-54 pin, the dokn epic, and this reconciliation. `release/1` sits
+at `5e2ce0d` holding the pre-2.0 corpus.
 
-**Toolchain.** Staged compiler `../bin/riddlc` is
-**`2.0.0-rc.9-54-64b7b413`**. `build.sbt:21` still pins
-**`2.0.0-rc.9-48-fdc5c171`** — they have drifted, and closing that gap is
-BACKLOG item 1. sbt 2.0.3, sbt-ossuminc 3.1.0.
+**Toolchain.** Staged compiler `../bin/riddlc` and the `build.sbt:21` pin
+are both **`2.0.0-rc.9-54-64b7b413`** — the drift is closed, and all four
+riddl artifacts resolve at that version on the dependency classpath.
+sbt 2.0.3, sbt-ossuminc 3.1.0.
 
 **Corpus is clean** — zero errors, deprecations, missing and completeness
 across all eight in-scope examples, verified against the staged rc.9-54
@@ -19,8 +19,12 @@ binary. `bin/validate-corpus.sh` exits 0. Nothing is half-finished.
 
 ### In flight
 
-Nothing. The 2.0 conformance work is complete and committed; the only
-open items are in BACKLOG.md, and none is partially done.
+Nothing. The 2.0 conformance work is complete and committed, `task/` is
+empty, and the remaining BACKLOG items are all decisions or standing
+watches rather than work in progress.
+
+**Unpushed, though** — three commits sit on local `main`. Pushing is the
+driver's call, which is why they were left.
 
 ### Traps
 
@@ -39,47 +43,47 @@ Each of these has already cost someone time.
   re-validating the output — the source parsed clean while the *writer*
   silently dropped metadata. Do that whenever a release touches emission
   or the AST.
+- **A clean run is not evidence that a check ran.** Prove the check is
+  live before believing it, by breaking the thing on purpose and watching
+  it complain. Used on the epic witnessing (2026-08-05); same failure mode
+  as the scoverage and sbt-2 test-cache traps in the org CLAUDE.md.
+- **`grep -c '\[style\]'` overcounts by one.** riddlc's own
+  `[style] Style Message Count: N` summary line matches the pattern. Same
+  for the other message kinds. Trust `bin/validate-corpus.sh`, which
+  counts correctly.
+- **`on other` clauses in dokn are correct, not leftovers.** Ten of them
+  sit as trailing catch-alls after a named clause. The old *workaround*
+  was `on other` **instead of** named dispatch; that is gone. Do not
+  delete the survivors — a task file in `task/done/` asks for their
+  removal and is wrong on this point.
 - **Names resolve globally.** Two contexts with an outlet both called
   `Published`, or two subdomains with a `FrontEnd` context, are ambiguous
   rather than merely similar. Qualify.
 - **`FooBarSameDomain` is meant to fail** (4 errors, 4 missing) and is
   excluded by name in the harness. Do not "fix" it.
 
-### Task queue — 2 files, both UNTRIAGED
+### Task queue — empty
 
-Not triaged here on purpose; that is check-tasks' job. Recorded with the
-evidence so the next session can confirm quickly rather than re-derive.
+Both files were triaged, verified and closed on 2026-08-05. They live in
+`task/done/` with `## Results` sections recording how each criterion was
+checked, and with corrections appended where the file had drifted from
+the repo. Nothing is waiting.
 
-- **`task/2026-08-03-yields-in-streamlets-fixed.md`** — riddl telling us
-  the `yields`-in-streamlet fix landed and to bump to rc.9-25.
-  *Very likely already satisfied:* the dep went past it to rc.9-48 and the
-  `on other` workaround was fully reverted in `3e68c00` — dokn's five
-  intake sinks and five gateway sources dispatch by name again, corpus
-  clean. Confirm and close.
-
-- **`task/migrate-dokn-to-event-sourcing-rules.md`** — migrate dokn to the
-  2.0 event-sourcing rules; states it blocks
-  `riddlc/testOnly *RunRiddlcOnLocalTest` in the riddl repo ("should
-  validate riddl-examples dokn" failing with 7 errors).
-  *Very likely already satisfied:* done in `1f74750` — dokn's five
-  entities became `event-sourced available entity`, each command declares
-  `yields`, and `morph`/`set` moved into the `on event` clause. dokn now
-  reports 0/0/0/0.
-  **Worth telling riddl**, since that repo's test was blocked on it.
-
-Both were filed against older binaries (rc.9-6 and rc.9-25) and this repo
-has since moved well past them, which is why they read as stale.
+A task was filed back to riddl (`riddl/task/`) telling them the epic
+witnessing criterion they left open is now satisfied, and that no second
+defect hides behind the first.
 
 ### Certainty
 
-Verified this session by running the command: branch and push state,
-riddlc version, ivy rows for rc.9-54, corpus result, `sbt compile`,
-prettify round trip, and that both riddl tasks this repo filed are closed
-in `riddl/task/done/`.
+Verified this session by running the command: branch and tree state,
+riddlc version, resolved dependency classpath, full corpus, the epic
+witness positive control, prettify round trip on the new epic, and the
+before/after style counts.
 
-Assumed, not verified: that the rc.9-48 → rc.9-54 bump is uneventful. The
-corpus is clean under the rc.9-54 *binary*, but the *library* at that
-version has not been resolved into this build yet.
+Assumed, not verified: that riddl's `RunRiddlcOnLocalTest` "should
+validate riddl-examples dokn" passes. riddl reported it green on
+2026-08-03 and closed their side, but it lives in their repo and was not
+re-run from here.
 
 ### Pointers
 

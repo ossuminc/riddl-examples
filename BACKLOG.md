@@ -8,54 +8,7 @@ NOTEBOOK.md § HANDOFF.
 
 ---
 
-## 1. Bump the riddl dependency to the staged version
-
-`build.sbt:21` pins `2.0.0-rc.9-48-fdc5c171`, while the staged compiler
-at `../bin/riddlc` is **`2.0.0-rc.9-54-64b7b413`**. They should match —
-the whole point of pinning the local build is that the library and the
-validating binary are the same commit.
-
-**Already verified (2026-08-04), do not repeat:**
-
-- 20 ivy rows exist under
-  `~/.ivy2/local/com.ossuminc/*/2.0.0-rc.9-54-64b7b413`, so it resolves.
-- The corpus validates **clean on all four goal kinds** against the
-  staged rc.9-54 binary — no migration is needed, this is a pure bump.
-- `sbt compile` succeeds on the current rc.9-48 pin; `sbt test` reports
-  "No tests to run" (this repo has no Scala sources by design).
-
-So: change the one version string, re-run `bin/validate-corpus.sh`,
-commit. Nothing else is expected to move.
-
----
-
-## 2. Cover the epic + event-sourced combination
-
-The `yields` defect this repo reported was fixed upstream
-(`0dba8d26b`), and its task is closed in `riddl/task/done/`. One
-acceptance criterion was deliberately left **unchecked**, and it is
-still unchecked:
-
-> An epic step sending an event-sourced entity's command to a sink
-> validates and is witnessed.
-
-No model anywhere exercises it. dokn is the only example with
-event-sourced entities and it has no epics; Trello, ShopifyCart and
-ReactiveBBQ have epics but no event-sourced entities. The two halves
-never meet, which is exactly how the original bug survived.
-
-**What would close it:** add an epic to dokn whose step sends, say,
-`dokn.Companies.Company.AddCompany` from a gateway source to
-`dokn.Companies.IntakeCompany`. If it validates and is witnessed, the
-fix is confirmed end to end and the criterion can be ticked in the
-closed task file.
-
-Worth doing before 2.0 ships, since it is the one combination known to
-have been unsatisfiable.
-
----
-
-## 3. Decide the branch-protection posture on `main`
+## 1. Decide the branch-protection posture on `main`
 
 Every push to `main` prints:
 
@@ -76,7 +29,7 @@ urgent; it is noise either way.
 
 ---
 
-## 4. Standing instruction: keyword-named fields
+## 2. Standing instruction: keyword-named fields
 
 Two fields are named with RIDDL keywords:
 
@@ -95,7 +48,7 @@ is not lost.
 
 ---
 
-## 5. Watch, do not fix: style and usage counts
+## 3. Watch, do not fix: style and usage counts
 
 Out of scope by explicit decision — the goal is zero on errors,
 deprecations, missing and completeness only. Recorded so drift is
@@ -119,7 +72,7 @@ is legitimate in a reference corpus.
 
 ---
 
-## 6. Closed, but know this happened
+## 4. Closed, but know this happened
 
 Not work — context, so nobody rediscovers it as a defect.
 

@@ -1,5 +1,98 @@
 # Engineering Notebook: riddl-examples
 
+## HANDOFF
+
+**Last verified: 2026-08-04**, by running the commands, not from memory.
+
+**Repo state.** On `main`, working tree clean, **0 commits unpushed**.
+`main` and `release/2` are both at `4c28809`; `release/1` sits at
+`5e2ce0d` holding the pre-2.0 corpus. All three are pushed.
+
+**Toolchain.** Staged compiler `../bin/riddlc` is
+**`2.0.0-rc.9-54-64b7b413`**. `build.sbt:21` still pins
+**`2.0.0-rc.9-48-fdc5c171`** — they have drifted, and closing that gap is
+BACKLOG item 1. sbt 2.0.3, sbt-ossuminc 3.1.0.
+
+**Corpus is clean** — zero errors, deprecations, missing and completeness
+across all eight in-scope examples, verified against the staged rc.9-54
+binary. `bin/validate-corpus.sh` exits 0. Nothing is half-finished.
+
+### In flight
+
+Nothing. The 2.0 conformance work is complete and committed; the only
+open items are in BACKLOG.md, and none is partially done.
+
+### Traps
+
+Each of these has already cost someone time.
+
+- **riddlc is the test suite, not sbt.** This repo has no Scala sources —
+  they were deleted once the `hugo` command they exercised was removed
+  from the product. `sbt test` reports "No tests to run" and that is
+  correct, not a failure. Run `bin/validate-corpus.sh`.
+- **Do not validate through the `.conf` files.** Their `common` blocks
+  once set `hide-warnings` and `hide-missing-warnings`, hiding exactly
+  what the corpus is driven to zero on. The harness passes flags itself
+  for that reason.
+- **Validate is not enough after a compiler bump.** Two defects were
+  found only by round-tripping through `riddlc prettify -s true` and
+  re-validating the output — the source parsed clean while the *writer*
+  silently dropped metadata. Do that whenever a release touches emission
+  or the AST.
+- **Names resolve globally.** Two contexts with an outlet both called
+  `Published`, or two subdomains with a `FrontEnd` context, are ambiguous
+  rather than merely similar. Qualify.
+- **`FooBarSameDomain` is meant to fail** (4 errors, 4 missing) and is
+  excluded by name in the harness. Do not "fix" it.
+
+### Task queue — 2 files, both UNTRIAGED
+
+Not triaged here on purpose; that is check-tasks' job. Recorded with the
+evidence so the next session can confirm quickly rather than re-derive.
+
+- **`task/2026-08-03-yields-in-streamlets-fixed.md`** — riddl telling us
+  the `yields`-in-streamlet fix landed and to bump to rc.9-25.
+  *Very likely already satisfied:* the dep went past it to rc.9-48 and the
+  `on other` workaround was fully reverted in `3e68c00` — dokn's five
+  intake sinks and five gateway sources dispatch by name again, corpus
+  clean. Confirm and close.
+
+- **`task/migrate-dokn-to-event-sourcing-rules.md`** — migrate dokn to the
+  2.0 event-sourcing rules; states it blocks
+  `riddlc/testOnly *RunRiddlcOnLocalTest` in the riddl repo ("should
+  validate riddl-examples dokn" failing with 7 errors).
+  *Very likely already satisfied:* done in `1f74750` — dokn's five
+  entities became `event-sourced available entity`, each command declares
+  `yields`, and `morph`/`set` moved into the `on event` clause. dokn now
+  reports 0/0/0/0.
+  **Worth telling riddl**, since that repo's test was blocked on it.
+
+Both were filed against older binaries (rc.9-6 and rc.9-25) and this repo
+has since moved well past them, which is why they read as stale.
+
+### Certainty
+
+Verified this session by running the command: branch and push state,
+riddlc version, ivy rows for rc.9-54, corpus result, `sbt compile`,
+prettify round trip, and that both riddl tasks this repo filed are closed
+in `riddl/task/done/`.
+
+Assumed, not verified: that the rc.9-48 → rc.9-54 bump is uneventful. The
+corpus is clean under the rc.9-54 *binary*, but the *library* at that
+version has not been resolved into this build yet.
+
+### Pointers
+
+- **BACKLOG.md** — all open work, with the evidence already gathered.
+- **CLAUDE.md** — durable facts: validation procedure, 2.0 syntax rules.
+- **NOTEBOOK.md § RIDDL 2.0 Conformance** — what zero actually requires
+  architecturally, and the traps met getting there.
+
+**Run `/ossuminc-skills:check-tasks` in the new session.**
+
+---
+
+
 ## Incoming Tasks
 
 **At session start**, check the `task/` directory for pending

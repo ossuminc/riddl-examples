@@ -4,24 +4,32 @@
 
 **Last verified: 2026-08-08**, by running the commands, not from memory.
 
-**Repo state.** On `main`, working tree clean. **5 commits unpushed** —
+**Repo state.** On `main`, working tree clean. **6 commits unpushed** —
 the rc.9-54 pin, the dokn epic, the 08-05 reconciliation, the rc.10-45
-upgrade, and this documentation pass. `release/1` sits at `5e2ce0d`
-holding the pre-2.0 corpus.
+upgrade, its documentation pass, and the rc.10-46 bump. `release/1` sits
+at `5e2ce0d` holding the pre-2.0 corpus.
 
 **Toolchain.** Staged compiler `../bin/riddlc` and the `build.sbt:21` pin
-are both **`2.0.0-rc.10-45-a50496e0`** — same commit, and all four riddl
+are both **`2.0.0-rc.10-46-286ef815`** — same commit, and all four riddl
 artifacts resolve at that version on the dependency classpath.
 sbt 2.0.3, sbt-ossuminc 3.1.0.
 
 **Corpus is clean** — zero errors, deprecations, missing and completeness
-across all eight in-scope examples, verified against the staged rc.10-45
+across all eight in-scope examples, verified against the staged rc.10-46
 binary. `bin/validate-corpus.sh` exits 0. Nothing is half-finished.
 
-**One open riddlc defect**, filed 2026-08-08 and not ours to fix:
-`prettify` emits `described in file` without quotes, so its output will not
-re-parse. Affects ReactiveSummit only (the sole user of that construct).
-The *source* is correct — do not "fix" the model.
+**All eight examples also round-trip clean** through
+`riddlc prettify -s true` — the first release for which that is true. The
+quoting defect that broke ReactiveSummit's round trip is fixed in rc.10-46.
+
+**One open riddlc defect, and it is invisible to every check we run:**
+prettify still absolutizes `described in file` paths, and the rewrite
+**compounds** — each pass prepends another base directory, so the value
+grows by ~128 chars and gains another `file://` scheme every time. It
+parses and validates clean at every stage, because `validate` never
+resolves that target. Filed as
+`riddl/task/2026-08-09-prettify-absolutizes-described-in-file-path.md`.
+Affects ReactiveSummit only. **Our source is correct — do not "fix" it.**
 
 ### In flight
 
@@ -29,7 +37,7 @@ Nothing. The 2.0 conformance work is complete and committed, `task/` is
 empty, and the remaining BACKLOG items are all decisions or standing
 watches rather than work in progress.
 
-**Unpushed, though** — three commits sit on local `main`. Pushing is the
+**Unpushed, though** — six commits sit on local `main`. Pushing is the
 driver's call, which is why they were left.
 
 ### Traps
@@ -69,6 +77,11 @@ Each of these has already cost someone time.
   changed.** rc.10's writer defect was in `described in file`, used once
   in the whole corpus, in a file this session never touched. Rare
   constructs are where writer bugs survive.
+- **A round trip only catches writer bugs that break the PARSE.** The
+  prettify quoting bug was caught that way; the path-compounding bug in
+  the same clause was not, because every corrupted pass still validates.
+  To catch value corruption, prettify **twice** and diff the two outputs —
+  `prettify(prettify(x))` should equal `prettify(x)`.
 - **Check our own CLAUDE.md against the grammar before believing it.** It
   claimed `when` had no `else` clause; the grammar has always had one, and
   the claim made a solvable problem look unsolvable. The canonical grammar
@@ -82,11 +95,11 @@ Each of these has already cost someone time.
 Nothing incoming. Everything in `task/done/` carries a `## Results`
 section recording how each criterion was checked.
 
-Two items were filed **outward** to riddl and are awaiting their action,
-not ours:
+Filed **outward** to riddl and awaiting their action, not ours:
 
-- `2026-08-08-prettify-drops-quotes-described-in-file.md` — the writer
-  defect above.
+- `2026-08-09-prettify-absolutizes-described-in-file-path.md` — the
+  compounding-path defect above. Its predecessor (the quoting half) is
+  fixed and closed in `riddl/task/done/` with verification.
 - A corroboration appended to riddl-models'
   `2026-08-08-reply-not-counted-as-executable.md`, noting that this repo
   is at zero both before and after their fix and so cannot serve as its
@@ -95,11 +108,12 @@ not ours:
 ### Certainty
 
 Verified this session by running the command: riddlc version, resolved
-dependency classpath at rc.10-45, the full corpus before and after each
-change, a prettify round trip on all eight examples, the exact parse
-failure in the emitted ReactiveSummit (and that restoring only the quotes
-clears it), the negative fixture's failure reason, and the absence of the
-`classifyHandlers` warnings here.
+dependency classpath at rc.10-46, the full corpus, a prettify round trip
+on all eight examples (all clean), three successive prettify passes
+showing the path compounding 113 → 241 → 372 chars, that the emitted file
+still validates after its referenced `.md` is deleted, the negative
+fixture's failure reason, and the absence of the `classifyHandlers`
+warnings here.
 
 Assumed, not verified: that riddl's `RunRiddlcOnLocalTest` "should
 validate riddl-examples dokn" still passes under rc.10. It lives in their
@@ -142,6 +156,44 @@ Remaining work:
 - None outstanding. All five task files are closed in `task/done/`.
 - The `show … to …` riddlc bug is filed against riddl; once fixed,
   restore the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-08b: rc.10-46 — the prettify fix, verified and half-true
+
+riddl shipped `2.0.0-rc.10-46-286ef815` to fix the quoting defect we filed.
+
+**The quoting bug is genuinely fixed.** The path is emitted quoted, the
+output re-parses, and **all eight examples now round-trip clean** — the
+first release for which that is true. The corpus is unchanged and still
+0/0/0/0; this bump required no model edits at all.
+
+**The secondary issue is not fixed, and we had understated it.** We had
+called the absolutized path a portability wart. Prettifying the output of
+a prettify shows it is worse than that — the rewrite **compounds**:
+
+| pass | path length | `file://` occurrences |
+|---|---:|---:|
+| 1 | 113 chars | 1 |
+| 2 | 241 chars | 2 |
+| 3 | 372 chars | 3 |
+
+Each pass treats the already-absolute URL as relative and prepends a new
+base directory, nesting one `file://` inside another. Unbounded.
+
+**Nothing we run detects this.** Every corrupted pass parses and validates
+clean, because `validate` never resolves the `described in file` target —
+confirmed by deleting the referenced `.md` and watching the emitted file
+still report 0/0/0/0. The round trip caught the quoting bug only because
+that broke the *parse*. Value corruption needs a different check: prettify
+twice and diff. Filed as
+`2026-08-09-prettify-absolutizes-described-in-file-path.md`.
+
+**Correction to what we told riddl.** Our original report said the absolute
+path "will not resolve on another checkout, in CI, or for another
+developer". The path is indeed dangling there, but we implied it would be
+caught, and it is not. Corrected on the closed task file rather than left
+to mislead.
 
 ---
 

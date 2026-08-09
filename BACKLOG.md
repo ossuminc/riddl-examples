@@ -8,26 +8,30 @@ NOTEBOOK.md § HANDOFF.
 
 ---
 
-## 1. Re-check the prettify round trip once riddl fixes `described in file`
+## 1. Watch: prettify compounds `described in file` paths
 
-Filed 2026-08-08 as
-`riddl/task/2026-08-08-prettify-drops-quotes-described-in-file.md`.
-`riddlc prettify -s true` emits the path unquoted, so its own output will
-not re-parse. **Nothing to change here — our source is correct** and
-validates clean; this is a watch item, not work.
+The **quoting** half of this is **fixed** in rc.10-46 and verified — all
+eight examples round-trip clean, and that task is closed in
+`riddl/task/done/`. What remains is filed as
+`riddl/task/2026-08-09-prettify-absolutizes-described-in-file-path.md`.
 
-**Already verified, do not repeat:**
+**Nothing to change here — our source is correct.** Watch item, not work.
 
-- The missing quotes are the *entire* parse failure. Patching only those
-  onto the emitted file gives 0 errors / 0 missing / 0 completeness.
-- ReactiveSummit is the only affected example — the sole user of
-  `described in file` in the corpus. The other seven round-trip clean.
-- Secondary, and a separate decision for riddl: the relative path
-  `"ReactiveSummit.md"` is absolutized to a machine-specific `file://`
-  URL, which would not resolve on another checkout or in CI.
+**Already verified (2026-08-08), do not repeat:**
 
-**When their fix lands:** re-run the all-examples round trip (the loop is
-in the 2026-08-08 NOTEBOOK entry) and expect eight clean rows.
+- prettify absolutizes the relative path, and re-prettifying compounds it:
+  113 → 241 → 372 chars across three passes, one extra `file://` scheme
+  each time, unbounded.
+- **Every corrupted pass validates clean.** `validate` never resolves the
+  `described in file` target — proven by deleting the referenced `.md`
+  and getting 0 errors / 0 missing / 0 completeness from the emitted file.
+- ReactiveSummit is the only affected example, the sole user of the
+  construct in the corpus.
+
+**When their fix lands:** `prettify(prettify(x))` must be byte-identical
+to `prettify(x)` for ReactiveSummit, and no emitted value may contain more
+than one `file://`. A plain round trip will **not** tell you — it passes
+today with the bug present.
 
 ---
 
@@ -111,7 +115,8 @@ compiler, so the thinning does not matter. Do not "fix" it without
 asking.
 
 **FooBarSameDomain is intentionally non-zero** — 5 errors, 3 missing
-under rc.10-45 (it was 4 and 4 under rc.9-54; only message granularity
+under rc.10-45 and rc.10-46 alike (it was 4 and 4 under rc.9-54; only
+message granularity
 changed, and it still fails for the intended reason: a duplicate `Info`
 type name and the ambiguous references to it). It defines one type name
 twice so the ambiguity detector has something to catch; 2.0 promoted that

@@ -4,10 +4,9 @@
 
 **Last verified: 2026-08-08**, by running the commands, not from memory.
 
-**Repo state.** On `main`, working tree clean. **6 commits unpushed** —
-the rc.9-54 pin, the dokn epic, the 08-05 reconciliation, the rc.10-45
-upgrade, its documentation pass, and the rc.10-46 bump. `release/1` sits
-at `5e2ce0d` holding the pre-2.0 corpus.
+**Repo state.** On `main`, working tree clean, **everything pushed** —
+`main` and `origin/main` are both at `73949ae`. `release/1` sits at
+`5e2ce0d` holding the pre-2.0 corpus.
 
 **Toolchain.** Staged compiler `../bin/riddlc` and the `build.sbt:21` pin
 are both **`2.0.0-rc.10-46-286ef815`** — same commit, and all four riddl
@@ -33,12 +32,9 @@ Affects ReactiveSummit only. **Our source is correct — do not "fix" it.**
 
 ### In flight
 
-Nothing. The 2.0 conformance work is complete and committed, `task/` is
-empty, and the remaining BACKLOG items are all decisions or standing
-watches rather than work in progress.
-
-**Unpushed, though** — six commits sit on local `main`. Pushing is the
-driver's call, which is why they were left.
+Nothing. The 2.0 conformance work is complete, committed and pushed,
+`task/` is empty, and the remaining BACKLOG items are all decisions or
+standing watches rather than work in progress.
 
 ### Traps
 

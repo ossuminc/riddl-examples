@@ -2,20 +2,26 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-05**, by running the commands, not from memory.
+**Last verified: 2026-08-08**, by running the commands, not from memory.
 
-**Repo state.** On `main`, working tree clean. **3 commits unpushed** —
-the rc.9-54 pin, the dokn epic, and this reconciliation. `release/1` sits
-at `5e2ce0d` holding the pre-2.0 corpus.
+**Repo state.** On `main`, working tree clean. **5 commits unpushed** —
+the rc.9-54 pin, the dokn epic, the 08-05 reconciliation, the rc.10-45
+upgrade, and this documentation pass. `release/1` sits at `5e2ce0d`
+holding the pre-2.0 corpus.
 
 **Toolchain.** Staged compiler `../bin/riddlc` and the `build.sbt:21` pin
-are both **`2.0.0-rc.9-54-64b7b413`** — the drift is closed, and all four
-riddl artifacts resolve at that version on the dependency classpath.
+are both **`2.0.0-rc.10-45-a50496e0`** — same commit, and all four riddl
+artifacts resolve at that version on the dependency classpath.
 sbt 2.0.3, sbt-ossuminc 3.1.0.
 
 **Corpus is clean** — zero errors, deprecations, missing and completeness
-across all eight in-scope examples, verified against the staged rc.9-54
+across all eight in-scope examples, verified against the staged rc.10-45
 binary. `bin/validate-corpus.sh` exits 0. Nothing is half-finished.
+
+**One open riddlc defect**, filed 2026-08-08 and not ours to fix:
+`prettify` emits `described in file` without quotes, so its output will not
+re-parse. Affects ReactiveSummit only (the sole user of that construct).
+The *source* is correct — do not "fix" the model.
 
 ### In flight
 
@@ -59,31 +65,46 @@ Each of these has already cost someone time.
 - **Names resolve globally.** Two contexts with an outlet both called
   `Published`, or two subdomains with a `FrontEnd` context, are ambiguous
   rather than merely similar. Qualify.
+- **Round-trip every example after a compiler bump, not just the ones you
+  changed.** rc.10's writer defect was in `described in file`, used once
+  in the whole corpus, in a file this session never touched. Rare
+  constructs are where writer bugs survive.
+- **Check our own CLAUDE.md against the grammar before believing it.** It
+  claimed `when` had no `else` clause; the grammar has always had one, and
+  the claim made a solvable problem look unsolvable. The canonical grammar
+  at `../riddl/language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
+  is generated from the parser and wins every time.
 - **`FooBarSameDomain` is meant to fail** (4 errors, 4 missing) and is
   excluded by name in the harness. Do not "fix" it.
 
 ### Task queue — empty
 
-Both files were triaged, verified and closed on 2026-08-05. They live in
-`task/done/` with `## Results` sections recording how each criterion was
-checked, and with corrections appended where the file had drifted from
-the repo. Nothing is waiting.
+Nothing incoming. Everything in `task/done/` carries a `## Results`
+section recording how each criterion was checked.
 
-A task was filed back to riddl (`riddl/task/`) telling them the epic
-witnessing criterion they left open is now satisfied, and that no second
-defect hides behind the first.
+Two items were filed **outward** to riddl and are awaiting their action,
+not ours:
+
+- `2026-08-08-prettify-drops-quotes-described-in-file.md` — the writer
+  defect above.
+- A corroboration appended to riddl-models'
+  `2026-08-08-reply-not-counted-as-executable.md`, noting that this repo
+  is at zero both before and after their fix and so cannot serve as its
+  regression check.
 
 ### Certainty
 
-Verified this session by running the command: branch and tree state,
-riddlc version, resolved dependency classpath, full corpus, the epic
-witness positive control, prettify round trip on the new epic, and the
-before/after style counts.
+Verified this session by running the command: riddlc version, resolved
+dependency classpath at rc.10-45, the full corpus before and after each
+change, a prettify round trip on all eight examples, the exact parse
+failure in the emitted ReactiveSummit (and that restoring only the quotes
+clears it), the negative fixture's failure reason, and the absence of the
+`classifyHandlers` warnings here.
 
 Assumed, not verified: that riddl's `RunRiddlcOnLocalTest` "should
-validate riddl-examples dokn" passes. riddl reported it green on
-2026-08-03 and closed their side, but it lives in their repo and was not
-re-run from here.
+validate riddl-examples dokn" still passes under rc.10. It lives in their
+repo. Our dokn is clean under the rc.10 binary, so the likely answer is
+yes, but the corpus changed this session and that test was not re-run.
 
 ### Pointers
 
@@ -121,6 +142,100 @@ Remaining work:
 - None outstanding. All five task files are closed in `task/done/`.
 - The `show … to …` riddlc bug is filed against riddl; once fixed,
   restore the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-08: upgrade to rc.10-45
+
+rc.10 took the corpus from clean to **31 errors and 5 completeness
+warnings** across six examples. Two distinct changes, one mechanical and
+one not.
+
+### `yield` and `reply` are now distinct statements
+
+Until 2.0 `reply` was a deprecated synonym for `yield` and both parsed to
+a single node. rc.10 splits them, and the wrong pairing (`yield result`,
+`reply event`) is an **Error**. A command yields an event; a query replies
+a result.
+
+All 31 errors were `yield result X` inside an `on query` clause, so the
+fix was `yield result` → `reply result` across 18 files. The occurrence
+count matched the error count exactly, which is the cheap check that a
+bulk edit hit precisely the reported sites and nothing else.
+
+The `-P` remediation tip named the fix outright. Read these literally.
+
+### Command handlers must discharge on EVERY path
+
+The five ShopifyCart completeness warnings needed real modelling, and the
+first reading of them was wrong. Those handlers *did* emit their events —
+but from inside a `when ... then` guard, and rc.10 checks discharge on
+every path (`dischargesOnEveryPath`, `ValidationPass.scala`). For a
+`when`, it requires the `then` branch **and a non-empty `else`** to both
+discharge.
+
+The corpus pattern was a positive guard that emitted and a separate,
+negated guard that errored:
+
+```riddl
+when prompt("newPrice > 0") then  ... tell event ProductPriceUpdated ... end
+when prompt("newPrice <= 0") then error "Price must be greater than zero" end
+```
+
+A human reads those two as exhaustive. The compiler cannot: the conditions
+are opaque prose, so nothing rules out a path where neither matches and
+the command is silently swallowed. Collapsing each pair into one
+`when ... then ... else ... end` states the exhaustiveness instead of
+implying it. A refusal counts as discharging — declining IS processing.
+
+**Our own CLAUDE.md said `when` had "NO else clause".** It was wrong, and
+believing it would have made this look unfixable. The grammar
+(`when_statement`) has carried the optional `else` all along. Corrected.
+
+`Cart.UpdateQuantity` needed more: its quantity-zero branch did
+`tell command RemoveFromCart to entity Cart`, and **telling a command does
+not discharge — only an event does**. A self-dispatch leaves that path
+with nothing recorded. It now emits `ItemRemovedFromCart` directly, which
+is what `RemoveFromCart`'s own handler does anyway.
+
+### Known riddlc defect: prettify drops quotes on `described in file`
+
+Found by the round trip, not by validation — the source is correct and
+validates clean. Filed to riddl as
+`2026-08-08-prettify-drops-quotes-described-in-file.md`.
+
+`riddlc prettify -s true` emits the path **unquoted**, so its own output
+will not re-parse:
+
+```
+source:   described in file "ReactiveSummit.md"
+emitted:  described in file file:///Users/reid/.../ReactiveSummit.md
+          → Expected ("\"")
+```
+
+Patching only the quotes back makes the emitted file validate clean, so
+that is the entire parse failure. Secondary issue: the relative path is
+absolutized into a machine-specific `file://` URL.
+
+It survived because `described in file` is used **once** in the whole
+corpus. Rare constructs are where writer bugs live — which is the argument
+for round-tripping everything, not just what changed.
+
+### rc.10 did not change our warning profile
+
+Style and usage counts are byte-identical before and after, and the
+negative fixture still fails for its intended reason (duplicate `Info`,
+ambiguous references) — only message granularity shifted, 4 errors/4
+missing → 5/3.
+
+Worth knowing because riddl-models hit **27 new false warnings** from the
+same `reply` split: `classifyHandlers` does not count `ReplyStatement` as
+executable. We see zero of them, and that agrees with their diagnosis
+rather than contradicting it — the classifier works per *handler*, and
+every `reply` here sits in a handler whose sibling clauses already do
+`morph`/`send`. We have no handler whose clauses are all reply/do, which
+is the shape their repro cases have. **So this repo is not a regression
+check for that fix**; riddl-models is. Recorded on their task file.
 
 ---
 

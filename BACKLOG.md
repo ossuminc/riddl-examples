@@ -8,7 +8,30 @@ NOTEBOOK.md § HANDOFF.
 
 ---
 
-## 1. Decide the branch-protection posture on `main`
+## 1. Re-check the prettify round trip once riddl fixes `described in file`
+
+Filed 2026-08-08 as
+`riddl/task/2026-08-08-prettify-drops-quotes-described-in-file.md`.
+`riddlc prettify -s true` emits the path unquoted, so its own output will
+not re-parse. **Nothing to change here — our source is correct** and
+validates clean; this is a watch item, not work.
+
+**Already verified, do not repeat:**
+
+- The missing quotes are the *entire* parse failure. Patching only those
+  onto the emitted file gives 0 errors / 0 missing / 0 completeness.
+- ReactiveSummit is the only affected example — the sole user of
+  `described in file` in the corpus. The other seven round-trip clean.
+- Secondary, and a separate decision for riddl: the relative path
+  `"ReactiveSummit.md"` is absolutized to a machine-specific `file://`
+  URL, which would not resolve on another checkout or in CI.
+
+**When their fix lands:** re-run the all-examples round trip (the loop is
+in the 2026-08-08 NOTEBOOK entry) and expect eight clean rows.
+
+---
+
+## 2. Decide the branch-protection posture on `main`
 
 Every push to `main` prints:
 
@@ -29,7 +52,7 @@ urgent; it is noise either way.
 
 ---
 
-## 2. Standing instruction: keyword-named fields
+## 3. Standing instruction: keyword-named fields
 
 Two fields are named with RIDDL keywords:
 
@@ -48,7 +71,7 @@ is not lost.
 
 ---
 
-## 3. Watch, do not fix: style and usage counts
+## 4. Watch, do not fix: style and usage counts
 
 Out of scope by explicit decision — the goal is zero on errors,
 deprecations, missing and completeness only. Recorded so drift is
@@ -72,7 +95,7 @@ is legitimate in a reference corpus.
 
 ---
 
-## 4. Closed, but know this happened
+## 5. Closed, but know this happened
 
 Not work — context, so nobody rediscovers it as a defect.
 
@@ -87,8 +110,13 @@ in **riddl-models**, not here. These examples exist to exercise the
 compiler, so the thinning does not matter. Do not "fix" it without
 asking.
 
-**FooBarSameDomain is intentionally non-zero** (4 errors, 4 missing). It
-defines one type name twice so the ambiguity detector has something to
-catch; 2.0 promoted that ambiguity from warning to error, so it can be a
-fixture or it can be clean, not both. `bin/validate-corpus.sh` excludes
-it by name.
+**FooBarSameDomain is intentionally non-zero** — 5 errors, 3 missing
+under rc.10-45 (it was 4 and 4 under rc.9-54; only message granularity
+changed, and it still fails for the intended reason: a duplicate `Info`
+type name and the ambiguous references to it). It defines one type name
+twice so the ambiguity detector has something to catch; 2.0 promoted that
+ambiguity from warning to error, so it can be a fixture or it can be
+clean, not both. `bin/validate-corpus.sh` excludes it by name.
+
+Expect these counts to move whenever message granularity changes upstream.
+Check the *reason* it fails, not the numbers.

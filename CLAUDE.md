@@ -59,10 +59,14 @@ has drifted from the canonical copy above.
 ### Key Syntax Points (v1.0.2+)
 
 **Statements** (valid inside handlers):
-- `when "condition" then {statements} end` - NO else clause
+- `when <condition> then {statements} [else {statements}] end` — the
+  `else` **is** supported (grammar `when_statement`). A condition in
+  prose is written `prompt("...")`; a bare string is deprecated.
 - `match "expr" { case "val" { } default { } }`
 - `send message_ref to outlet_ref|inlet_ref`
 - `tell message_ref to processor_ref`
+- `yield event_ref` — a command emits its declared event
+- `reply result_ref` — a query answers with its declared result
 - `set field_ref to "value"`
 - `let identifier = "value"`
 - `prompt "description"` - for AI-friendly pseudo-code descriptions
@@ -70,7 +74,25 @@ has drifted from the canonical copy above.
 - `morph entity_ref to state_ref with message_ref`
 - `become entity_ref to handler_ref`
 
+**`yield` vs `reply` (rc.10+)**: they are **distinct statements**. Until
+2.0 `reply` was a deprecated synonym for `yield` and both parsed to one
+node; rc.10 split them and the wrong pairing — `yield result` or
+`reply event` — is an **ERROR**. A command yields an event; a query
+replies a result. Migrating the corpus to rc.10 meant rewriting 31
+`yield result` sites.
+
 **Handler rules (RIDDL 2.0)**:
+- A command handler in an entity must **discharge on every path**: emit
+  an event (`send`/`tell`/`yield`) or refuse (`error`/`require`). A
+  refusal counts — declining IS processing. Emitting from inside one
+  `when ... then` is **not** enough, because a bare guard leaves a
+  fall-through path where nothing happens; the conditions are opaque
+  prose, so the compiler cannot tell that two side-by-side guards are
+  exhaustive. Use `when ... then ... else ... end`, nesting for a third
+  outcome. (`dischargesOnEveryPath` in `ValidationPass.scala`.)
+- Telling a **command** does not discharge — only an event does. A
+  self-dispatch such as `tell command RemoveFromCart to entity Cart`
+  leaves that path with nothing recorded.
 - Every non-empty **adaptor** handler must have an `on other` clause,
   else a validation ERROR. Form:
   `on other { error "unexpected message" }` (the `is` is optional).
@@ -94,17 +116,31 @@ has drifted from the canonical copy above.
 ## Dependencies
 
 - **sbt**: 2.0.3
-- **sbt-ossuminc**: 3.0.3
-- **RIDDL**: 1.31.0 (library); the 2.0 release candidate at
-  `../bin/riddlc` is what validates the models
+- **sbt-ossuminc**: 3.1.0
+- **RIDDL**: `2.0.0-rc.10-45-a50496e0` — the pin and the staged
+  `../bin/riddlc` are deliberately the **same commit**. That is the whole
+  point of pinning a local build; when they drift, the library and the
+  binary doing the validating disagree.
 - **Scala**: 3.8.4 (sbt-ossuminc default)
 
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "1.31.0",
+.configure(With.Riddl.library(version = "2.0.0-rc.10-45-a50496e0",
   nonJVMDependency = false))
 ```
+
+**Verifying a bump:** `sbt compile` proves nothing here — with no Scala
+sources it succeeds against a stale classpath. Check resolution instead:
+
+```bash
+sbt "show Compile/dependencyClasspath" | grep riddl
+```
+
+All four artifacts (`riddl-lib`, `-utils`, `-language`, `-passes`) must
+show the new version. The corpus does not consult `build.sbt` at all —
+`bin/validate-corpus.sh` shells out to `../bin/riddlc` — so re-running it
+after a version-string change re-proves the old result.
 
 Note `With.Riddl.library` pulls only `riddl-lib` (and transitively
 `riddl-utils`, `riddl-language`, `riddl-passes`). It does **not** add

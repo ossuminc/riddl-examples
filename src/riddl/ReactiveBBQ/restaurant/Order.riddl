@@ -74,7 +74,7 @@ context Orders is {
         send event OrderPlaced to outlet OrderAnnouncer.Published
       }
       on query WhichOrder {
-        yield result TheOrder
+        reply result TheOrder
       }
     } with {
       briefly as "Handles messages addressed to a order"

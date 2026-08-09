@@ -74,7 +74,7 @@ context Locations is {
         send event LocationOpened to outlet LocationAnnouncer.Published
       }
       on query WhichLocation {
-        yield result TheLocation
+        reply result TheLocation
       }
     } with {
       briefly as "Handles messages addressed to a location"

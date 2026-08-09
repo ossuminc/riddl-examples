@@ -76,7 +76,7 @@ context Payments is {
         send event Paid to outlet PaymentAnnouncer.Published
       }
       on query WhichPayment {
-        yield result ThePayment
+        reply result ThePayment
       }
     } with {
       briefly as "Handles messages addressed to a payment"

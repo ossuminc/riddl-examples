@@ -74,7 +74,7 @@ context SupplyOrder is {
         send event SupplyOrdered to outlet SupplyAnnouncer.Published
       }
       on query WhichSupply {
-        yield result TheSupply
+        reply result TheSupply
       }
     } with {
       briefly as "Handles messages addressed to a supply"

@@ -227,7 +227,7 @@ domain ShopifyCart is {
       // Handler for processing commands
       handler ProductCommandHandler is {
         on query WhichProduct {
-          yield result TheProduct
+          reply result TheProduct
         }
 
         on init {
@@ -236,14 +236,15 @@ domain ShopifyCart is {
 
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Product.UpdateProductPrice is {
-          // Validate the price change
+          // Validate the price change. The two outcomes are one decision, so
+          // they are one when/else: a command must either record what happened
+          // or refuse, on every path.
           when prompt("newPrice > 0") then
             // Update the product price in the ProductData state
             morph entity Product to state ProductData with record ProductRecord
             // Emit event
             tell event ProductPriceUpdated to entity Product
-          end
-          when prompt("newPrice <= 0") then
+          else
             error "Price must be greater than zero"
           end
         }
@@ -829,7 +830,7 @@ domain ShopifyCart is {
       // Handler for processing commands
       handler CartCommandHandler is {
         on query WhichCart {
-          yield result TheCart
+          reply result TheCart
         }
 
         on init {
@@ -852,8 +853,7 @@ domain ShopifyCart is {
             morph entity Cart to state CartData with record CartRecord
             // Emit event
             tell event ItemAddedToCart to entity Cart
-          end
-          when prompt("!productExists(command.productId) || !isInStock(command.productId)") then
+          else
             error "Product is not available"
           end
         }
@@ -867,19 +867,25 @@ domain ShopifyCart is {
 
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.ShoppingContext.Cart.UpdateQuantity is {
-          // Validate new quantity
+          // Validate new quantity. Three outcomes, so the guards nest rather
+          // than sitting side by side — side-by-side guards leave a path where
+          // none matches and nothing is recorded.
           when prompt("command.quantity > 0") then
             // Update cart state
             morph entity Cart to state CartData with record CartRecord
             // Emit event
             tell event CartQuantityUpdated to entity Cart
-          end
-          when prompt("command.quantity == 0") then
-            // Remove item if quantity is zero
-            tell command RemoveFromCart to entity Cart
-          end
-          when prompt("command.quantity < 0") then
-            error "Quantity must be zero or positive"
+          else
+            when prompt("command.quantity == 0") then
+              // Quantity zero means the item leaves the cart. Record the
+              // removal here rather than telling Cart a RemoveFromCart
+              // command: that self-dispatch emitted nothing on this path, and
+              // the entity already knows what happened.
+              morph entity Cart to state CartData with record CartRecord
+              tell event ItemRemovedFromCart to entity Cart
+            else
+              error "Quantity must be zero or positive"
+            end
           end
         }
 
@@ -890,8 +896,7 @@ domain ShopifyCart is {
             morph entity Cart to state CartData with record CartRecord
             // Emit event
             tell event DiscountApplied to entity Cart
-          end
-          when prompt("!isValidDiscountCode(command.discountCode)") then
+          else
             error "Invalid discount code"
           end
         }
@@ -1072,7 +1077,7 @@ domain ShopifyCart is {
       // Handler for processing commands
       handler CheckoutCommandHandler is {
         on query WhichCheckout {
-          yield result TheCheckout
+          reply result TheCheckout
         }
 
         on init {
@@ -1106,8 +1111,7 @@ domain ShopifyCart is {
             // Process payment, Create order, Clear cart
             // Emit event with new order ID
             tell event CheckoutCompleted to entity ShopifyCart.ShoppingContext.Checkout
-          end
-          when prompt("!isValidCart(command.cartId) || !hasPaymentMethod()") then
+          else
             error "Cannot complete checkout"
           end
         }

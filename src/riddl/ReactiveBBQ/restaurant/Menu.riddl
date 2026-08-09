@@ -76,7 +76,7 @@ context Menus is {
         send event MenuItemAdded to outlet MenuItemAnnouncer.Published
       }
       on query WhichMenuItem {
-        yield result TheMenuItem
+        reply result TheMenuItem
       }
     } with {
       briefly as "Handles messages addressed to a menuitem"
@@ -258,7 +258,7 @@ context Menus is {
         send event MenuComposed to outlet MenuAnnouncer.Published
       }
       on query WhichMenu {
-        yield result TheMenu
+        reply result TheMenu
       }
     } with {
       briefly as "Handles messages addressed to a menu"

@@ -76,7 +76,7 @@ context Loyalty is {
         send event PointsAccrued to outlet LoyaltyAccountAnnouncer.Published
       }
       on query WhichLoyaltyAccount {
-        yield result TheLoyaltyAccount
+        reply result TheLoyaltyAccount
       }
     } with {
       briefly as "Handles messages addressed to a loyaltyaccount"

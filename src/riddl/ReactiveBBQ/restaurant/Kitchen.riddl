@@ -74,7 +74,7 @@ context Kitchen is {
         send event OrdersShown to outlet OrderViewerAnnouncer.Published
       }
       on query WhichOrderViewer {
-        yield result TheOrderViewer
+        reply result TheOrderViewer
       }
     } with {
       briefly as "Handles messages addressed to a orderviewer"

@@ -74,7 +74,7 @@ context Tables is {
         send event TableAdded to outlet TableAnnouncer.Published
       }
       on query WhichTable {
-        yield result TheTable
+        reply result TheTable
       }
     } with {
       briefly as "Handles messages addressed to a table"

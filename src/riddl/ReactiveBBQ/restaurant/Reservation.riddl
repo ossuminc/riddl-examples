@@ -78,7 +78,7 @@ context Reservations is {
         send event TableBooked to outlet ReservationAnnouncer.Published
       }
       on query WhichReservation {
-        yield result TheReservation
+        reply result TheReservation
       }
     } with {
       briefly as "Handles messages addressed to a reservation"

@@ -100,7 +100,7 @@ context UserManagement is {
         send event AccountCreated to outlet UserManagementAnnouncer.Published
       }
       on query WhichAccount {
-        yield result TheAccount
+        reply result TheAccount
       }
     } with {
       briefly as "Handles messages addressed to a user"
@@ -216,7 +216,7 @@ context UserManagement is {
         send event NotificationCreated to outlet UserManagementAnnouncer.Published
       }
       on query WhichNotification {
-        yield result TheNotification
+        reply result TheNotification
       }
     } with {
       briefly as "Handles messages addressed to a notification"
@@ -510,7 +510,7 @@ context WorkspaceManagement is {
         send event WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
       }
       on query WhichWorkspace {
-        yield result TheWorkspace
+        reply result TheWorkspace
       }
     } with {
       briefly as "Handles messages addressed to a workspace"
@@ -745,7 +745,7 @@ context BoardManagement is {
         send event BoardCreated to outlet BoardManagementAnnouncer.Published
       }
       on query WhichBoard {
-        yield result TheBoard
+        reply result TheBoard
       }
     } with {
       briefly as "Handles messages addressed to a board"
@@ -848,7 +848,7 @@ context BoardManagement is {
         send event ListAdded to outlet BoardManagementAnnouncer.Published
       }
       on query WhichCardList {
-        yield result TheCardList
+        reply result TheCardList
       }
     } with {
       briefly as "Handles messages addressed to a cardlist"
@@ -1018,7 +1018,7 @@ context BoardManagement is {
         send event CardAdded to outlet BoardManagementAnnouncer.Published
       }
       on query WhichCard {
-        yield result TheCard
+        reply result TheCard
       }
     } with {
       briefly as "Handles messages addressed to a card"
@@ -1108,7 +1108,7 @@ context BoardManagement is {
         send event ActivityRecorded to outlet BoardManagementAnnouncer.Published
       }
       on query WhichActivity {
-        yield result TheActivity
+        reply result TheActivity
       }
     } with {
       briefly as "Handles messages addressed to a activity"

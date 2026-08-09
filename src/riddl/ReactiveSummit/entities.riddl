@@ -125,7 +125,7 @@ context ToDoList is {
         send event ItemCompleted to outlet ItemAnnouncer.Published
       }
       on query WhichItem {
-        yield result TheItem
+        reply result TheItem
       }
     } with {
       briefly as "Handles messages addressed to a to-do item"

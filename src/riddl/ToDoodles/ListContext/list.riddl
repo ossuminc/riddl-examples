@@ -115,7 +115,7 @@ context List is {
         send event DoodleAddedToList to outlet ListAnnouncer.Published
       }
       on query WhichList {
-        yield result TheList
+        reply result TheList
       }
     } with {
       briefly as "Handles messages addressed to a doodle list"

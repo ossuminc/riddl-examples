@@ -80,7 +80,7 @@ context Doodle is {
         send event DrawingCreated to outlet DrawingAnnouncer.Published
       }
       on query WhichDrawing {
-        yield result TheDrawing
+        reply result TheDrawing
       }
     } with {
       briefly as "Handles messages addressed to a drawing"

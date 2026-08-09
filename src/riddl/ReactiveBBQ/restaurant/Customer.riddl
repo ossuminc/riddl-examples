@@ -74,7 +74,7 @@ context Customers is {
         send event CustomerRegistered to outlet CustomerAnnouncer.Published
       }
       on query WhichCustomer {
-        yield result TheCustomer
+        reply result TheCustomer
       }
     } with {
       briefly as "Handles messages addressed to a customer"

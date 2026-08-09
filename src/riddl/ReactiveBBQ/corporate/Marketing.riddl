@@ -74,7 +74,7 @@ context Marketing is {
         send event CampaignLaunched to outlet CampaignAnnouncer.Published
       }
       on query WhichCampaign {
-        yield result TheCampaign
+        reply result TheCampaign
       }
     } with {
       briefly as "Handles messages addressed to a campaign"

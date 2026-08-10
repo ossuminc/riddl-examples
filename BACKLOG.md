@@ -8,34 +8,7 @@ NOTEBOOK.md § HANDOFF.
 
 ---
 
-## 1. Watch: prettify compounds `described in file` paths
-
-The **quoting** half of this is **fixed** in rc.10-46 and verified — all
-eight examples round-trip clean, and that task is closed in
-`riddl/task/done/`. What remains is filed as
-`riddl/task/2026-08-09-prettify-absolutizes-described-in-file-path.md`.
-
-**Nothing to change here — our source is correct.** Watch item, not work.
-
-**Already verified (2026-08-08), do not repeat:**
-
-- prettify absolutizes the relative path, and re-prettifying compounds it:
-  113 → 241 → 372 chars across three passes, one extra `file://` scheme
-  each time, unbounded.
-- **Every corrupted pass validates clean.** `validate` never resolves the
-  `described in file` target — proven by deleting the referenced `.md`
-  and getting 0 errors / 0 missing / 0 completeness from the emitted file.
-- ReactiveSummit is the only affected example, the sole user of the
-  construct in the corpus.
-
-**When their fix lands:** `prettify(prettify(x))` must be byte-identical
-to `prettify(x)` for ReactiveSummit, and no emitted value may contain more
-than one `file://`. A plain round trip will **not** tell you — it passes
-today with the bug present.
-
----
-
-## 2. Decide the branch-protection posture on `main`
+## 1. Decide the branch-protection posture on `main`
 
 Every push to `main` prints:
 
@@ -56,7 +29,7 @@ urgent; it is noise either way.
 
 ---
 
-## 3. Standing instruction: keyword-named fields
+## 2. Standing instruction: keyword-named fields
 
 Two fields are named with RIDDL keywords:
 
@@ -75,7 +48,7 @@ is not lost.
 
 ---
 
-## 4. Watch, do not fix: style and usage counts
+## 3. Watch, do not fix: style and usage counts
 
 Out of scope by explicit decision — the goal is zero on errors,
 deprecations, missing and completeness only. Recorded so drift is
@@ -99,7 +72,7 @@ is legitimate in a reference corpus.
 
 ---
 
-## 5. Closed, but know this happened
+## 4. Closed, but know this happened
 
 Not work — context, so nobody rediscovers it as a defect.
 
@@ -115,8 +88,8 @@ compiler, so the thinning does not matter. Do not "fix" it without
 asking.
 
 **FooBarSameDomain is intentionally non-zero** — 5 errors, 3 missing
-under rc.10-45 and rc.10-46 alike (it was 4 and 4 under rc.9-54; only
-message granularity
+unchanged across rc.10-45, -46 and -57 (it was 4 and 4 under rc.9-54;
+only message granularity
 changed, and it still fails for the intended reason: a duplicate `Info`
 type name and the ambiguous references to it). It defines one type name
 twice so the ambiguity detector has something to catch; 2.0 promoted that

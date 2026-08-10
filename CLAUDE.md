@@ -117,7 +117,7 @@ replies a result. Migrating the corpus to rc.10 meant rewriting 31
 
 - **sbt**: 2.0.3
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.10-46-286ef815` — the pin and the staged
+- **RIDDL**: `2.0.0-rc.10-57-e012ebb9` — the pin and the staged
   `../bin/riddlc` are deliberately the **same commit**. That is the whole
   point of pinning a local build; when they drift, the library and the
   binary doing the validating disagree.
@@ -126,7 +126,7 @@ replies a result. Migrating the corpus to rc.10 meant rewriting 31
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.10-46-286ef815",
+.configure(With.Riddl.library(version = "2.0.0-rc.10-57-e012ebb9",
   nonJVMDependency = false))
 ```
 

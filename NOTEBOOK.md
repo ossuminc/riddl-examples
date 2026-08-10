@@ -4,31 +4,26 @@
 
 **Last verified: 2026-08-08**, by running the commands, not from memory.
 
-**Repo state.** On `main`, working tree clean, **everything pushed** —
-`main` and `origin/main` are both at `73949ae`. `release/1` sits at
+**Repo state.** On `main`, working tree clean. **2 commits unpushed** —
+a HANDOFF push-state correction and the rc.10-57 bump. `release/1` sits at
 `5e2ce0d` holding the pre-2.0 corpus.
 
 **Toolchain.** Staged compiler `../bin/riddlc` and the `build.sbt:21` pin
-are both **`2.0.0-rc.10-46-286ef815`** — same commit, and all four riddl
+are both **`2.0.0-rc.10-57-e012ebb9`** — same commit, and all four riddl
 artifacts resolve at that version on the dependency classpath.
 sbt 2.0.3, sbt-ossuminc 3.1.0.
 
 **Corpus is clean** — zero errors, deprecations, missing and completeness
-across all eight in-scope examples, verified against the staged rc.10-46
+across all eight in-scope examples, verified against the staged rc.10-57
 binary. `bin/validate-corpus.sh` exits 0. Nothing is half-finished.
 
-**All eight examples also round-trip clean** through
-`riddlc prettify -s true` — the first release for which that is true. The
-quoting defect that broke ReactiveSummit's round trip is fixed in rc.10-46.
+**All eight examples round-trip clean AND idempotent.** prettify → validate
+is 0/0/0/0 for every one, and `prettify(prettify(x))` is byte-identical to
+`prettify(x)` for every one. Neither held before rc.10-46, and both now do.
 
-**One open riddlc defect, and it is invisible to every check we run:**
-prettify still absolutizes `described in file` paths, and the rewrite
-**compounds** — each pass prepends another base directory, so the value
-grows by ~128 chars and gains another `file://` scheme every time. It
-parses and validates clean at every stage, because `validate` never
-resolves that target. Filed as
-`riddl/task/2026-08-09-prettify-absolutizes-described-in-file-path.md`.
-Affects ReactiveSummit only. **Our source is correct — do not "fix" it.**
+**No open riddlc defects.** Both prettify defects this repo filed are fixed
+and closed in `riddl/task/done/`, each verified here against the real
+corpus rather than taken on trust.
 
 ### In flight
 
@@ -91,25 +86,18 @@ Each of these has already cost someone time.
 Nothing incoming. Everything in `task/done/` carries a `## Results`
 section recording how each criterion was checked.
 
-Filed **outward** to riddl and awaiting their action, not ours:
-
-- `2026-08-09-prettify-absolutizes-described-in-file-path.md` — the
-  compounding-path defect above. Its predecessor (the quoting half) is
-  fixed and closed in `riddl/task/done/` with verification.
-- A corroboration appended to riddl-models'
-  `2026-08-08-reply-not-counted-as-executable.md`, noting that this repo
-  is at zero both before and after their fix and so cannot serve as its
-  regression check.
+Nothing outstanding outward either. Both prettify defects this repo filed
+are fixed and closed in `riddl/task/done/`, each with our independent
+downstream confirmation appended.
 
 ### Certainty
 
 Verified this session by running the command: riddlc version, resolved
-dependency classpath at rc.10-46, the full corpus, a prettify round trip
-on all eight examples (all clean), three successive prettify passes
-showing the path compounding 113 → 241 → 372 chars, that the emitted file
-still validates after its referenced `.md` is deleted, the negative
-fixture's failure reason, and the absence of the `classifyHandlers`
-warnings here.
+dependency classpath at rc.10-57, the full corpus, a prettify round trip
+on all eight examples, a second prettify pass on all eight and a `diff`
+against the first (all idempotent), three passes on ReactiveSummit showing
+the authored relative path surviving verbatim with zero `file://`, and
+that a deleted `described in file` target is still silent at validate time.
 
 Assumed, not verified: that riddl's `RunRiddlcOnLocalTest` "should
 validate riddl-examples dokn" still passes under rc.10. It lives in their
@@ -152,6 +140,36 @@ Remaining work:
 - None outstanding. All five task files are closed in `task/done/`.
 - The `show … to …` riddlc bug is filed against riddl; once fixed,
   restore the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-10: rc.10-57 — a bump that needed nothing
+
+`2.0.0-rc.10-57-e012ebb9`, eleven commits on from rc.10-46. **The corpus
+required no changes at all** — clean on the new binary before the pin
+moved, with style and usage counts identical to rc.10-46 and the negative
+fixture unchanged at 5/3. Worth recording precisely because it is the
+uneventful case: rc.10-45 needed 36 edits, this one needed zero.
+
+**Both prettify defects we filed are now fixed.** The compounding-path one
+was closed by riddl in the AST rather than in prettify: `URLDescription`
+stores the authored string and computes the URL at use, so there is no
+absolutization left to be idempotent about. Confirmed here on the real
+corpus rather than trusting their synthetic fixture — `ReactiveSummit.md`
+survives three passes verbatim with zero `file://`.
+
+**All eight examples are now round-trip clean *and* idempotent**, the first
+release for which both hold. The double-prettify check added as a trap last
+session is what demonstrates the second half, and it is cheap: prettify the
+output again and `diff`.
+
+One thing deliberately left open, by agreement: `validate` still does not
+resolve `described in file` targets, so a dangling reference is silent.
+Confirmed by deleting `ReactiveSummit.md` and getting 0/0/0/0. Resolving
+would have caught both defects at compile time, but it would make
+validation depend on files that may legitimately be absent — a model
+validated in CI without its docs checked out. Their call, and the better
+argument; recorded with evidence so the trade-off is not re-derived.
 
 ---
 

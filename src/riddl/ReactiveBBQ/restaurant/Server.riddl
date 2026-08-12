@@ -158,7 +158,7 @@ context Servers is {
     }
     handler ServerStoreHandler is {
       on event Restaurant.Servers.Server.ServerAdded {
-        set field Restaurant.Servers.Server.ServerFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps server storage in step with what happened"

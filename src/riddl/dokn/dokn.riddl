@@ -216,7 +216,7 @@ domain dokn is {
       }
       handler CompanyStoreHandler is {
         on event dokn.Companies.Company.CompanyAdded {
-          set field dokn.Companies.Company.fields.id to "the identifier carried by the event"
+          do "store the identifier carried by the event"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -430,7 +430,7 @@ domain dokn is {
       }
       handler DriverStoreHandler is {
         on event dokn.Drivers.Driver.DriverAddedToCompany {
-          set field dokn.Drivers.Driver.fields.id to "the identifier carried by the event"
+          do "store the identifier carried by the event"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -627,7 +627,7 @@ domain dokn is {
       }
       handler NoteStoreHandler is {
         on event dokn.Notes.Note.NoteCaptured {
-          set field dokn.Notes.Note.fields.id to "the identifier carried by the event"
+          do "store the identifier carried by the event"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -818,7 +818,7 @@ domain dokn is {
       }
       handler MediumStoreHandler is {
         on event dokn.Media.Medium.MediumStored {
-          set field dokn.Media.Medium.fields.id to "the identifier carried by the event"
+          do "store the identifier carried by the event"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -1036,7 +1036,7 @@ domain dokn is {
       }
       handler LocationStoreHandler is {
         on event dokn.Locations.Location.DeliveryLocationAdded {
-          set field dokn.Locations.Location.fields.id to "the identifier carried by the event"
+          do "store the identifier carried by the event"
         }
       } with {
         briefly as "Keeps storage in step with what happened"

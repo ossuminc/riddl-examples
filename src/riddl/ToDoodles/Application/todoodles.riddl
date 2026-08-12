@@ -50,7 +50,6 @@ application context ToDoodlesApp is {
 
   handler StudioHandler is {
     on command ToDoodles.Doodle.Drawing.CreateDrawing {
-      set field NewDoodleEntry.title to "the title the artist typed"
       put get from form StartDoodle to list Confirmation
       put "the artist's doodles, newest first" to list Gallery
     }

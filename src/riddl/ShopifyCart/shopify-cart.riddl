@@ -1159,7 +1159,7 @@ domain ShopifyCart is {
       // Message handlers
       handler CartRepositoryHandler is {
         on event ShopifyCart.ShoppingContext.Cart.CartCreated {
-          set field CartRecord.cartId to "the cart identifier carried by the event"
+          do "store the cart identifier carried by the event"
         }
 
         on event CartCreated is {
@@ -1214,12 +1214,10 @@ domain ShopifyCart is {
       handler ProductRepositoryHandler is {
         on event ProductPriceUpdated is {
           do "Update product price in Product repository"
-          set field ProductRecord.price to "the price carried by the event"
         }
 
         on event InventoryUpdated is {
           do "Update product inventory in Product repository"
-          set field ProductRecord.sku to "the sku carried by the event"
         }
       }
       with {

@@ -160,7 +160,7 @@ context Menus is {
     }
     handler MenuItemStoreHandler is {
       on event Restaurant.Menus.MenuItem.MenuItemAdded {
-        set field Restaurant.Menus.MenuItem.MenuItemFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps menuitem storage in step with what happened"
@@ -342,7 +342,7 @@ context Menus is {
     }
     handler MenuStoreHandler is {
       on event Restaurant.Menus.Menu.MenuComposed {
-        set field Restaurant.Menus.Menu.MenuFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps menu storage in step with what happened"

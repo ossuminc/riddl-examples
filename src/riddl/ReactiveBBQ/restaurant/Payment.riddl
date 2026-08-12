@@ -160,7 +160,7 @@ context Payments is {
     }
     handler PaymentStoreHandler is {
       on event Restaurant.Payments.Payment.Paid {
-        set field Restaurant.Payments.Payment.PaymentFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps payment storage in step with what happened"

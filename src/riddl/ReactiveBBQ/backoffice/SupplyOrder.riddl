@@ -168,7 +168,7 @@ context SupplyOrder is {
     }
     handler SupplyStoreHandler is {
       on event BackOffice.SupplyOrder.Supply.SupplyOrdered {
-        set field BackOffice.SupplyOrder.Supply.SupplyFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps supply storage in step with what happened"

@@ -179,7 +179,7 @@ context Doodle is {
     }
     handler StoreHandler is {
       on event DrawingCreated {
-        set field DrawingData.title to "the title carried by the event"
+        do "store the title carried by the event"
       }
     } with {
       briefly as "Keeps storage in step with what happened"

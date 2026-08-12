@@ -168,7 +168,7 @@ context Marketing is {
     }
     handler CampaignStoreHandler is {
       on event Corporate.Marketing.Campaign.CampaignLaunched {
-        set field Corporate.Marketing.Campaign.CampaignFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps campaign storage in step with what happened"

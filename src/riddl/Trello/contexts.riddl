@@ -352,7 +352,7 @@ context UserManagement is {
     }
     handler UserManagementStoreHandler is {
       on event Trello.UserManagement.Account.AccountCreated {
-        set field Trello.UserManagement.Account.AccountFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps storage in step with what happened"
@@ -624,7 +624,7 @@ context WorkspaceManagement is {
     }
     handler WorkspaceManagementStoreHandler is {
       on event Trello.WorkspaceManagement.Workspace.WorkspaceCreated {
-        set field Trello.WorkspaceManagement.Workspace.WorkspaceFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps storage in step with what happened"
@@ -1260,7 +1260,7 @@ context BoardManagement is {
     }
     handler BoardManagementStoreHandler is {
       on event Trello.BoardManagement.Board.BoardCreated {
-        set field Trello.BoardManagement.Board.BoardFields.id to "the identifier carried by the event"
+        do "store the identifier carried by the event"
       }
     } with {
       briefly as "Keeps storage in step with what happened"

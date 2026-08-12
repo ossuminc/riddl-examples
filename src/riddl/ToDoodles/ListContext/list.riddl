@@ -215,7 +215,7 @@ context List is {
     }
     handler StoreHandler is {
       on event ListCreated {
-        set field DoodleListData.name to "the name carried by the event"
+        do "store the name carried by the event"
       }
     } with {
       briefly as "Keeps storage in step with what happened"

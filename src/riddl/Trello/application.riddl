@@ -47,7 +47,6 @@ application context TrelloUI is {
 
   handler BoardsPageHandler is {
     on command Trello.BoardManagement.Board.CreateBoard {
-      set field BoardEntry.title to "the title the member typed"
       put get from form NewBoard to list JustCreated
     }
   } with {

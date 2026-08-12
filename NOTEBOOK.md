@@ -2,6 +2,38 @@
 
 ## HANDOFF
 
+**Incoming from riddl, 2026-08-12 — repository handlers no longer write state.**
+Done here directly (Reid approved crossing the repo boundary) because riddl's
+`RunRiddlcOnLocalTest` validates `dokn` and `ShopifyCart` from this repo, so the
+riddl gate was red until these landed. All 6 affected models were fixed, not just
+the 2 the gate covers.
+
+riddlc now rejects `set` in a repository handler: a repository owns no state to
+write. 29 sites, in two shapes — 4 removed outright (other statements remained),
+and **25 turned into a `do` carrying the same words**, because the `set` was the
+clause's only statement and deleting it would leave an empty on-clause, which is
+a parse error:
+
+    on event CompanyAdded {
+      do "store the identifier carried by the event"   // was: set field …
+    }
+
+That is the endorsed idiom, not a workaround: a repository's on-clause describes
+persistence, and a `do` standing in for the storage operation IS the modelling.
+riddlc's "contains only prompt statements" warning used to punish exactly this
+shape — which is what taught these models to write `set` — and it now exempts
+repositories, in the same riddl change.
+
+**Requires riddlc at or after riddl `release/2` `dd5f539f0`+.**
+
+**Two PRE-EXISTING errors remain and are NOT from this work**, confirmed by
+re-running the previous riddlc build and getting identical counts:
+`src/test/input/hugoOptions.conf` (no `validate` command defined — it is a hugo
+options fixture) and `src/riddl/FooBarSameDomain` (5 × duplicate content names).
+Neither is covered by riddl's gate test.
+
+
+
 **Last verified: 2026-08-08**, by running the commands, not from memory.
 
 **Repo state.** On `main`, working tree clean. **2 commits unpushed** —

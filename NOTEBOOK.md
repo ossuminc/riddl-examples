@@ -29,13 +29,10 @@ unvalidated.
 and closed in `riddl/task/done/`, each verified here against the real
 corpus rather than taken on trust.
 
-**One piece of dead weight, deliberately left alone:**
-`src/test/input/hugoOptions.conf` is a fixture for the `hugo` command that
-was removed from the product, alongside this repo's deleted Scala tests. It
-is unreferenced (riddl's gate names three `.conf` files explicitly and does
-not enumerate) and is not even valid HOCON — an unterminated string and a
-Scala `new URL(...)` in it. Deleting it is a one-line change nobody has
-asked for; raised, not taken.
+**`src/` is now models only.** `src/test/input/hugoOptions.conf` — the last
+fixture for the removed `hugo` command — was deleted on 2026-08-13, taking
+the whole `src/test/` tree with it. `src/riddl/` is all that remains, which
+matches the fact that riddlc is this repo's only test.
 
 ### In flight
 
@@ -179,13 +176,14 @@ model, since a new file that nothing includes would validate as nothing:
 # find src -name '*.riddl'   → expect UNREACHED: 0
 ```
 
-**One vestigial file, raised not removed.** `src/test/input/hugoOptions.conf`
-is a fixture for the `hugo` command that was removed from the product along
-with this repo's Scala tests. Nothing references it — riddl's
-`RunRiddlcOnLocalTest` names three `.conf` files explicitly rather than
-enumerating — and it is not valid HOCON anyway (unterminated string, a
-Scala `new URL(...)` expression). Deleting it is a one-line change outside
-the scope of a version bump.
+**Removed the last vestige of the `hugo` command.**
+`src/test/input/hugoOptions.conf` was a fixture for a command deleted from
+the product along with this repo's Scala tests. Nothing referenced it —
+riddl's `RunRiddlcOnLocalTest` names three `.conf` files explicitly rather
+than enumerating — and it was not valid HOCON anyway (unterminated string,
+a Scala `new URL(...)` expression). Raised during the bump and removed on
+Reid's go-ahead. It was the only file under `src/test/`, so that tree is
+gone and `src/` is now models only.
 
 ---
 

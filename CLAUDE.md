@@ -104,6 +104,22 @@ replies a result. Migrating the corpus to rc.10 meant rewriting 31
   for output.
 - Entity handlers may use `on activate` / `on passivate` lifecycle
   clauses (side-effect-free — no send/tell/reply/morph/become).
+- **`set` is banned in a repository handler** (ERROR) — a repository owns
+  no state to write. When the `set` was the clause's only statement, the
+  fix is a `do` carrying the same words, because an empty on-clause is a
+  parse error:
+
+  ```riddl
+  on event CompanyAdded {
+    do "store the identifier carried by the event"   // was: set field …
+  }
+  ```
+
+  **This is the endorsed idiom, not a workaround.** A repository's
+  on-clause describes persistence, and a `do` standing in for the storage
+  operation IS the modelling. The "contains only prompt statements"
+  warning used to punish this shape — which is what taught the older
+  models to write `set` — and it now exempts repositories.
 
 **Metadata** (after definitions):
 ```riddl
@@ -115,18 +131,20 @@ replies a result. Migrating the corpus to rc.10 meant rewriting 31
 
 ## Dependencies
 
-- **sbt**: 2.0.3
+- **sbt**: 2.0.6
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.10-57-e012ebb9` — the pin and the staged
-  `../bin/riddlc` are deliberately the **same commit**. That is the whole
-  point of pinning a local build; when they drift, the library and the
-  binary doing the validating disagree.
+- **RIDDL**: `2.0.0-rc.13` — the pin and the staged `../bin/riddlc` must
+  always be the **same build**. When they drift, the library and the
+  binary doing the validating disagree, and the corpus result no longer
+  says anything about the pin. This has been a released tag since rc.13;
+  earlier pins were local snapshots (`2.0.0-rc.10-57-e012ebb9`), resolved
+  from `~/.ivy2/local`. Either is fine — sameness is the requirement.
 - **Scala**: 3.8.4 (sbt-ossuminc default)
 
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.10-57-e012ebb9",
+.configure(With.Riddl.library(version = "2.0.0-rc.13",
   nonJVMDependency = false))
 ```
 

@@ -2,60 +2,40 @@
 
 ## HANDOFF
 
-**Incoming from riddl, 2026-08-12 — repository handlers no longer write state.**
-Done here directly (Reid approved crossing the repo boundary) because riddl's
-`RunRiddlcOnLocalTest` validates `dokn` and `ShopifyCart` from this repo, so the
-riddl gate was red until these landed. All 6 affected models were fixed, not just
-the 2 the gate covers.
+**Last verified: 2026-08-13**, by running the commands, not from memory.
 
-riddlc now rejects `set` in a repository handler: a repository owns no state to
-write. 29 sites, in two shapes — 4 removed outright (other statements remained),
-and **25 turned into a `do` carrying the same words**, because the `set` was the
-clause's only statement and deleting it would leave an empty on-clause, which is
-a parse error:
-
-    on event CompanyAdded {
-      do "store the identifier carried by the event"   // was: set field …
-    }
-
-That is the endorsed idiom, not a workaround: a repository's on-clause describes
-persistence, and a `do` standing in for the storage operation IS the modelling.
-riddlc's "contains only prompt statements" warning used to punish exactly this
-shape — which is what taught these models to write `set` — and it now exempts
-repositories, in the same riddl change.
-
-**Requires riddlc at or after riddl `release/2` `dd5f539f0`+.**
-
-**Two PRE-EXISTING errors remain and are NOT from this work**, confirmed by
-re-running the previous riddlc build and getting identical counts:
-`src/test/input/hugoOptions.conf` (no `validate` command defined — it is a hugo
-options fixture) and `src/riddl/FooBarSameDomain` (5 × duplicate content names).
-Neither is covered by riddl's gate test.
-
-
-
-**Last verified: 2026-08-08**, by running the commands, not from memory.
-
-**Repo state.** On `main`, working tree clean. **2 commits unpushed** —
-a HANDOFF push-state correction and the rc.10-57 bump. `release/1` sits at
-`5e2ce0d` holding the pre-2.0 corpus.
+**Repo state.** On `main`, working tree clean. **1 commit unpushed** — the
+rc.13 bump. `release/1` sits at `5e2ce0d` holding the pre-2.0 corpus.
 
 **Toolchain.** Staged compiler `../bin/riddlc` and the `build.sbt:21` pin
-are both **`2.0.0-rc.10-57-e012ebb9`** — same commit, and all four riddl
-artifacts resolve at that version on the dependency classpath.
-sbt 2.0.3, sbt-ossuminc 3.1.0.
+are both **`2.0.0-rc.13`** — the first *released tag* rather than a local
+snapshot; all four riddl artifacts resolve at it from `~/.ivy2/local`.
+sbt 2.0.6, sbt-ossuminc 3.1.0.
 
 **Corpus is clean** — zero errors, deprecations, missing and completeness
-across all eight in-scope examples, verified against the staged rc.10-57
+across all eight in-scope examples, verified against the staged rc.13
 binary. `bin/validate-corpus.sh` exits 0. Nothing is half-finished.
 
 **All eight examples round-trip clean AND idempotent.** prettify → validate
 is 0/0/0/0 for every one, and `prettify(prettify(x))` is byte-identical to
-`prettify(x)` for every one. Neither held before rc.10-46, and both now do.
+`prettify(x)` for every one.
+
+**Harness coverage is total**, checked this session rather than assumed:
+all **41** `.riddl` files in the repo are reachable by `include` from the
+nine entry points in `bin/validate-corpus.sh`. No model is going
+unvalidated.
 
 **No open riddlc defects.** Both prettify defects this repo filed are fixed
 and closed in `riddl/task/done/`, each verified here against the real
 corpus rather than taken on trust.
+
+**One piece of dead weight, deliberately left alone:**
+`src/test/input/hugoOptions.conf` is a fixture for the `hugo` command that
+was removed from the product, alongside this repo's deleted Scala tests. It
+is unreferenced (riddl's gate names three `.conf` files explicitly and does
+not enumerate) and is not even valid HOCON — an unterminated string and a
+Scala `new URL(...)` in it. Deleting it is a one-line change nobody has
+asked for; raised, not taken.
 
 ### In flight
 
@@ -172,6 +152,74 @@ Remaining work:
 - None outstanding. All five task files are closed in `task/done/`.
 - The `show … to …` riddlc bug is filed against riddl; once fixed,
   restore the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-13: upgrade to rc.13
+
+`2.0.0-rc.13` — the first **released tag** this repo has pinned; every
+earlier pin was a local snapshot like `2.0.0-rc.10-57-e012ebb9`. Both
+resolve from `~/.ivy2/local`; what matters is that the pin and
+`../bin/riddlc` are the same build, not which form the version takes.
+
+**The corpus needed no changes.** Clean on the new binary before the pin
+moved, style and usage counts identical to rc.10-57, negative fixture
+unchanged at 5/3, all eight round-trip clean and idempotent. That the jump
+crossed three RC minors (rc.10 → rc.13) without a single model edit is
+largely because the repository-handler change below had already landed.
+
+**Harness coverage verified rather than assumed.** All **41** `.riddl`
+files in the repo are reachable by `include` from the nine entry points in
+`bin/validate-corpus.sh` — so "the corpus is clean" really does mean every
+model, not merely every entry point. Worth re-running after anyone adds a
+model, since a new file that nothing includes would validate as nothing:
+
+```python
+# walk `include "name"` transitively from each entry root, diff against
+# find src -name '*.riddl'   → expect UNREACHED: 0
+```
+
+**One vestigial file, raised not removed.** `src/test/input/hugoOptions.conf`
+is a fixture for the `hugo` command that was removed from the product along
+with this repo's Scala tests. Nothing references it — riddl's
+`RunRiddlcOnLocalTest` names three `.conf` files explicitly rather than
+enumerating — and it is not valid HOCON anyway (unterminated string, a
+Scala `new URL(...)` expression). Deleting it is a one-line change outside
+the scope of a version bump.
+
+---
+
+## Session 2026-08-12: repository handlers stop writing state
+
+Not our session — done here directly by the riddl session with Reid's
+approval to cross the repo boundary, because riddl's `RunRiddlcOnLocalTest`
+validates `dokn` and `ShopifyCart` out of this repo and the gate was red
+until it landed. Recorded here because the HANDOFF it was written into is
+transient, and the idiom below is durable.
+
+riddlc now **rejects `set` in a repository handler** — a repository owns no
+state to write. 29 sites across 6 models (not just the 2 the gate covers),
+in two shapes:
+
+- **4 removed outright**, where other statements remained in the clause.
+- **25 became a `do` carrying the same words**, because the `set` was the
+  clause's only statement and deleting it would leave an empty on-clause,
+  which is a parse error:
+
+```riddl
+on event CompanyAdded {
+  do "store the identifier carried by the event"   // was: set field …
+}
+```
+
+**That is the endorsed idiom, not a workaround.** A repository's on-clause
+describes persistence, and a `do` standing in for the storage operation IS
+the modelling. riddlc's "contains only prompt statements" warning used to
+punish exactly this shape — which is what taught these models to write
+`set` in the first place — and the same riddl change exempts repositories
+from it.
+
+Requires riddlc at or after riddl `release/2` `dd5f539f0`.
 
 ---
 

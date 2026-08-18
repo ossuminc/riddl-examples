@@ -22,7 +22,11 @@ domain Restaurant is {
       }
       handler CustomerRequestsHandler is {
         on command Restaurant.Customers.Customer.RegisterCustomer {
-          send command Restaurant.Customers.Customer.RegisterCustomer to outlet CustomerSubmissions
+          send command Restaurant.Customers.Customer.RegisterCustomer(
+            id = prompt("the id carried by RegisterCustomer"),
+            name = prompt("the name carried by RegisterCustomer"),
+            phone = prompt("the phone carried by RegisterCustomer")
+          ) to outlet CustomerSubmissions
         }
         on other {
           do "ignore requests that are not about customers"
@@ -49,7 +53,11 @@ domain Restaurant is {
       }
       handler TableRequestsHandler is {
         on command Restaurant.Tables.Table.AddTable {
-          send command Restaurant.Tables.Table.AddTable to outlet TableSubmissions
+          send command Restaurant.Tables.Table.AddTable(
+            id = prompt("the id carried by AddTable"),
+            seats = prompt("the seats carried by AddTable"),
+            section = prompt("the section carried by AddTable")
+          ) to outlet TableSubmissions
         }
         on other {
           do "ignore requests that are not about tables"
@@ -76,7 +84,11 @@ domain Restaurant is {
       }
       handler ServerRequestsHandler is {
         on command Restaurant.Servers.Server.AddServer {
-          send command Restaurant.Servers.Server.AddServer to outlet ServerSubmissions
+          send command Restaurant.Servers.Server.AddServer(
+            id = prompt("the id carried by AddServer"),
+            name = prompt("the name carried by AddServer"),
+            section = prompt("the section carried by AddServer")
+          ) to outlet ServerSubmissions
         }
         on other {
           do "ignore requests that are not about servers"
@@ -103,7 +115,11 @@ domain Restaurant is {
       }
       handler LocationRequestsHandler is {
         on command Restaurant.Locations.Location.OpenLocation {
-          send command Restaurant.Locations.Location.OpenLocation to outlet LocationSubmissions
+          send command Restaurant.Locations.Location.OpenLocation(
+            id = prompt("the id carried by OpenLocation"),
+            name = prompt("the name carried by OpenLocation"),
+            city = prompt("the city carried by OpenLocation")
+          ) to outlet LocationSubmissions
         }
         on other {
           do "ignore requests that are not about locations"
@@ -130,7 +146,11 @@ domain Restaurant is {
       }
       handler OrderRequestsHandler is {
         on command Restaurant.Orders.Order.PlaceOrder {
-          send command Restaurant.Orders.Order.PlaceOrder to outlet OrderSubmissions
+          send command Restaurant.Orders.Order.PlaceOrder(
+            id = prompt("the id carried by PlaceOrder"),
+            customerName = prompt("the customerName carried by PlaceOrder"),
+            total = prompt("the total carried by PlaceOrder")
+          ) to outlet OrderSubmissions
         }
         on other {
           do "ignore requests that are not about orders"
@@ -157,7 +177,12 @@ domain Restaurant is {
       }
       handler PaymentRequestsHandler is {
         on command Restaurant.Payments.Payment.Pay {
-          send command Restaurant.Payments.Payment.Pay to outlet PaymentSubmissions
+          send command Restaurant.Payments.Payment.Pay(
+            id = prompt("the id carried by Pay"),
+            orderAmount = prompt("the orderAmount carried by Pay"),
+            tipAmount = prompt("the tipAmount carried by Pay"),
+            cardToken = prompt("the cardToken carried by Pay")
+          ) to outlet PaymentSubmissions
         }
         on other {
           do "ignore requests that are not about payments"
@@ -184,7 +209,13 @@ domain Restaurant is {
       }
       handler ReservationRequestsHandler is {
         on command Restaurant.Reservations.Reservation.BookTable {
-          send command Restaurant.Reservations.Reservation.BookTable to outlet ReservationSubmissions
+          send command Restaurant.Reservations.Reservation.BookTable(
+            id = prompt("the id carried by BookTable"),
+            partyName = prompt("the partyName carried by BookTable"),
+            phoneNumber = prompt("the phoneNumber carried by BookTable"),
+            time = prompt("the time carried by BookTable"),
+            date = prompt("the date carried by BookTable")
+          ) to outlet ReservationSubmissions
         }
         on other {
           do "ignore requests that are not about reservations"
@@ -211,7 +242,11 @@ domain Restaurant is {
       }
       handler OrderViewerRequestsHandler is {
         on command Restaurant.Kitchen.OrderViewer.ShowOrders {
-          send command Restaurant.Kitchen.OrderViewer.ShowOrders to outlet OrderViewerSubmissions
+          send command Restaurant.Kitchen.OrderViewer.ShowOrders(
+            id = prompt("the id carried by ShowOrders"),
+            viewType = prompt("the viewType carried by ShowOrders"),
+            station = prompt("the station carried by ShowOrders")
+          ) to outlet OrderViewerSubmissions
         }
         on other {
           do "ignore requests that are not about orderviewers"
@@ -238,7 +273,12 @@ domain Restaurant is {
       }
       handler MenuItemRequestsHandler is {
         on command Restaurant.Menus.MenuItem.AddMenuItem {
-          send command Restaurant.Menus.MenuItem.AddMenuItem to outlet MenuItemSubmissions
+          send command Restaurant.Menus.MenuItem.AddMenuItem(
+            id = prompt("the id carried by AddMenuItem"),
+            name = prompt("the name carried by AddMenuItem"),
+            description = prompt("the description carried by AddMenuItem"),
+            price = prompt("the price carried by AddMenuItem")
+          ) to outlet MenuItemSubmissions
         }
         on other {
           do "ignore requests that are not about menuitems"
@@ -265,7 +305,11 @@ domain Restaurant is {
       }
       handler MenuRequestsHandler is {
         on command Restaurant.Menus.Menu.ComposeMenu {
-          send command Restaurant.Menus.Menu.ComposeMenu to outlet MenuSubmissions
+          send command Restaurant.Menus.Menu.ComposeMenu(
+            id = prompt("the id carried by ComposeMenu"),
+            title = prompt("the title carried by ComposeMenu"),
+            season = prompt("the season carried by ComposeMenu")
+          ) to outlet MenuSubmissions
         }
         on other {
           do "ignore requests that are not about menus"
@@ -292,7 +336,12 @@ domain Restaurant is {
       }
       handler LoyaltyAccountRequestsHandler is {
         on command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
-          send command Restaurant.Loyalty.LoyaltyAccount.AccruePoints to outlet LoyaltyAccountSubmissions
+          send command Restaurant.Loyalty.LoyaltyAccount.AccruePoints(
+            id = prompt("the id carried by AccruePoints"),
+            points = prompt("the points carried by AccruePoints"),
+            accrualRate = prompt("the accrualRate carried by AccruePoints"),
+            redemptionRate = prompt("the redemptionRate carried by AccruePoints")
+          ) to outlet LoyaltyAccountSubmissions
         }
         on other {
           do "ignore requests that are not about loyaltyaccounts"
@@ -319,7 +368,7 @@ domain Restaurant is {
     }
   }
 
-  connector CustomerRequests is {
+  persistent connector CustomerRequests is {
     from outlet Restaurant.RestaurantFrontEnd.CustomerRequests.CustomerSubmissions
     to inlet Restaurant.Customers.IntakeCustomer.Requests
   } with {
@@ -328,10 +377,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector TableRequests is {
+  persistent connector TableRequests is {
     from outlet Restaurant.RestaurantFrontEnd.TableRequests.TableSubmissions
     to inlet Restaurant.Tables.IntakeTable.Requests
   } with {
@@ -340,10 +388,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector ServerRequests is {
+  persistent connector ServerRequests is {
     from outlet Restaurant.RestaurantFrontEnd.ServerRequests.ServerSubmissions
     to inlet Restaurant.Servers.IntakeServer.Requests
   } with {
@@ -352,10 +399,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector LocationRequests is {
+  persistent connector LocationRequests is {
     from outlet Restaurant.RestaurantFrontEnd.LocationRequests.LocationSubmissions
     to inlet Restaurant.Locations.IntakeLocation.Requests
   } with {
@@ -364,10 +410,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector OrderRequests is {
+  persistent connector OrderRequests is {
     from outlet Restaurant.RestaurantFrontEnd.OrderRequests.OrderSubmissions
     to inlet Restaurant.Orders.IntakeOrder.Requests
   } with {
@@ -376,10 +421,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector PaymentRequests is {
+  persistent connector PaymentRequests is {
     from outlet Restaurant.RestaurantFrontEnd.PaymentRequests.PaymentSubmissions
     to inlet Restaurant.Payments.IntakePayment.Requests
   } with {
@@ -388,10 +432,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector ReservationRequests is {
+  persistent connector ReservationRequests is {
     from outlet Restaurant.RestaurantFrontEnd.ReservationRequests.ReservationSubmissions
     to inlet Restaurant.Reservations.IntakeReservation.Requests
   } with {
@@ -400,10 +443,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector OrderViewerRequests is {
+  persistent connector OrderViewerRequests is {
     from outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.OrderViewerSubmissions
     to inlet Restaurant.Kitchen.IntakeOrderViewer.Requests
   } with {
@@ -412,10 +454,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector MenuItemRequests is {
+  persistent connector MenuItemRequests is {
     from outlet Restaurant.RestaurantFrontEnd.MenuItemRequests.MenuItemSubmissions
     to inlet Restaurant.Menus.IntakeMenuItem.Requests
   } with {
@@ -424,10 +465,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector MenuRequests is {
+  persistent connector MenuRequests is {
     from outlet Restaurant.RestaurantFrontEnd.MenuRequests.MenuSubmissions
     to inlet Restaurant.Menus.IntakeMenu.Requests
   } with {
@@ -436,10 +476,9 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector LoyaltyAccountRequests is {
+  persistent connector LoyaltyAccountRequests is {
     from outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountRequests.LoyaltyAccountSubmissions
     to inlet Restaurant.Loyalty.IntakeLoyaltyAccount.Requests
   } with {
@@ -448,7 +487,6 @@ domain Restaurant is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
 } with {

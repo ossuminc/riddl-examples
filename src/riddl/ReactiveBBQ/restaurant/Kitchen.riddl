@@ -10,6 +10,7 @@ context Kitchen is {
   entity OrderViewer is {
 
     command ShowOrders is {
+      id is Id(OrderViewer),
       viewType is String,
       station is String
     } with {
@@ -70,11 +71,20 @@ context Kitchen is {
         set field Restaurant.Kitchen.OrderViewer.OrderViewerFields.id to "a freshly minted identifier"
       }
       on command ShowOrders {
-        morph entity OrderViewer to state OrderViewerState with record Restaurant.Kitchen.OrderViewer.OrderViewerFields
-        send event OrdersShown to outlet OrderViewerAnnouncer.Published
+        morph entity OrderViewer to state OrderViewerState with record Restaurant.Kitchen.OrderViewer.OrderViewerFields(
+          id = prompt("the id of the resulting OrderViewer state"),
+          viewType = prompt("the viewType of the resulting OrderViewer state"),
+          station = prompt("the station of the resulting OrderViewer state")
+        )
+        send event OrdersShown(
+          id = prompt("the id carried by OrdersShown")
+        ) to outlet OrderViewerAnnouncer.Published
       }
       on query WhichOrderViewer {
-        reply result TheOrderViewer
+        reply result TheOrderViewer(
+          id = prompt("the id carried by TheOrderViewer"),
+          summary = prompt("the summary carried by TheOrderViewer")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a orderviewer"
@@ -99,7 +109,9 @@ context Kitchen is {
     }
     handler OrderViewerAnnouncerHandler is {
       on event Restaurant.Kitchen.OrderViewer.OrdersShown {
-        send event Restaurant.Kitchen.OrderViewer.OrdersShown to outlet OrderViewerAnnouncer.Published
+        send event Restaurant.Kitchen.OrderViewer.OrdersShown(
+          id = prompt("the id carried by OrdersShown")
+        ) to outlet OrderViewerAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a orderviewer event"
@@ -126,7 +138,11 @@ context Kitchen is {
     }
     handler IntakeOrderViewerHandler is {
       on command Restaurant.Kitchen.OrderViewer.ShowOrders {
-        tell command Restaurant.Kitchen.OrderViewer.ShowOrders to entity OrderViewer
+        tell command Restaurant.Kitchen.OrderViewer.ShowOrders(
+          id = prompt("the id carried by ShowOrders"),
+          viewType = prompt("the viewType carried by ShowOrders"),
+          station = prompt("the station carried by ShowOrders")
+        ) to entity OrderViewer
       }
     } with {
       briefly as "Dispatches arriving orderviewer commands"

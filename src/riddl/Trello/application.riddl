@@ -66,7 +66,11 @@ application context TrelloUI is {
       }
       handler UserManagementRequestsHandler is {
         on command Trello.UserManagement.Account.CreateAccount {
-          send command Trello.UserManagement.Account.CreateAccount to outlet UserManagementSubmissions
+          send command Trello.UserManagement.Account.CreateAccount(
+            id = prompt("the id carried by CreateAccount"),
+            username = prompt("the username carried by CreateAccount"),
+            email = prompt("the email carried by CreateAccount")
+          ) to outlet UserManagementSubmissions
         }
         on other {
           do "forward whatever else the member asked of UserManagement"
@@ -93,7 +97,11 @@ application context TrelloUI is {
       }
       handler WorkspaceManagementRequestsHandler is {
         on command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
-          send command Trello.WorkspaceManagement.Workspace.CreateWorkspace to outlet WorkspaceManagementSubmissions
+          send command Trello.WorkspaceManagement.Workspace.CreateWorkspace(
+            id = prompt("the id carried by CreateWorkspace"),
+            name = prompt("the name carried by CreateWorkspace"),
+            visibility = prompt("the visibility carried by CreateWorkspace")
+          ) to outlet WorkspaceManagementSubmissions
         }
         on other {
           do "forward whatever else the member asked of WorkspaceManagement"
@@ -120,7 +128,11 @@ application context TrelloUI is {
       }
       handler BoardManagementRequestsHandler is {
         on command Trello.BoardManagement.Board.CreateBoard {
-          send command Trello.BoardManagement.Board.CreateBoard to outlet BoardManagementSubmissions
+          send command Trello.BoardManagement.Board.CreateBoard(
+            id = prompt("the id carried by CreateBoard"),
+            title = prompt("the title carried by CreateBoard"),
+            visibility = prompt("the visibility carried by CreateBoard")
+          ) to outlet BoardManagementSubmissions
         }
         on other {
           do "forward whatever else the member asked of BoardManagement"

@@ -10,6 +10,7 @@ context Payments is {
   entity Payment is {
 
     command Pay is {
+      id is Id(Payment),
       orderAmount is Number,
       tipAmount is Number,
       cardToken is String
@@ -72,11 +73,19 @@ context Payments is {
         set field Restaurant.Payments.Payment.PaymentFields.id to "a freshly minted identifier"
       }
       on command Pay {
-        morph entity Payment to state PaymentState with record Restaurant.Payments.Payment.PaymentFields
-        send event Paid to outlet PaymentAnnouncer.Published
+        morph entity Payment to state PaymentState with record Restaurant.Payments.Payment.PaymentFields(
+          id = prompt("the id of the resulting Payment state"),
+          orderAmount = prompt("the orderAmount of the resulting Payment state"),
+          tipAmount = prompt("the tipAmount of the resulting Payment state"),
+          cardToken = prompt("the cardToken of the resulting Payment state")
+        )
+        send event Paid(id = prompt("the id carried by Paid")) to outlet PaymentAnnouncer.Published
       }
       on query WhichPayment {
-        reply result ThePayment
+        reply result ThePayment(
+          id = prompt("the id carried by ThePayment"),
+          summary = prompt("the summary carried by ThePayment")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a payment"
@@ -101,7 +110,9 @@ context Payments is {
     }
     handler PaymentAnnouncerHandler is {
       on event Restaurant.Payments.Payment.Paid {
-        send event Restaurant.Payments.Payment.Paid to outlet PaymentAnnouncer.Published
+        send event Restaurant.Payments.Payment.Paid(
+          id = prompt("the id carried by Paid")
+        ) to outlet PaymentAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a payment event"
@@ -128,7 +139,12 @@ context Payments is {
     }
     handler IntakePaymentHandler is {
       on command Restaurant.Payments.Payment.Pay {
-        tell command Restaurant.Payments.Payment.Pay to entity Payment
+        tell command Restaurant.Payments.Payment.Pay(
+          id = prompt("the id carried by Pay"),
+          orderAmount = prompt("the orderAmount carried by Pay"),
+          tipAmount = prompt("the tipAmount carried by Pay"),
+          cardToken = prompt("the cardToken carried by Pay")
+        ) to entity Payment
       }
     } with {
       briefly as "Dispatches arriving payment commands"

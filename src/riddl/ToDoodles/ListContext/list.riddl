@@ -38,6 +38,7 @@ context List is {
   entity DoodleList is {
 
     command CreateList is {
+      id is Id(DoodleList),
       name is String
     } with {
       briefly as "Ask for a new, empty doodle list"
@@ -107,15 +108,28 @@ context List is {
         set field DoodleListData.name to "untitled"
       }
       on command CreateList {
-        morph entity DoodleList to state DoodleListState with record DoodleListData
-        send event ListCreated to outlet ListAnnouncer.Published
+        morph entity DoodleList to state DoodleListState with record DoodleListData(
+          id = prompt("the id of the resulting List state"),
+          name = prompt("the name of the resulting List state"),
+          entries = prompt("the entries of the resulting List state")
+        )
+        send event ListCreated(
+          id = prompt("the id carried by ListCreated"),
+          name = prompt("the name carried by ListCreated")
+        ) to outlet ListAnnouncer.Published
       }
       on command AddDoodleToList {
         set field DoodleListData.entries to "the list's members plus this doodle"
-        send event DoodleAddedToList to outlet ListAnnouncer.Published
+        send event DoodleAddedToList(
+          list = prompt("the list carried by DoodleAddedToList"),
+          doodle = prompt("the doodle carried by DoodleAddedToList")
+        ) to outlet ListAnnouncer.Published
       }
       on query WhichList {
-        reply result TheList
+        reply result TheList(
+          id = prompt("the id carried by TheList"),
+          name = prompt("the name carried by TheList")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a doodle list"
@@ -151,10 +165,16 @@ context List is {
     }
     handler ListAnnouncerHandler is {
       on event ListCreated {
-        send event ListCreated to outlet ListAnnouncer.Published
+        send event ListCreated(
+          id = prompt("the id carried by ListCreated"),
+          name = prompt("the name carried by ListCreated")
+        ) to outlet ListAnnouncer.Published
       }
       on event DoodleAddedToList {
-        send event DoodleAddedToList to outlet ListAnnouncer.Published
+        send event DoodleAddedToList(
+          list = prompt("the list carried by DoodleAddedToList"),
+          doodle = prompt("the doodle carried by DoodleAddedToList")
+        ) to outlet ListAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a list event"
@@ -182,7 +202,10 @@ context List is {
     }
     handler IntakeHandler is {
       on command CreateList {
-        tell command CreateList to entity DoodleList
+        tell command CreateList(
+          id = prompt("the id carried by CreateList"),
+          name = prompt("the name carried by CreateList")
+        ) to entity DoodleList
       }
     } with {
       briefly as "Dispatches arriving commands to the right list"

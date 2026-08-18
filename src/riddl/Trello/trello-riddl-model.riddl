@@ -17,7 +17,7 @@ domain Trello is {
   include "application"
   include "epics"
 
-  connector UserManagementRequests is {
+  persistent connector UserManagementRequests is {
     from outlet Trello.TrelloUI.UserManagementRequests.UserManagementSubmissions
     to inlet Trello.UserManagement.UserManagementIntake.Requests
   } with {
@@ -26,10 +26,9 @@ domain Trello is {
       |Crosses a context boundary, so it is declared at domain scope and made
       |persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector WorkspaceManagementRequests is {
+  persistent connector WorkspaceManagementRequests is {
     from outlet Trello.TrelloUI.WorkspaceManagementRequests.WorkspaceManagementSubmissions
     to inlet Trello.WorkspaceManagement.WorkspaceManagementIntake.Requests
   } with {
@@ -38,10 +37,9 @@ domain Trello is {
       |Crosses a context boundary, so it is declared at domain scope and made
       |persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector BoardManagementRequests is {
+  persistent connector BoardManagementRequests is {
     from outlet Trello.TrelloUI.BoardManagementRequests.BoardManagementSubmissions
     to inlet Trello.BoardManagement.BoardManagementIntake.Requests
   } with {
@@ -50,7 +48,6 @@ domain Trello is {
       |Crosses a context boundary, so it is declared at domain scope and made
       |persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
 } with {

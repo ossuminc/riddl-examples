@@ -75,7 +75,10 @@ application context ToDoListUI is {
     }
     handler ItemRequestsHandler is {
       on command ReactiveSummit.ToDoList.ToDoItem.AddItem {
-        send command ReactiveSummit.ToDoList.ToDoItem.AddItem to outlet Submissions
+        send command ReactiveSummit.ToDoList.ToDoItem.AddItem(
+          id = prompt("the id carried by AddItem"),
+          content = prompt("the content carried by AddItem")
+        ) to outlet Submissions
       }
       on other {
         do "ignore interactions that do not add an item"

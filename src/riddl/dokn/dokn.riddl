@@ -53,6 +53,7 @@ domain dokn is {
     event-sourced available entity Company is {
 
       command AddCompany yields event CompanyAdded is {
+        id is Id(Company),
         mailingAddress is dokn.Companies.Address,
         primaryContactName is String,
         primaryContactPhone is dokn.Companies.MobileNumber,
@@ -114,15 +115,26 @@ domain dokn is {
 
       handler CompanyHandler is {
         on command AddCompany {
-          yield event CompanyAdded
-          send event CompanyAdded to outlet CompanyAnnouncer.Published
+          yield event CompanyAdded(id = prompt("the id carried by CompanyAdded"))
+          send event CompanyAdded(
+            id = prompt("the id carried by CompanyAdded")
+          ) to outlet CompanyAnnouncer.Published
         }
         on event CompanyAdded {
-          morph entity Company to state CompanyBase with record dokn.Companies.Company.fields
+          morph entity Company to state CompanyBase with record dokn.Companies.Company.fields(
+            id = prompt("the id of the resulting Company state"),
+            mailingAddress = prompt("the mailingAddress of the resulting Company state"),
+            primaryContactName = prompt("the primaryContactName of the resulting Company state"),
+            primaryContactPhone = prompt("the primaryContactPhone of the resulting Company state"),
+            primaryContactEmail = prompt("the primaryContactEmail of the resulting Company state")
+          )
           set field dokn.Companies.Company.fields.id to "the identifier carried by the event"
         }
         on query WhichCompany {
-          reply result TheCompany
+          reply result TheCompany(
+            id = prompt("the id carried by TheCompany"),
+            summary = prompt("the summary carried by TheCompany")
+          )
         }
       } with {
         briefly as "Handles messages addressed to a company"
@@ -147,7 +159,9 @@ domain dokn is {
       }
       handler CompanyAnnouncerHandler is {
         on event dokn.Companies.Company.CompanyAdded {
-          send event dokn.Companies.Company.CompanyAdded to outlet CompanyAnnouncer.Published
+          send event dokn.Companies.Company.CompanyAdded(
+            id = prompt("the id carried by CompanyAdded")
+          ) to outlet CompanyAnnouncer.Published
         }
         on other {
           do "ignore anything that is not a company event"
@@ -184,7 +198,13 @@ domain dokn is {
       }
       handler IntakeCompanyHandler is {
         on command dokn.Companies.Company.AddCompany {
-          tell command dokn.Companies.Company.AddCompany to entity Company
+          tell command dokn.Companies.Company.AddCompany(
+            id = prompt("the id carried by AddCompany"),
+            mailingAddress = prompt("the mailingAddress carried by AddCompany"),
+            primaryContactName = prompt("the primaryContactName carried by AddCompany"),
+            primaryContactPhone = prompt("the primaryContactPhone carried by AddCompany"),
+            primaryContactEmail = prompt("the primaryContactEmail carried by AddCompany")
+          ) to entity Company
         }
       } with {
         briefly as "Dispatches arriving commands"
@@ -279,6 +299,7 @@ domain dokn is {
     event-sourced available entity Driver is {
 
       command AddDriverToCompany yields event DriverAddedToCompany is {
+        id is Id(Driver),
         name is String,
         mobile is dokn.Drivers.MobileNumber,
         onDutyTime is TimeStamp
@@ -338,15 +359,25 @@ domain dokn is {
 
       handler DriverHandler is {
         on command AddDriverToCompany {
-          yield event DriverAddedToCompany
-          send event DriverAddedToCompany to outlet DriverAnnouncer.Published
+          yield event DriverAddedToCompany(id = prompt("the id carried by DriverAddedToCompany"))
+          send event DriverAddedToCompany(
+            id = prompt("the id carried by DriverAddedToCompany")
+          ) to outlet DriverAnnouncer.Published
         }
         on event DriverAddedToCompany {
-          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.fields
+          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.fields(
+            id = prompt("the id of the resulting Driver state"),
+            name = prompt("the name of the resulting Driver state"),
+            mobile = prompt("the mobile of the resulting Driver state"),
+            onDutyTime = prompt("the onDutyTime of the resulting Driver state")
+          )
           set field dokn.Drivers.Driver.fields.id to "the identifier carried by the event"
         }
         on query WhichDriver {
-          reply result TheDriver
+          reply result TheDriver(
+            id = prompt("the id carried by TheDriver"),
+            summary = prompt("the summary carried by TheDriver")
+          )
         }
       } with {
         briefly as "Handles messages addressed to a driver"
@@ -371,7 +402,9 @@ domain dokn is {
       }
       handler DriverAnnouncerHandler is {
         on event dokn.Drivers.Driver.DriverAddedToCompany {
-          send event dokn.Drivers.Driver.DriverAddedToCompany to outlet DriverAnnouncer.Published
+          send event dokn.Drivers.Driver.DriverAddedToCompany(
+            id = prompt("the id carried by DriverAddedToCompany")
+          ) to outlet DriverAnnouncer.Published
         }
         on other {
           do "ignore anything that is not a driver event"
@@ -398,7 +431,12 @@ domain dokn is {
       }
       handler IntakeDriverHandler is {
         on command dokn.Drivers.Driver.AddDriverToCompany {
-          tell command dokn.Drivers.Driver.AddDriverToCompany to entity Driver
+          tell command dokn.Drivers.Driver.AddDriverToCompany(
+            id = prompt("the id carried by AddDriverToCompany"),
+            name = prompt("the name carried by AddDriverToCompany"),
+            mobile = prompt("the mobile carried by AddDriverToCompany"),
+            onDutyTime = prompt("the onDutyTime carried by AddDriverToCompany")
+          ) to entity Driver
         }
       } with {
         briefly as "Dispatches arriving commands"
@@ -474,6 +512,7 @@ domain dokn is {
     event-sourced available entity Note is {
 
       command CaptureNote yields event NoteCaptured is {
+        id is Id(Note),
         text is String,
         upvoteCount is Integer,
         downvoteCount is Integer,
@@ -535,15 +574,26 @@ domain dokn is {
 
       handler NoteHandler is {
         on command CaptureNote {
-          yield event NoteCaptured
-          send event NoteCaptured to outlet NoteAnnouncer.Published
+          yield event NoteCaptured(id = prompt("the id carried by NoteCaptured"))
+          send event NoteCaptured(
+            id = prompt("the id carried by NoteCaptured")
+          ) to outlet NoteAnnouncer.Published
         }
         on event NoteCaptured {
-          morph entity Note to state NoteBase with record dokn.Notes.Note.fields
+          morph entity Note to state NoteBase with record dokn.Notes.Note.fields(
+            id = prompt("the id of the resulting Note state"),
+            text = prompt("the text of the resulting Note state"),
+            upvoteCount = prompt("the upvoteCount of the resulting Note state"),
+            downvoteCount = prompt("the downvoteCount of the resulting Note state"),
+            approved = prompt("the approved of the resulting Note state")
+          )
           set field dokn.Notes.Note.fields.id to "the identifier carried by the event"
         }
         on query WhichNote {
-          reply result TheNote
+          reply result TheNote(
+            id = prompt("the id carried by TheNote"),
+            summary = prompt("the summary carried by TheNote")
+          )
         }
       } with {
         briefly as "Handles messages addressed to a note"
@@ -568,7 +618,9 @@ domain dokn is {
       }
       handler NoteAnnouncerHandler is {
         on event dokn.Notes.Note.NoteCaptured {
-          send event dokn.Notes.Note.NoteCaptured to outlet NoteAnnouncer.Published
+          send event dokn.Notes.Note.NoteCaptured(
+            id = prompt("the id carried by NoteCaptured")
+          ) to outlet NoteAnnouncer.Published
         }
         on other {
           do "ignore anything that is not a note event"
@@ -595,7 +647,13 @@ domain dokn is {
       }
       handler IntakeNoteHandler is {
         on command dokn.Notes.Note.CaptureNote {
-          tell command dokn.Notes.Note.CaptureNote to entity Note
+          tell command dokn.Notes.Note.CaptureNote(
+            id = prompt("the id carried by CaptureNote"),
+            text = prompt("the text carried by CaptureNote"),
+            upvoteCount = prompt("the upvoteCount carried by CaptureNote"),
+            downvoteCount = prompt("the downvoteCount carried by CaptureNote"),
+            approved = prompt("the approved carried by CaptureNote")
+          ) to entity Note
         }
       } with {
         briefly as "Dispatches arriving commands"
@@ -671,6 +729,7 @@ domain dokn is {
     event-sourced available entity Medium is {
 
       command StoreMedium yields event MediumStored is {
+        id is Id(Medium),
         path is String
       } with {
         briefly as "Ask for a medium to be recorded"
@@ -726,15 +785,23 @@ domain dokn is {
 
       handler MediumHandler is {
         on command StoreMedium {
-          yield event MediumStored
-          send event MediumStored to outlet MediumAnnouncer.Published
+          yield event MediumStored(id = prompt("the id carried by MediumStored"))
+          send event MediumStored(
+            id = prompt("the id carried by MediumStored")
+          ) to outlet MediumAnnouncer.Published
         }
         on event MediumStored {
-          morph entity Medium to state MediumBase with record dokn.Media.Medium.fields
+          morph entity Medium to state MediumBase with record dokn.Media.Medium.fields(
+            id = prompt("the id of the resulting Medium state"),
+            path = prompt("the path of the resulting Medium state")
+          )
           set field dokn.Media.Medium.fields.id to "the identifier carried by the event"
         }
         on query WhichMedium {
-          reply result TheMedium
+          reply result TheMedium(
+            id = prompt("the id carried by TheMedium"),
+            summary = prompt("the summary carried by TheMedium")
+          )
         }
       } with {
         briefly as "Handles messages addressed to a medium"
@@ -759,7 +826,9 @@ domain dokn is {
       }
       handler MediumAnnouncerHandler is {
         on event dokn.Media.Medium.MediumStored {
-          send event dokn.Media.Medium.MediumStored to outlet MediumAnnouncer.Published
+          send event dokn.Media.Medium.MediumStored(
+            id = prompt("the id carried by MediumStored")
+          ) to outlet MediumAnnouncer.Published
         }
         on other {
           do "ignore anything that is not a medium event"
@@ -786,7 +855,10 @@ domain dokn is {
       }
       handler IntakeMediumHandler is {
         on command dokn.Media.Medium.StoreMedium {
-          tell command dokn.Media.Medium.StoreMedium to entity Medium
+          tell command dokn.Media.Medium.StoreMedium(
+            id = prompt("the id carried by StoreMedium"),
+            path = prompt("the path carried by StoreMedium")
+          ) to entity Medium
         }
       } with {
         briefly as "Dispatches arriving commands"
@@ -883,6 +955,7 @@ domain dokn is {
     event-sourced available entity Location is {
 
       command AddDeliveryLocation yields event DeliveryLocationAdded is {
+        id is Id(Location),
         label is String,
         address is dokn.Locations.Address,
         ticketCount is Integer,
@@ -944,15 +1017,26 @@ domain dokn is {
 
       handler LocationHandler is {
         on command AddDeliveryLocation {
-          yield event DeliveryLocationAdded
-          send event DeliveryLocationAdded to outlet LocationAnnouncer.Published
+          yield event DeliveryLocationAdded(id = prompt("the id carried by DeliveryLocationAdded"))
+          send event DeliveryLocationAdded(
+            id = prompt("the id carried by DeliveryLocationAdded")
+          ) to outlet LocationAnnouncer.Published
         }
         on event DeliveryLocationAdded {
-          morph entity Location to state LocationBase with record dokn.Locations.Location.fields
+          morph entity Location to state LocationBase with record dokn.Locations.Location.fields(
+            id = prompt("the id of the resulting Location state"),
+            label = prompt("the label of the resulting Location state"),
+            address = prompt("the address of the resulting Location state"),
+            ticketCount = prompt("the ticketCount of the resulting Location state"),
+            loadingMethod = prompt("the loadingMethod of the resulting Location state")
+          )
           set field dokn.Locations.Location.fields.id to "the identifier carried by the event"
         }
         on query WhichLocation {
-          reply result TheLocation
+          reply result TheLocation(
+            id = prompt("the id carried by TheLocation"),
+            summary = prompt("the summary carried by TheLocation")
+          )
         }
       } with {
         briefly as "Handles messages addressed to a location"
@@ -977,7 +1061,9 @@ domain dokn is {
       }
       handler LocationAnnouncerHandler is {
         on event dokn.Locations.Location.DeliveryLocationAdded {
-          send event dokn.Locations.Location.DeliveryLocationAdded to outlet LocationAnnouncer.Published
+          send event dokn.Locations.Location.DeliveryLocationAdded(
+            id = prompt("the id carried by DeliveryLocationAdded")
+          ) to outlet LocationAnnouncer.Published
         }
         on other {
           do "ignore anything that is not a location event"
@@ -1004,7 +1090,13 @@ domain dokn is {
       }
       handler IntakeLocationHandler is {
         on command dokn.Locations.Location.AddDeliveryLocation {
-          tell command dokn.Locations.Location.AddDeliveryLocation to entity Location
+          tell command dokn.Locations.Location.AddDeliveryLocation(
+            id = prompt("the id carried by AddDeliveryLocation"),
+            label = prompt("the label carried by AddDeliveryLocation"),
+            address = prompt("the address carried by AddDeliveryLocation"),
+            ticketCount = prompt("the ticketCount carried by AddDeliveryLocation"),
+            loadingMethod = prompt("the loadingMethod carried by AddDeliveryLocation")
+          ) to entity Location
         }
       } with {
         briefly as "Dispatches arriving commands"
@@ -1079,7 +1171,13 @@ domain dokn is {
       }
       handler CompanyRequestsHandler is {
         on command dokn.Companies.Company.AddCompany {
-          send command dokn.Companies.Company.AddCompany to outlet CompanySubmissions
+          send command dokn.Companies.Company.AddCompany(
+            id = prompt("the id carried by AddCompany"),
+            mailingAddress = prompt("the mailingAddress carried by AddCompany"),
+            primaryContactName = prompt("the primaryContactName carried by AddCompany"),
+            primaryContactPhone = prompt("the primaryContactPhone carried by AddCompany"),
+            primaryContactEmail = prompt("the primaryContactEmail carried by AddCompany")
+          ) to outlet CompanySubmissions
         }
         on other {
           do "ignore requests that are not about companys"
@@ -1106,7 +1204,12 @@ domain dokn is {
       }
       handler DriverRequestsHandler is {
         on command dokn.Drivers.Driver.AddDriverToCompany {
-          send command dokn.Drivers.Driver.AddDriverToCompany to outlet DriverSubmissions
+          send command dokn.Drivers.Driver.AddDriverToCompany(
+            id = prompt("the id carried by AddDriverToCompany"),
+            name = prompt("the name carried by AddDriverToCompany"),
+            mobile = prompt("the mobile carried by AddDriverToCompany"),
+            onDutyTime = prompt("the onDutyTime carried by AddDriverToCompany")
+          ) to outlet DriverSubmissions
         }
         on other {
           do "ignore requests that are not about drivers"
@@ -1133,7 +1236,13 @@ domain dokn is {
       }
       handler NoteRequestsHandler is {
         on command dokn.Notes.Note.CaptureNote {
-          send command dokn.Notes.Note.CaptureNote to outlet NoteSubmissions
+          send command dokn.Notes.Note.CaptureNote(
+            id = prompt("the id carried by CaptureNote"),
+            text = prompt("the text carried by CaptureNote"),
+            upvoteCount = prompt("the upvoteCount carried by CaptureNote"),
+            downvoteCount = prompt("the downvoteCount carried by CaptureNote"),
+            approved = prompt("the approved carried by CaptureNote")
+          ) to outlet NoteSubmissions
         }
         on other {
           do "ignore requests that are not about notes"
@@ -1160,7 +1269,10 @@ domain dokn is {
       }
       handler MediumRequestsHandler is {
         on command dokn.Media.Medium.StoreMedium {
-          send command dokn.Media.Medium.StoreMedium to outlet MediumSubmissions
+          send command dokn.Media.Medium.StoreMedium(
+            id = prompt("the id carried by StoreMedium"),
+            path = prompt("the path carried by StoreMedium")
+          ) to outlet MediumSubmissions
         }
         on other {
           do "ignore requests that are not about mediums"
@@ -1187,7 +1299,13 @@ domain dokn is {
       }
       handler LocationRequestsHandler is {
         on command dokn.Locations.Location.AddDeliveryLocation {
-          send command dokn.Locations.Location.AddDeliveryLocation to outlet LocationSubmissions
+          send command dokn.Locations.Location.AddDeliveryLocation(
+            id = prompt("the id carried by AddDeliveryLocation"),
+            label = prompt("the label carried by AddDeliveryLocation"),
+            address = prompt("the address carried by AddDeliveryLocation"),
+            ticketCount = prompt("the ticketCount carried by AddDeliveryLocation"),
+            loadingMethod = prompt("the loadingMethod carried by AddDeliveryLocation")
+          ) to outlet LocationSubmissions
         }
         on other {
           do "ignore requests that are not about locations"
@@ -1274,7 +1392,7 @@ domain dokn is {
     by author Reid
   }
 
-  connector CompanyRequests is {
+  persistent connector CompanyRequests is {
     from outlet dokn.Intake.CompanyRequests.CompanySubmissions
     to inlet dokn.Companies.IntakeCompany.Requests
   } with {
@@ -1283,10 +1401,9 @@ domain dokn is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector DriverRequests is {
+  persistent connector DriverRequests is {
     from outlet dokn.Intake.DriverRequests.DriverSubmissions
     to inlet dokn.Drivers.IntakeDriver.Requests
   } with {
@@ -1295,10 +1412,9 @@ domain dokn is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector NoteRequests is {
+  persistent connector NoteRequests is {
     from outlet dokn.Intake.NoteRequests.NoteSubmissions
     to inlet dokn.Notes.IntakeNote.Requests
   } with {
@@ -1307,10 +1423,9 @@ domain dokn is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector MediumRequests is {
+  persistent connector MediumRequests is {
     from outlet dokn.Intake.MediumRequests.MediumSubmissions
     to inlet dokn.Media.IntakeMedium.Requests
   } with {
@@ -1319,10 +1434,9 @@ domain dokn is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
-  connector LocationRequests is {
+  persistent connector LocationRequests is {
     from outlet dokn.Intake.LocationRequests.LocationSubmissions
     to inlet dokn.Locations.IntakeLocation.Requests
   } with {
@@ -1331,7 +1445,6 @@ domain dokn is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
 } with {

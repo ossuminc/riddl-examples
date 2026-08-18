@@ -13,7 +13,11 @@ domain Corporate is {
       }
       handler CampaignRequestsHandler is {
         on command Corporate.Marketing.Campaign.LaunchCampaign {
-          send command Corporate.Marketing.Campaign.LaunchCampaign to outlet CampaignSubmissions
+          send command Corporate.Marketing.Campaign.LaunchCampaign(
+            id = prompt("the id carried by LaunchCampaign"),
+            title = prompt("the title carried by LaunchCampaign"),
+            budget = prompt("the budget carried by LaunchCampaign")
+          ) to outlet CampaignSubmissions
         }
         on other {
           do "ignore requests that are not about campaigns"
@@ -39,7 +43,7 @@ domain Corporate is {
     }
   }
 
-  connector CampaignRequests is {
+  persistent connector CampaignRequests is {
     from outlet Corporate.CorporateFrontEnd.CampaignRequests.CampaignSubmissions
     to inlet Corporate.Marketing.IntakeCampaign.Requests
   } with {
@@ -48,7 +52,6 @@ domain Corporate is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
 } with {

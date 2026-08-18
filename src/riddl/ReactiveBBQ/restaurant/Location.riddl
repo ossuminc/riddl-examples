@@ -10,6 +10,7 @@ context Locations is {
   entity Location is {
 
     command OpenLocation is {
+      id is Id(Location),
       name is String,
       city is String
     } with {
@@ -70,11 +71,20 @@ context Locations is {
         set field Restaurant.Locations.Location.LocationFields.id to "a freshly minted identifier"
       }
       on command OpenLocation {
-        morph entity Location to state LocationState with record Restaurant.Locations.Location.LocationFields
-        send event LocationOpened to outlet LocationAnnouncer.Published
+        morph entity Location to state LocationState with record Restaurant.Locations.Location.LocationFields(
+          id = prompt("the id of the resulting Location state"),
+          name = prompt("the name of the resulting Location state"),
+          city = prompt("the city of the resulting Location state")
+        )
+        send event LocationOpened(
+          id = prompt("the id carried by LocationOpened")
+        ) to outlet LocationAnnouncer.Published
       }
       on query WhichLocation {
-        reply result TheLocation
+        reply result TheLocation(
+          id = prompt("the id carried by TheLocation"),
+          summary = prompt("the summary carried by TheLocation")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a location"
@@ -99,7 +109,9 @@ context Locations is {
     }
     handler LocationAnnouncerHandler is {
       on event Restaurant.Locations.Location.LocationOpened {
-        send event Restaurant.Locations.Location.LocationOpened to outlet LocationAnnouncer.Published
+        send event Restaurant.Locations.Location.LocationOpened(
+          id = prompt("the id carried by LocationOpened")
+        ) to outlet LocationAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a location event"
@@ -126,7 +138,11 @@ context Locations is {
     }
     handler IntakeLocationHandler is {
       on command Restaurant.Locations.Location.OpenLocation {
-        tell command Restaurant.Locations.Location.OpenLocation to entity Location
+        tell command Restaurant.Locations.Location.OpenLocation(
+          id = prompt("the id carried by OpenLocation"),
+          name = prompt("the name carried by OpenLocation"),
+          city = prompt("the city carried by OpenLocation")
+        ) to entity Location
       }
     } with {
       briefly as "Dispatches arriving location commands"

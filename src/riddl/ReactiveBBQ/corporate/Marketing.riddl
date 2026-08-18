@@ -10,6 +10,7 @@ context Marketing is {
   entity Campaign is {
 
     command LaunchCampaign is {
+      id is Id(Campaign),
       title is String,
       budget is Number
     } with {
@@ -70,11 +71,20 @@ context Marketing is {
         set field Corporate.Marketing.Campaign.CampaignFields.id to "a freshly minted identifier"
       }
       on command LaunchCampaign {
-        morph entity Campaign to state CampaignState with record Corporate.Marketing.Campaign.CampaignFields
-        send event CampaignLaunched to outlet CampaignAnnouncer.Published
+        morph entity Campaign to state CampaignState with record Corporate.Marketing.Campaign.CampaignFields(
+          id = prompt("the id of the resulting Campaign state"),
+          title = prompt("the title of the resulting Campaign state"),
+          budget = prompt("the budget of the resulting Campaign state")
+        )
+        send event CampaignLaunched(
+          id = prompt("the id carried by CampaignLaunched")
+        ) to outlet CampaignAnnouncer.Published
       }
       on query WhichCampaign {
-        reply result TheCampaign
+        reply result TheCampaign(
+          id = prompt("the id carried by TheCampaign"),
+          summary = prompt("the summary carried by TheCampaign")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a campaign"
@@ -99,7 +109,9 @@ context Marketing is {
     }
     handler CampaignAnnouncerHandler is {
       on event Corporate.Marketing.Campaign.CampaignLaunched {
-        send event Corporate.Marketing.Campaign.CampaignLaunched to outlet CampaignAnnouncer.Published
+        send event Corporate.Marketing.Campaign.CampaignLaunched(
+          id = prompt("the id carried by CampaignLaunched")
+        ) to outlet CampaignAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a campaign event"
@@ -136,7 +148,11 @@ context Marketing is {
     }
     handler IntakeCampaignHandler is {
       on command Corporate.Marketing.Campaign.LaunchCampaign {
-        tell command Corporate.Marketing.Campaign.LaunchCampaign to entity Campaign
+        tell command Corporate.Marketing.Campaign.LaunchCampaign(
+          id = prompt("the id carried by LaunchCampaign"),
+          title = prompt("the title carried by LaunchCampaign"),
+          budget = prompt("the budget carried by LaunchCampaign")
+        ) to entity Campaign
       }
     } with {
       briefly as "Dispatches arriving campaign commands"

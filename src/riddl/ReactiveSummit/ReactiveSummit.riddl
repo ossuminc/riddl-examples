@@ -17,7 +17,7 @@ domain ReactiveSummit is {
   include "stories"
   include "entities"
 
-  connector ItemRequests is {
+  persistent connector ItemRequests is {
     from outlet ReactiveSummit.ToDoListUI.ItemRequests.Submissions
     to inlet ReactiveSummit.ToDoList.Intake.Requests
   } with {
@@ -26,7 +26,6 @@ domain ReactiveSummit is {
       |This connector crosses a context boundary, so RIDDL 2.0 requires it
       |to be declared at domain scope and to be persistent.
     }
-    option is persistent
   }
 
 } with {

@@ -10,6 +10,7 @@ context Tables is {
   entity Table is {
 
     command AddTable is {
+      id is Id(Table),
       seats is Integer,
       section is String
     } with {
@@ -70,11 +71,20 @@ context Tables is {
         set field Restaurant.Tables.Table.TableFields.id to "a freshly minted identifier"
       }
       on command AddTable {
-        morph entity Table to state TableState with record Restaurant.Tables.Table.TableFields
-        send event TableAdded to outlet TableAnnouncer.Published
+        morph entity Table to state TableState with record Restaurant.Tables.Table.TableFields(
+          id = prompt("the id of the resulting Table state"),
+          seats = prompt("the seats of the resulting Table state"),
+          section = prompt("the section of the resulting Table state")
+        )
+        send event TableAdded(
+          id = prompt("the id carried by TableAdded")
+        ) to outlet TableAnnouncer.Published
       }
       on query WhichTable {
-        reply result TheTable
+        reply result TheTable(
+          id = prompt("the id carried by TheTable"),
+          summary = prompt("the summary carried by TheTable")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a table"
@@ -99,7 +109,9 @@ context Tables is {
     }
     handler TableAnnouncerHandler is {
       on event Restaurant.Tables.Table.TableAdded {
-        send event Restaurant.Tables.Table.TableAdded to outlet TableAnnouncer.Published
+        send event Restaurant.Tables.Table.TableAdded(
+          id = prompt("the id carried by TableAdded")
+        ) to outlet TableAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a table event"
@@ -126,7 +138,11 @@ context Tables is {
     }
     handler IntakeTableHandler is {
       on command Restaurant.Tables.Table.AddTable {
-        tell command Restaurant.Tables.Table.AddTable to entity Table
+        tell command Restaurant.Tables.Table.AddTable(
+          id = prompt("the id carried by AddTable"),
+          seats = prompt("the seats carried by AddTable"),
+          section = prompt("the section carried by AddTable")
+        ) to entity Table
       }
     } with {
       briefly as "Dispatches arriving table commands"

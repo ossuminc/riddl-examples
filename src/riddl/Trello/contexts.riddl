@@ -10,6 +10,7 @@ context UserManagement is {
   entity Account is {
 
     command CreateAccount is {
+      id is Id(Account),
       username is String,
       email is String
     } with {
@@ -88,19 +89,40 @@ context UserManagement is {
         set field Trello.UserManagement.Account.AccountFields.id to "a freshly minted identifier"
       }
       on command CreateAccount {
-        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields
-        send event AccountCreated to outlet UserManagementAnnouncer.Published
+        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields(
+          id = prompt("the id of the resulting Account state"),
+          username = prompt("the username of the resulting Account state"),
+          email = prompt("the email of the resulting Account state")
+        )
+        send event AccountCreated(
+          id = prompt("the id carried by AccountCreated")
+        ) to outlet UserManagementAnnouncer.Published
       }
       on command UpdateProfile {
-        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields
-        send event AccountCreated to outlet UserManagementAnnouncer.Published
+        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields(
+          id = prompt("the id of the resulting Account state"),
+          username = prompt("the username of the resulting Account state"),
+          email = prompt("the email of the resulting Account state")
+        )
+        send event AccountCreated(
+          id = prompt("the id carried by AccountCreated")
+        ) to outlet UserManagementAnnouncer.Published
       }
       on command UpdateSettings {
-        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields
-        send event AccountCreated to outlet UserManagementAnnouncer.Published
+        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields(
+          id = prompt("the id of the resulting Account state"),
+          username = prompt("the username of the resulting Account state"),
+          email = prompt("the email of the resulting Account state")
+        )
+        send event AccountCreated(
+          id = prompt("the id carried by AccountCreated")
+        ) to outlet UserManagementAnnouncer.Published
       }
       on query WhichAccount {
-        reply result TheAccount
+        reply result TheAccount(
+          id = prompt("the id carried by TheAccount"),
+          summary = prompt("the summary carried by TheAccount")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a user"
@@ -126,6 +148,7 @@ context UserManagement is {
   entity Notification is {
 
     command CreateNotification is {
+      id is Id(Notification),
       text is String,
       read is Boolean
     } with {
@@ -204,19 +227,40 @@ context UserManagement is {
         set field Trello.UserManagement.Notification.NotificationFields.id to "a freshly minted identifier"
       }
       on command CreateNotification {
-        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields
-        send event NotificationCreated to outlet UserManagementAnnouncer.Published
+        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields(
+          id = prompt("the id of the resulting Notification state"),
+          text = prompt("the text of the resulting Notification state"),
+          read = prompt("the read of the resulting Notification state")
+        )
+        send event NotificationCreated(
+          id = prompt("the id carried by NotificationCreated")
+        ) to outlet UserManagementAnnouncer.Published
       }
       on command MarkAsRead {
-        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields
-        send event NotificationCreated to outlet UserManagementAnnouncer.Published
+        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields(
+          id = prompt("the id of the resulting Notification state"),
+          text = prompt("the text of the resulting Notification state"),
+          read = prompt("the read of the resulting Notification state")
+        )
+        send event NotificationCreated(
+          id = prompt("the id carried by NotificationCreated")
+        ) to outlet UserManagementAnnouncer.Published
       }
       on command MarkAllAsRead {
-        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields
-        send event NotificationCreated to outlet UserManagementAnnouncer.Published
+        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields(
+          id = prompt("the id of the resulting Notification state"),
+          text = prompt("the text of the resulting Notification state"),
+          read = prompt("the read of the resulting Notification state")
+        )
+        send event NotificationCreated(
+          id = prompt("the id carried by NotificationCreated")
+        ) to outlet UserManagementAnnouncer.Published
       }
       on query WhichNotification {
-        reply result TheNotification
+        reply result TheNotification(
+          id = prompt("the id carried by TheNotification"),
+          summary = prompt("the summary carried by TheNotification")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a notification"
@@ -267,7 +311,9 @@ context UserManagement is {
     }
     handler UserManagementAnnouncerHandler is {
       on event Trello.UserManagement.Account.AccountCreated {
-        send event Trello.UserManagement.Account.AccountCreated to outlet UserManagementAnnouncer.Published
+        send event Trello.UserManagement.Account.AccountCreated(
+          id = prompt("the id carried by AccountCreated")
+        ) to outlet UserManagementAnnouncer.Published
       }
       on other {
         do "publish any other event this context raises"
@@ -304,22 +350,38 @@ context UserManagement is {
     }
     handler UserManagementIntakeHandler is {
       on command Trello.UserManagement.Account.CreateAccount {
-        tell command Trello.UserManagement.Account.CreateAccount to entity Account
+        tell command Trello.UserManagement.Account.CreateAccount(
+          id = prompt("the id carried by CreateAccount"),
+          username = prompt("the username carried by CreateAccount"),
+          email = prompt("the email carried by CreateAccount")
+        ) to entity Account
       }
       on command Trello.UserManagement.Account.UpdateProfile {
-        tell command Trello.UserManagement.Account.UpdateProfile to entity Account
+        tell command Trello.UserManagement.Account.UpdateProfile(
+          id = prompt("the id carried by UpdateProfile")
+        ) to entity Account
       }
       on command Trello.UserManagement.Account.UpdateSettings {
-        tell command Trello.UserManagement.Account.UpdateSettings to entity Account
+        tell command Trello.UserManagement.Account.UpdateSettings(
+          id = prompt("the id carried by UpdateSettings")
+        ) to entity Account
       }
       on command Trello.UserManagement.Notification.CreateNotification {
-        tell command Trello.UserManagement.Notification.CreateNotification to entity Notification
+        tell command Trello.UserManagement.Notification.CreateNotification(
+          id = prompt("the id carried by CreateNotification"),
+          text = prompt("the text carried by CreateNotification"),
+          read = prompt("the read carried by CreateNotification")
+        ) to entity Notification
       }
       on command Trello.UserManagement.Notification.MarkAsRead {
-        tell command Trello.UserManagement.Notification.MarkAsRead to entity Notification
+        tell command Trello.UserManagement.Notification.MarkAsRead(
+          id = prompt("the id carried by MarkAsRead")
+        ) to entity Notification
       }
       on command Trello.UserManagement.Notification.MarkAllAsRead {
-        tell command Trello.UserManagement.Notification.MarkAllAsRead to entity Notification
+        tell command Trello.UserManagement.Notification.MarkAllAsRead(
+          id = prompt("the id carried by MarkAllAsRead")
+        ) to entity Notification
       }
     } with {
       briefly as "Dispatches arriving commands to the entity that owns them"
@@ -408,6 +470,7 @@ context WorkspaceManagement is {
   entity Workspace is {
 
     command CreateWorkspace is {
+      id is Id(Workspace),
       name is String,
       visibility is String
     } with {
@@ -498,19 +561,40 @@ context WorkspaceManagement is {
         set field Trello.WorkspaceManagement.Workspace.WorkspaceFields.id to "a freshly minted identifier"
       }
       on command CreateWorkspace {
-        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
-        send event WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
+          id = prompt("the id of the resulting Workspace state"),
+          name = prompt("the name of the resulting Workspace state"),
+          visibility = prompt("the visibility of the resulting Workspace state")
+        )
+        send event WorkspaceCreated(
+          id = prompt("the id carried by WorkspaceCreated")
+        ) to outlet WorkspaceManagementAnnouncer.Published
       }
       on command AddWorkspaceMember {
-        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
-        send event WorkspaceMemberAdded to outlet WorkspaceManagementAnnouncer.Published
+        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
+          id = prompt("the id of the resulting Workspace state"),
+          name = prompt("the name of the resulting Workspace state"),
+          visibility = prompt("the visibility of the resulting Workspace state")
+        )
+        send event WorkspaceMemberAdded(
+          id = prompt("the id carried by WorkspaceMemberAdded")
+        ) to outlet WorkspaceManagementAnnouncer.Published
       }
       on command UpdateWorkspaceSettings {
-        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields
-        send event WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
+          id = prompt("the id of the resulting Workspace state"),
+          name = prompt("the name of the resulting Workspace state"),
+          visibility = prompt("the visibility of the resulting Workspace state")
+        )
+        send event WorkspaceCreated(
+          id = prompt("the id carried by WorkspaceCreated")
+        ) to outlet WorkspaceManagementAnnouncer.Published
       }
       on query WhichWorkspace {
-        reply result TheWorkspace
+        reply result TheWorkspace(
+          id = prompt("the id carried by TheWorkspace"),
+          summary = prompt("the summary carried by TheWorkspace")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a workspace"
@@ -558,7 +642,9 @@ context WorkspaceManagement is {
     }
     handler WorkspaceManagementAnnouncerHandler is {
       on event Trello.WorkspaceManagement.Workspace.WorkspaceCreated {
-        send event Trello.WorkspaceManagement.Workspace.WorkspaceCreated to outlet WorkspaceManagementAnnouncer.Published
+        send event Trello.WorkspaceManagement.Workspace.WorkspaceCreated(
+          id = prompt("the id carried by WorkspaceCreated")
+        ) to outlet WorkspaceManagementAnnouncer.Published
       }
       on other {
         do "publish any other event this context raises"
@@ -585,13 +671,21 @@ context WorkspaceManagement is {
     }
     handler WorkspaceManagementIntakeHandler is {
       on command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
-        tell command Trello.WorkspaceManagement.Workspace.CreateWorkspace to entity Workspace
+        tell command Trello.WorkspaceManagement.Workspace.CreateWorkspace(
+          id = prompt("the id carried by CreateWorkspace"),
+          name = prompt("the name carried by CreateWorkspace"),
+          visibility = prompt("the visibility carried by CreateWorkspace")
+        ) to entity Workspace
       }
       on command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember {
-        tell command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember to entity Workspace
+        tell command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember(
+          id = prompt("the id carried by AddWorkspaceMember")
+        ) to entity Workspace
       }
       on command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings {
-        tell command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings to entity Workspace
+        tell command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings(
+          id = prompt("the id carried by UpdateWorkspaceSettings")
+        ) to entity Workspace
       }
     } with {
       briefly as "Dispatches arriving commands to the entity that owns them"
@@ -668,6 +762,7 @@ context BoardManagement is {
   entity Board is {
 
     command CreateBoard is {
+      id is Id(Board),
       title is String,
       visibility is String
     } with {
@@ -737,15 +832,30 @@ context BoardManagement is {
         set field Trello.BoardManagement.Board.BoardFields.id to "a freshly minted identifier"
       }
       on command CreateBoard {
-        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields
-        send event BoardCreated to outlet BoardManagementAnnouncer.Published
+        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields(
+          id = prompt("the id of the resulting Board state"),
+          title = prompt("the title of the resulting Board state"),
+          visibility = prompt("the visibility of the resulting Board state")
+        )
+        send event BoardCreated(
+          id = prompt("the id carried by BoardCreated")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command AddBoardMember {
-        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields
-        send event BoardCreated to outlet BoardManagementAnnouncer.Published
+        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields(
+          id = prompt("the id of the resulting Board state"),
+          title = prompt("the title of the resulting Board state"),
+          visibility = prompt("the visibility of the resulting Board state")
+        )
+        send event BoardCreated(
+          id = prompt("the id carried by BoardCreated")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on query WhichBoard {
-        reply result TheBoard
+        reply result TheBoard(
+          id = prompt("the id carried by TheBoard"),
+          summary = prompt("the summary carried by TheBoard")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a board"
@@ -771,6 +881,7 @@ context BoardManagement is {
   entity CardList is {
 
     command AddList is {
+      id is Id(CardList),
       title is String,
       position is Integer
     } with {
@@ -840,15 +951,30 @@ context BoardManagement is {
         set field Trello.BoardManagement.CardList.CardListFields.id to "a freshly minted identifier"
       }
       on command AddList {
-        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields
-        send event ListAdded to outlet BoardManagementAnnouncer.Published
+        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields(
+          id = prompt("the id of the resulting CardList state"),
+          title = prompt("the title of the resulting CardList state"),
+          position = prompt("the position of the resulting CardList state")
+        )
+        send event ListAdded(
+          id = prompt("the id carried by ListAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command MoveList {
-        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields
-        send event ListAdded to outlet BoardManagementAnnouncer.Published
+        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields(
+          id = prompt("the id of the resulting CardList state"),
+          title = prompt("the title of the resulting CardList state"),
+          position = prompt("the position of the resulting CardList state")
+        )
+        send event ListAdded(
+          id = prompt("the id carried by ListAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on query WhichCardList {
-        reply result TheCardList
+        reply result TheCardList(
+          id = prompt("the id carried by TheCardList"),
+          summary = prompt("the summary carried by TheCardList")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a cardlist"
@@ -874,6 +1000,7 @@ context BoardManagement is {
   entity Card is {
 
     command AddCard is {
+      id is Id(Card),
       title is String,
       description is String,
       dueDate is TimeStamp
@@ -990,35 +1117,87 @@ context BoardManagement is {
         set field Trello.BoardManagement.Card.CardFields.id to "a freshly minted identifier"
       }
       on command AddCard {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
-        send event CardAdded to outlet BoardManagementAnnouncer.Published
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
+          id = prompt("the id of the resulting Card state"),
+          title = prompt("the title of the resulting Card state"),
+          description = prompt("the description of the resulting Card state"),
+          dueDate = prompt("the dueDate of the resulting Card state")
+        )
+        send event CardAdded(
+          id = prompt("the id carried by CardAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command EditCard {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
-        send event CardAdded to outlet BoardManagementAnnouncer.Published
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
+          id = prompt("the id of the resulting Card state"),
+          title = prompt("the title of the resulting Card state"),
+          description = prompt("the description of the resulting Card state"),
+          dueDate = prompt("the dueDate of the resulting Card state")
+        )
+        send event CardAdded(
+          id = prompt("the id carried by CardAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command MoveCard {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
-        send event CardAdded to outlet BoardManagementAnnouncer.Published
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
+          id = prompt("the id of the resulting Card state"),
+          title = prompt("the title of the resulting Card state"),
+          description = prompt("the description of the resulting Card state"),
+          dueDate = prompt("the dueDate of the resulting Card state")
+        )
+        send event CardAdded(
+          id = prompt("the id carried by CardAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command AssignMember {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
-        send event CardAdded to outlet BoardManagementAnnouncer.Published
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
+          id = prompt("the id of the resulting Card state"),
+          title = prompt("the title of the resulting Card state"),
+          description = prompt("the description of the resulting Card state"),
+          dueDate = prompt("the dueDate of the resulting Card state")
+        )
+        send event CardAdded(
+          id = prompt("the id carried by CardAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command AddComment {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
-        send event CardAdded to outlet BoardManagementAnnouncer.Published
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
+          id = prompt("the id of the resulting Card state"),
+          title = prompt("the title of the resulting Card state"),
+          description = prompt("the description of the resulting Card state"),
+          dueDate = prompt("the dueDate of the resulting Card state")
+        )
+        send event CardAdded(
+          id = prompt("the id carried by CardAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command AddChecklist {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
-        send event CardAdded to outlet BoardManagementAnnouncer.Published
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
+          id = prompt("the id of the resulting Card state"),
+          title = prompt("the title of the resulting Card state"),
+          description = prompt("the description of the resulting Card state"),
+          dueDate = prompt("the dueDate of the resulting Card state")
+        )
+        send event CardAdded(
+          id = prompt("the id carried by CardAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on command SetDueDate {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields
-        send event CardAdded to outlet BoardManagementAnnouncer.Published
+        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
+          id = prompt("the id of the resulting Card state"),
+          title = prompt("the title of the resulting Card state"),
+          description = prompt("the description of the resulting Card state"),
+          dueDate = prompt("the dueDate of the resulting Card state")
+        )
+        send event CardAdded(
+          id = prompt("the id carried by CardAdded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on query WhichCard {
-        reply result TheCard
+        reply result TheCard(
+          id = prompt("the id carried by TheCard"),
+          summary = prompt("the summary carried by TheCard")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a card"
@@ -1044,6 +1223,7 @@ context BoardManagement is {
   entity Activity is {
 
     command RecordActivity is {
+      id is Id(Activity),
       summary is String,
       occurredAt is TimeStamp
     } with {
@@ -1104,11 +1284,20 @@ context BoardManagement is {
         set field Trello.BoardManagement.Activity.ActivityFields.id to "a freshly minted identifier"
       }
       on command RecordActivity {
-        morph entity Activity to state ActivityState with record Trello.BoardManagement.Activity.ActivityFields
-        send event ActivityRecorded to outlet BoardManagementAnnouncer.Published
+        morph entity Activity to state ActivityState with record Trello.BoardManagement.Activity.ActivityFields(
+          id = prompt("the id of the resulting Activity state"),
+          summary = prompt("the summary of the resulting Activity state"),
+          occurredAt = prompt("the occurredAt of the resulting Activity state")
+        )
+        send event ActivityRecorded(
+          id = prompt("the id carried by ActivityRecorded")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on query WhichActivity {
-        reply result TheActivity
+        reply result TheActivity(
+          id = prompt("the id carried by TheActivity"),
+          summary = prompt("the summary carried by TheActivity")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a activity"
@@ -1167,7 +1356,9 @@ context BoardManagement is {
     }
     handler BoardManagementAnnouncerHandler is {
       on event Trello.BoardManagement.Board.BoardCreated {
-        send event Trello.BoardManagement.Board.BoardCreated to outlet BoardManagementAnnouncer.Published
+        send event Trello.BoardManagement.Board.BoardCreated(
+          id = prompt("the id carried by BoardCreated")
+        ) to outlet BoardManagementAnnouncer.Published
       }
       on other {
         do "publish any other event this context raises"
@@ -1194,40 +1385,73 @@ context BoardManagement is {
     }
     handler BoardManagementIntakeHandler is {
       on command Trello.BoardManagement.Board.CreateBoard {
-        tell command Trello.BoardManagement.Board.CreateBoard to entity Board
+        tell command Trello.BoardManagement.Board.CreateBoard(
+          id = prompt("the id carried by CreateBoard"),
+          title = prompt("the title carried by CreateBoard"),
+          visibility = prompt("the visibility carried by CreateBoard")
+        ) to entity Board
       }
       on command Trello.BoardManagement.Board.AddBoardMember {
-        tell command Trello.BoardManagement.Board.AddBoardMember to entity Board
+        tell command Trello.BoardManagement.Board.AddBoardMember(
+          id = prompt("the id carried by AddBoardMember")
+        ) to entity Board
       }
       on command Trello.BoardManagement.CardList.AddList {
-        tell command Trello.BoardManagement.CardList.AddList to entity CardList
+        tell command Trello.BoardManagement.CardList.AddList(
+          id = prompt("the id carried by AddList"),
+          title = prompt("the title carried by AddList"),
+          position = prompt("the position carried by AddList")
+        ) to entity CardList
       }
       on command Trello.BoardManagement.CardList.MoveList {
-        tell command Trello.BoardManagement.CardList.MoveList to entity CardList
+        tell command Trello.BoardManagement.CardList.MoveList(
+          id = prompt("the id carried by MoveList")
+        ) to entity CardList
       }
       on command Trello.BoardManagement.Card.AddCard {
-        tell command Trello.BoardManagement.Card.AddCard to entity Card
+        tell command Trello.BoardManagement.Card.AddCard(
+          id = prompt("the id carried by AddCard"),
+          title = prompt("the title carried by AddCard"),
+          description = prompt("the description carried by AddCard"),
+          dueDate = prompt("the dueDate carried by AddCard")
+        ) to entity Card
       }
       on command Trello.BoardManagement.Card.EditCard {
-        tell command Trello.BoardManagement.Card.EditCard to entity Card
+        tell command Trello.BoardManagement.Card.EditCard(
+          id = prompt("the id carried by EditCard")
+        ) to entity Card
       }
       on command Trello.BoardManagement.Card.MoveCard {
-        tell command Trello.BoardManagement.Card.MoveCard to entity Card
+        tell command Trello.BoardManagement.Card.MoveCard(
+          id = prompt("the id carried by MoveCard")
+        ) to entity Card
       }
       on command Trello.BoardManagement.Card.AssignMember {
-        tell command Trello.BoardManagement.Card.AssignMember to entity Card
+        tell command Trello.BoardManagement.Card.AssignMember(
+          id = prompt("the id carried by AssignMember")
+        ) to entity Card
       }
       on command Trello.BoardManagement.Card.AddComment {
-        tell command Trello.BoardManagement.Card.AddComment to entity Card
+        tell command Trello.BoardManagement.Card.AddComment(
+          id = prompt("the id carried by AddComment")
+        ) to entity Card
       }
       on command Trello.BoardManagement.Card.AddChecklist {
-        tell command Trello.BoardManagement.Card.AddChecklist to entity Card
+        tell command Trello.BoardManagement.Card.AddChecklist(
+          id = prompt("the id carried by AddChecklist")
+        ) to entity Card
       }
       on command Trello.BoardManagement.Card.SetDueDate {
-        tell command Trello.BoardManagement.Card.SetDueDate to entity Card
+        tell command Trello.BoardManagement.Card.SetDueDate(
+          id = prompt("the id carried by SetDueDate")
+        ) to entity Card
       }
       on command Trello.BoardManagement.Activity.RecordActivity {
-        tell command Trello.BoardManagement.Activity.RecordActivity to entity Activity
+        tell command Trello.BoardManagement.Activity.RecordActivity(
+          id = prompt("the id carried by RecordActivity"),
+          summary = prompt("the summary carried by RecordActivity"),
+          occurredAt = prompt("the occurredAt carried by RecordActivity")
+        ) to entity Activity
       }
     } with {
       briefly as "Dispatches arriving commands to the entity that owns them"

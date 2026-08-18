@@ -10,6 +10,7 @@ context Reservations is {
   entity Reservation is {
 
     command BookTable is {
+      id is Id(Reservation),
       partyName is String,
       phoneNumber is String,
       time is Time,
@@ -74,11 +75,22 @@ context Reservations is {
         set field Restaurant.Reservations.Reservation.ReservationFields.id to "a freshly minted identifier"
       }
       on command BookTable {
-        morph entity Reservation to state ReservationState with record Restaurant.Reservations.Reservation.ReservationFields
-        send event TableBooked to outlet ReservationAnnouncer.Published
+        morph entity Reservation to state ReservationState with record Restaurant.Reservations.Reservation.ReservationFields(
+          id = prompt("the id of the resulting Reservation state"),
+          partyName = prompt("the partyName of the resulting Reservation state"),
+          phoneNumber = prompt("the phoneNumber of the resulting Reservation state"),
+          time = prompt("the time of the resulting Reservation state"),
+          date = prompt("the date of the resulting Reservation state")
+        )
+        send event TableBooked(
+          id = prompt("the id carried by TableBooked")
+        ) to outlet ReservationAnnouncer.Published
       }
       on query WhichReservation {
-        reply result TheReservation
+        reply result TheReservation(
+          id = prompt("the id carried by TheReservation"),
+          summary = prompt("the summary carried by TheReservation")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a reservation"
@@ -103,7 +115,9 @@ context Reservations is {
     }
     handler ReservationAnnouncerHandler is {
       on event Restaurant.Reservations.Reservation.TableBooked {
-        send event Restaurant.Reservations.Reservation.TableBooked to outlet ReservationAnnouncer.Published
+        send event Restaurant.Reservations.Reservation.TableBooked(
+          id = prompt("the id carried by TableBooked")
+        ) to outlet ReservationAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a reservation event"
@@ -130,7 +144,13 @@ context Reservations is {
     }
     handler IntakeReservationHandler is {
       on command Restaurant.Reservations.Reservation.BookTable {
-        tell command Restaurant.Reservations.Reservation.BookTable to entity Reservation
+        tell command Restaurant.Reservations.Reservation.BookTable(
+          id = prompt("the id carried by BookTable"),
+          partyName = prompt("the partyName carried by BookTable"),
+          phoneNumber = prompt("the phoneNumber carried by BookTable"),
+          time = prompt("the time carried by BookTable"),
+          date = prompt("the date carried by BookTable")
+        ) to entity Reservation
       }
     } with {
       briefly as "Dispatches arriving reservation commands"

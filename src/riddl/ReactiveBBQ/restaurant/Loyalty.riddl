@@ -10,6 +10,7 @@ context Loyalty is {
   entity LoyaltyAccount is {
 
     command AccruePoints is {
+      id is Id(LoyaltyAccount),
       points is Number,
       accrualRate is Real,
       redemptionRate is Real
@@ -72,11 +73,21 @@ context Loyalty is {
         set field Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields.id to "a freshly minted identifier"
       }
       on command AccruePoints {
-        morph entity LoyaltyAccount to state LoyaltyAccountState with record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields
-        send event PointsAccrued to outlet LoyaltyAccountAnnouncer.Published
+        morph entity LoyaltyAccount to state LoyaltyAccountState with record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields(
+          id = prompt("the id of the resulting LoyaltyAccount state"),
+          points = prompt("the points of the resulting LoyaltyAccount state"),
+          accrualRate = prompt("the accrualRate of the resulting LoyaltyAccount state"),
+          redemptionRate = prompt("the redemptionRate of the resulting LoyaltyAccount state")
+        )
+        send event PointsAccrued(
+          id = prompt("the id carried by PointsAccrued")
+        ) to outlet LoyaltyAccountAnnouncer.Published
       }
       on query WhichLoyaltyAccount {
-        reply result TheLoyaltyAccount
+        reply result TheLoyaltyAccount(
+          id = prompt("the id carried by TheLoyaltyAccount"),
+          summary = prompt("the summary carried by TheLoyaltyAccount")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a loyaltyaccount"
@@ -101,7 +112,9 @@ context Loyalty is {
     }
     handler LoyaltyAccountAnnouncerHandler is {
       on event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued {
-        send event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued to outlet LoyaltyAccountAnnouncer.Published
+        send event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued(
+          id = prompt("the id carried by PointsAccrued")
+        ) to outlet LoyaltyAccountAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a loyaltyaccount event"
@@ -128,7 +141,12 @@ context Loyalty is {
     }
     handler IntakeLoyaltyAccountHandler is {
       on command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
-        tell command Restaurant.Loyalty.LoyaltyAccount.AccruePoints to entity LoyaltyAccount
+        tell command Restaurant.Loyalty.LoyaltyAccount.AccruePoints(
+          id = prompt("the id carried by AccruePoints"),
+          points = prompt("the points carried by AccruePoints"),
+          accrualRate = prompt("the accrualRate carried by AccruePoints"),
+          redemptionRate = prompt("the redemptionRate carried by AccruePoints")
+        ) to entity LoyaltyAccount
       }
     } with {
       briefly as "Dispatches arriving loyaltyaccount commands"

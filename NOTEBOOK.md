@@ -2,123 +2,74 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-13**, by running the commands, not from memory.
+**Last verified: 2026-08-18**, by running the commands, not from memory.
 
-**Repo state.** On `main`, working tree clean. **1 commit unpushed** — the
-rc.13 bump. `release/1` sits at `5e2ce0d` holding the pre-2.0 corpus.
+**Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are
+both **`2.0.0-rc.15`**, a released tag. All four riddl artifacts resolve at
+it (`sbt "show Compile/dependencyClasspath"`). The previous staged binary
+is parked at `../bin/riddlc.rc14-164.bak`; delete it once rc.15 has settled.
 
-**Toolchain.** Staged compiler `../bin/riddlc` and the `build.sbt:21` pin
-are both **`2.0.0-rc.13`** — the first *released tag* rather than a local
-snapshot; all four riddl artifacts resolve at it from `~/.ivy2/local`.
-sbt 2.0.6, sbt-ossuminc 3.1.0.
+**Corpus.** All eight in-scope examples are **zero on error, deprecation
+and missing**. Seven are also zero on completeness; **ShopifyCart carries
+2**, and that is the one open item — see In flight. Every `.conf` entry
+point exits 0 except `FooBarSameDomain`, which exits 7 by design.
 
-**Corpus is clean** — zero errors, deprecations, missing and completeness
-across all eight in-scope examples, verified against the staged rc.13
-binary. `bin/validate-corpus.sh` exits 0. Nothing is half-finished.
-
-**All eight examples round-trip clean AND idempotent.** prettify → validate
-is 0/0/0/0 for every one, and `prettify(prettify(x))` is byte-identical to
-`prettify(x)` for every one.
-
-**Harness coverage is total**, checked this session rather than assumed:
-all **41** `.riddl` files in the repo are reachable by `include` from the
-nine entry points in `bin/validate-corpus.sh`. No model is going
-unvalidated.
-
-**No open riddlc defects.** Both prettify defects this repo filed are fixed
-and closed in `riddl/task/done/`, each verified here against the real
-corpus rather than taken on trust.
-
-**`src/` is now models only.** `src/test/input/hugoOptions.conf` — the last
-fixture for the removed `hugo` command — was deleted on 2026-08-13, taking
-the whole `src/test/` tree with it. `src/riddl/` is all that remains, which
-matches the fact that riddlc is this repo's only test.
+**Round trip verified.** prettify -> validate is clean for all eight, and
+`prettify(prettify(x))` is byte-identical to `prettify(x)` for all eight.
+rc.15 introduced no writer defects.
 
 ### In flight
 
-Nothing. The 2.0 conformance work is complete, committed and pushed,
-`task/` is empty, and the remaining BACKLOG items are all decisions or
-standing watches rather than work in progress.
+**ShopifyCart entities `Product` and `Checkout` define no command types.**
+Their commands were hoisted to domain scope to clear 8 context-isolation
+seam errors, which is what RIDDL 2.0 requires for a message crossing
+contexts — but it emptied those two entities of locally-defined commands.
+`Cart` does not warn because it still owns `CreateCart` and `ApplyDiscount`,
+neither of which crosses the seam. That is the shape to copy.
+
+The decision is what `Product` and `Checkout` should own locally, and it is
+a modelling call, not a syntax fix. Filed as BACKLOG item 1.
 
 ### Traps
 
 Each of these has already cost someone time.
 
-- **riddlc is the test suite, not sbt.** This repo has no Scala sources —
-  they were deleted once the `hugo` command they exercised was removed
-  from the product. `sbt test` reports "No tests to run" and that is
-  correct, not a failure. Run `bin/validate-corpus.sh`.
+- **The pin and the staged binary drift silently.** On 2026-08-17 the
+  NOTEBOOK said rc.13 and `build.sbt` said rc.13, while `../bin/riddlc` was
+  a `rc.14-164` snapshot — so "the corpus is clean" described a compiler
+  nobody had pinned, and a real regression sat unnoticed. **Run
+  `../bin/riddlc version` and compare it to `build.sbt:21` before believing
+  any corpus result.** `../bin/riddlc` is shared with the other projects in
+  `ossuminc/`, so it can change without a commit here.
+- **A corpus regression is not evidence about the release you just
+  installed.** rc.14-164 and rc.15 produced byte-identical results; the
+  breakage predated both. Measure the OLD binary too before attributing
+  fallout to a bump.
+- **riddlc is the test suite, not sbt.** No Scala sources here. `sbt test`
+  reports "No tests to run" and that is correct. Run
+  `bin/validate-corpus.sh`.
+- **`sbt compile` cannot verify a version bump** — no sources means it
+  succeeds against a stale classpath. Check
+  `sbt "show Compile/dependencyClasspath" | grep riddl` instead. And the
+  corpus never consults `build.sbt` at all: `bin/validate-corpus.sh` shells
+  out to `../bin/riddlc`.
 - **Do not validate through the `.conf` files.** Their `common` blocks
-  once set `hide-warnings` and `hide-missing-warnings`, hiding exactly
-  what the corpus is driven to zero on. The harness passes flags itself
-  for that reason.
-- **Validate is not enough after a compiler bump.** Two defects were
-  found only by round-tripping through `riddlc prettify -s true` and
-  re-validating the output — the source parsed clean while the *writer*
-  silently dropped metadata. Do that whenever a release touches emission
-  or the AST.
+  hide warnings — ShopifyCart's `.conf` exits 0 today *despite* its 2
+  completeness warnings. The harness passes flags itself for that reason.
+- **Validate is not enough after a compiler bump.** Round-trip through
+  `riddlc prettify -s true` and re-validate; two writer defects were once
+  visible only that way. Note prettify writes **`prettify-output.riddl`**,
+  not the input basename — a check for the original filename reports a
+  false failure.
 - **A clean run is not evidence that a check ran.** Prove the check is
-  live before believing it, by breaking the thing on purpose and watching
-  it complain. Used on the epic witnessing (2026-08-05); same failure mode
-  as the scoverage and sbt-2 test-cache traps in the org CLAUDE.md.
-- **`grep -c '\[style\]'` overcounts by one.** riddlc's own
-  `[style] Style Message Count: N` summary line matches the pattern. Same
-  for the other message kinds. Trust `bin/validate-corpus.sh`, which
-  counts correctly.
-- **`on other` clauses in dokn are correct, not leftovers.** Ten of them
-  sit as trailing catch-alls after a named clause. The old *workaround*
-  was `on other` **instead of** named dispatch; that is gone. Do not
-  delete the survivors — a task file in `task/done/` asks for their
-  removal and is wrong on this point.
-- **Names resolve globally.** Two contexts with an outlet both called
-  `Published`, or two subdomains with a `FrontEnd` context, are ambiguous
-  rather than merely similar. Qualify.
-- **Round-trip every example after a compiler bump, not just the ones you
-  changed.** rc.10's writer defect was in `described in file`, used once
-  in the whole corpus, in a file this session never touched. Rare
-  constructs are where writer bugs survive.
-- **A round trip only catches writer bugs that break the PARSE.** The
-  prettify quoting bug was caught that way; the path-compounding bug in
-  the same clause was not, because every corrupted pass still validates.
-  To catch value corruption, prettify **twice** and diff the two outputs —
-  `prettify(prettify(x))` should equal `prettify(x)`.
-- **Check our own CLAUDE.md against the grammar before believing it.** It
-  claimed `when` had no `else` clause; the grammar has always had one, and
-  the claim made a solvable problem look unsolvable. The canonical grammar
-  at `../riddl/language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
-  is generated from the parser and wins every time.
-- **`FooBarSameDomain` is meant to fail** (4 errors, 4 missing) and is
-  excluded by name in the harness. Do not "fix" it.
-
-### Task queue — empty
-
-Nothing incoming. Everything in `task/done/` carries a `## Results`
-section recording how each criterion was checked.
-
-Nothing outstanding outward either. Both prettify defects this repo filed
-are fixed and closed in `riddl/task/done/`, each with our independent
-downstream confirmation appended.
-
-### Certainty
-
-Verified this session by running the command: riddlc version, resolved
-dependency classpath at rc.10-57, the full corpus, a prettify round trip
-on all eight examples, a second prettify pass on all eight and a `diff`
-against the first (all idempotent), three passes on ReactiveSummit showing
-the authored relative path surviving verbatim with zero `file://`, and
-that a deleted `described in file` target is still silent at validate time.
-
-Assumed, not verified: that riddl's `RunRiddlcOnLocalTest` "should
-validate riddl-examples dokn" still passes under rc.10. It lives in their
-repo. Our dokn is clean under the rc.10 binary, so the likely answer is
-yes, but the corpus changed this session and that test was not re-run.
+  reachable before trusting a zero.
 
 ### Pointers
 
 - **BACKLOG.md** — all open work, with the evidence already gathered.
 - **CLAUDE.md** — durable facts: validation procedure, 2.0 syntax rules.
-- **NOTEBOOK.md § RIDDL 2.0 Conformance** — what zero actually requires
-  architecturally, and the traps met getting there.
+- **NOTEBOOK.md § Session 2026-08-18** — the rc.15 migration: the five
+  error families, the fix idiom for each, and the tooling used.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 
@@ -138,19 +89,118 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: July 28, 2026
+**Last Updated**: August 18, 2026
 
-**Status: COMPLETE** — the whole corpus is clean under the RIDDL 2.0
-release candidate, on branch `release/2`. All eight in-scope examples
-report zero errors, deprecations, missing warnings and completeness
-warnings. FooBarSameDomain remains non-zero by design. See "RIDDL 2.0 Conformance" below.
+**Status: one open item.** The corpus is clean under `2.0.0-rc.15` on
+`main`: all eight in-scope examples report zero errors, deprecations and
+missing warnings, and seven of eight report zero completeness warnings.
+ShopifyCart carries 2 completeness warnings arising from the
+context-isolation hoist — see HANDOFF § In flight and BACKLOG item 1.
+FooBarSameDomain remains non-zero by design.
 
 Remaining work:
-- None outstanding. All five task files are closed in `task/done/`.
+- ShopifyCart: decide what commands `Product` and `Checkout` own locally.
 - The `show … to …` riddlc bug is filed against riddl; once fixed,
   restore the step ToDoodles' epic had to drop.
 
 ---
+
+## Session 2026-08-18: rc.15, and a regression that was not rc.15's
+
+Upgraded the pin and the staged binary to `2.0.0-rc.15` and migrated the
+whole corpus to the 2.0 rules it enforces.
+
+### The bump was not the breakage
+
+The incoming task said two entry points went red "under rc.15". Running
+the *previous* staged binary produced byte-identical output, so the
+regression predated the release. What had actually happened is that
+`../bin/riddlc` had been replaced with an `rc.14-164` snapshot while
+`build.sbt` and the NOTEBOOK still said rc.13 — the drift CLAUDE.md warns
+about, in the wild. The lesson is now the first Trap in HANDOFF: compare
+`../bin/riddlc version` against the pin before believing any result.
+
+The task file also under-counted the damage. It named dokn and ShopifyCart
+because riddl's own suite drives the `.conf` files, whose `common` blocks
+hide warnings; the direct-entry harness showed **six** red examples.
+
+And its install instruction was wrong: `brew install
+ossuminc/tap/riddlc-rc` was still pinned at rc.12, older than what was
+already staged. The release asset from `gh release download` is the way to
+get an exact rc.
+
+### Five families, and nothing else
+
+355 messages decomposed *exactly* into five families with zero left over,
+which is what made a scripted migration safe rather than reckless:
+
+| Family | Sites | Fix |
+|---|--:|---|
+| Bare message operand | 208 | inline constructor |
+| Bare record operand | 53 | inline constructor |
+| `option is persistent` | 25 | `persistent connector X is` |
+| Message lacks `Id(Entity)` | 61 | add `id is Id(Entity)` |
+| Context isolation seam | 8 | hoist commands to domain |
+
+**Order mattered.** The id fields had to be added *before* the
+constructors were generated, because a constructor must name every field
+the type has — generating first would have produced 46 constructors
+missing their new `id`.
+
+### Chosen idiom: construct in place
+
+`yield event CompanyAdded` alone no longer says where the event's fields
+come from. Two spellings satisfy rc.15, both verified on a probe file
+before any real edit:
+
+```riddl
+yield event CompanyAdded(id = prompt("the id carried by CompanyAdded"))   // chosen
+let e: event CompanyAdded = prompt("...")   // lighter; used by riddl-models
+yield e
+```
+
+The inline constructor was chosen deliberately: it documents field-by-field
+where the data comes from, which is what a reference corpus is for. The
+cost is that every field of every message must be enumerated — hence the
+scripted approach, driven by the validator's own column spans.
+
+### Tooling note
+
+The error messages carry exact `line:startCol->endCol` spans, so the
+migration inserted the argument list at the reported end column rather than
+re-parsing statements. That is why a ~260-site rewrite landed without a
+single mangled line. The scanner did need two fixes to read the corpus:
+`command X yields event Y is {` puts a clause between name and `is`, and
+`event-sourced available entity Company` carries two modifiers.
+
+Two sites resisted it — `type CheckoutRecord is {` is referenced as
+`record CheckoutRecord`, and the scanner only indexed `record` definitions.
+Patched by hand.
+
+### ShopifyCart: the hoist has a cost
+
+Eight commands crossed the `UserInterface -> ShoppingContext` seam. Hoisting
+them to domain scope cleared all 8 errors — their field types were already
+domain-scoped, so nothing dangled — but it left `Product` and `Checkout`
+defining no commands at all, which is 2 new completeness warnings. `Cart`
+escaped because it still owns `CreateCart` and `ApplyDiscount`. Recorded as
+BACKLOG item 1 rather than patched over with invented commands.
+
+### Verified
+
+- `bin/validate-corpus.sh`: 8/8 zero on error/deprecation/missing; 7/8 on
+  completeness.
+- Every `.conf` entry point exits 0 except FooBarSameDomain (7, by design),
+  which is what riddl's `RunRiddlcOnLocalTest` reads.
+- prettify round trip: validate clean for all eight; second pass
+  byte-identical to the first for all eight. No rc.15 writer defects.
+- `sbt "show Compile/dependencyClasspath"`: all four artifacts at rc.15.
+
+Style counts rose (dokn 34 -> 39, ReactiveBBQ 65 -> 78) because the added
+`id` fields are short identifiers. Out of scope by standing decision.
+
+---
+
 
 ## Session 2026-08-13: upgrade to rc.13
 

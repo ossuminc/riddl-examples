@@ -81,6 +81,43 @@ node; rc.10 split them and the wrong pairing — `yield result` or
 replies a result. Migrating the corpus to rc.10 meant rewriting 31
 `yield result` sites.
 
+**Message operands must be VALUES, not type names (rc.14+)**: `yield event
+Foo`, `send event Foo to ...`, `tell command Foo to ...`, `reply result Foo`
+and `morph ... with record Bar` are all **Errors** when the operand names a
+type, because nothing says where the fields come from. Two accepted
+spellings:
+
+```riddl
+yield event CompanyAdded(id = prompt("the id carried by CompanyAdded"))
+
+let e: event CompanyAdded = prompt("the event just recorded")
+yield e
+```
+
+**This corpus uses the inline constructor**, which names every field — a
+reference corpus should show where data comes from. riddl-models uses the
+lighter `let` form; both validate. A constructor must supply **every** field
+the type declares, so add any missing `id` field (below) BEFORE writing
+constructors, or they come out incomplete.
+
+**Every entity-addressed message needs an `Id(Entity)` field**: a `tell`/
+`send` to an entity whose message carries no field typed `Id(<Entity>)`
+raises a **completeness** warning — nothing says which instance is meant.
+Add `id is Id(Cart)` as the first field.
+
+**Connector intentions are written BEFORE the keyword**: `option is
+persistent` inside a connector's `with` block is **deprecated**. Write
+`persistent connector CompanyRequests is { ... }`. Same for
+`at-least-once`, `at-most-once`, `exactly-once`.
+
+**A message crossing a context seam must be declared above both contexts**:
+`tell`ing a command from context A into context B is an **Error** unless the
+command is declared in a domain ancestral to both. Fix by hoisting the
+declaration to the shared domain, or by routing through an adaptor. Hoisting
+can empty an entity of locally-declared commands, which raises a *different*
+completeness warning — see BACKLOG item 1.
+
+
 **Handler rules (RIDDL 2.0)**:
 - A command handler in an entity must **discharge on every path**: emit
   an event (`send`/`tell`/`yield`) or refuse (`error`/`require`). A
@@ -133,7 +170,7 @@ replies a result. Migrating the corpus to rc.10 meant rewriting 31
 
 - **sbt**: 2.0.6
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.13` — the pin and the staged `../bin/riddlc` must
+- **RIDDL**: `2.0.0-rc.15` — the pin and the staged `../bin/riddlc` must
   always be the **same build**. When they drift, the library and the
   binary doing the validating disagree, and the corpus result no longer
   says anything about the pin. This has been a released tag since rc.13;
@@ -144,7 +181,7 @@ replies a result. Migrating the corpus to rc.10 meant rewriting 31
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.13",
+.configure(With.Riddl.library(version = "2.0.0-rc.15",
   nonJVMDependency = false))
 ```
 

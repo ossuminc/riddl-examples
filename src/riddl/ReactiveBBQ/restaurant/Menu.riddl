@@ -10,6 +10,7 @@ context Menus is {
   entity MenuItem is {
 
     command AddMenuItem is {
+      id is Id(MenuItem),
       name is String,
       description is String,
       price is Number
@@ -72,11 +73,21 @@ context Menus is {
         set field Restaurant.Menus.MenuItem.MenuItemFields.id to "a freshly minted identifier"
       }
       on command AddMenuItem {
-        morph entity MenuItem to state MenuItemState with record Restaurant.Menus.MenuItem.MenuItemFields
-        send event MenuItemAdded to outlet MenuItemAnnouncer.Published
+        morph entity MenuItem to state MenuItemState with record Restaurant.Menus.MenuItem.MenuItemFields(
+          id = prompt("the id of the resulting MenuItem state"),
+          name = prompt("the name of the resulting MenuItem state"),
+          description = prompt("the description of the resulting MenuItem state"),
+          price = prompt("the price of the resulting MenuItem state")
+        )
+        send event MenuItemAdded(
+          id = prompt("the id carried by MenuItemAdded")
+        ) to outlet MenuItemAnnouncer.Published
       }
       on query WhichMenuItem {
-        reply result TheMenuItem
+        reply result TheMenuItem(
+          id = prompt("the id carried by TheMenuItem"),
+          summary = prompt("the summary carried by TheMenuItem")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a menuitem"
@@ -101,7 +112,9 @@ context Menus is {
     }
     handler MenuItemAnnouncerHandler is {
       on event Restaurant.Menus.MenuItem.MenuItemAdded {
-        send event Restaurant.Menus.MenuItem.MenuItemAdded to outlet MenuItemAnnouncer.Published
+        send event Restaurant.Menus.MenuItem.MenuItemAdded(
+          id = prompt("the id carried by MenuItemAdded")
+        ) to outlet MenuItemAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a menuitem event"
@@ -128,7 +141,12 @@ context Menus is {
     }
     handler IntakeMenuItemHandler is {
       on command Restaurant.Menus.MenuItem.AddMenuItem {
-        tell command Restaurant.Menus.MenuItem.AddMenuItem to entity MenuItem
+        tell command Restaurant.Menus.MenuItem.AddMenuItem(
+          id = prompt("the id carried by AddMenuItem"),
+          name = prompt("the name carried by AddMenuItem"),
+          description = prompt("the description carried by AddMenuItem"),
+          price = prompt("the price carried by AddMenuItem")
+        ) to entity MenuItem
       }
     } with {
       briefly as "Dispatches arriving menuitem commands"
@@ -194,6 +212,7 @@ context Menus is {
   entity Menu is {
 
     command ComposeMenu is {
+      id is Id(Menu),
       title is String,
       season is String
     } with {
@@ -254,11 +273,20 @@ context Menus is {
         set field Restaurant.Menus.Menu.MenuFields.id to "a freshly minted identifier"
       }
       on command ComposeMenu {
-        morph entity Menu to state MenuState with record Restaurant.Menus.Menu.MenuFields
-        send event MenuComposed to outlet MenuAnnouncer.Published
+        morph entity Menu to state MenuState with record Restaurant.Menus.Menu.MenuFields(
+          id = prompt("the id of the resulting Menu state"),
+          title = prompt("the title of the resulting Menu state"),
+          season = prompt("the season of the resulting Menu state")
+        )
+        send event MenuComposed(
+          id = prompt("the id carried by MenuComposed")
+        ) to outlet MenuAnnouncer.Published
       }
       on query WhichMenu {
-        reply result TheMenu
+        reply result TheMenu(
+          id = prompt("the id carried by TheMenu"),
+          summary = prompt("the summary carried by TheMenu")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a menu"
@@ -283,7 +311,9 @@ context Menus is {
     }
     handler MenuAnnouncerHandler is {
       on event Restaurant.Menus.Menu.MenuComposed {
-        send event Restaurant.Menus.Menu.MenuComposed to outlet MenuAnnouncer.Published
+        send event Restaurant.Menus.Menu.MenuComposed(
+          id = prompt("the id carried by MenuComposed")
+        ) to outlet MenuAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a menu event"
@@ -310,7 +340,11 @@ context Menus is {
     }
     handler IntakeMenuHandler is {
       on command Restaurant.Menus.Menu.ComposeMenu {
-        tell command Restaurant.Menus.Menu.ComposeMenu to entity Menu
+        tell command Restaurant.Menus.Menu.ComposeMenu(
+          id = prompt("the id carried by ComposeMenu"),
+          title = prompt("the title carried by ComposeMenu"),
+          season = prompt("the season carried by ComposeMenu")
+        ) to entity Menu
       }
     } with {
       briefly as "Dispatches arriving menu commands"

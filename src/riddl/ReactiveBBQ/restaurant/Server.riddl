@@ -10,6 +10,7 @@ context Servers is {
   entity Server is {
 
     command AddServer is {
+      id is Id(Server),
       name is String,
       section is String
     } with {
@@ -70,11 +71,20 @@ context Servers is {
         set field Restaurant.Servers.Server.ServerFields.id to "a freshly minted identifier"
       }
       on command AddServer {
-        morph entity Server to state ServerState with record Restaurant.Servers.Server.ServerFields
-        send event ServerAdded to outlet ServerAnnouncer.Published
+        morph entity Server to state ServerState with record Restaurant.Servers.Server.ServerFields(
+          id = prompt("the id of the resulting Server state"),
+          name = prompt("the name of the resulting Server state"),
+          section = prompt("the section of the resulting Server state")
+        )
+        send event ServerAdded(
+          id = prompt("the id carried by ServerAdded")
+        ) to outlet ServerAnnouncer.Published
       }
       on query WhichServer {
-        reply result TheServer
+        reply result TheServer(
+          id = prompt("the id carried by TheServer"),
+          summary = prompt("the summary carried by TheServer")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a server"
@@ -99,7 +109,9 @@ context Servers is {
     }
     handler ServerAnnouncerHandler is {
       on event Restaurant.Servers.Server.ServerAdded {
-        send event Restaurant.Servers.Server.ServerAdded to outlet ServerAnnouncer.Published
+        send event Restaurant.Servers.Server.ServerAdded(
+          id = prompt("the id carried by ServerAdded")
+        ) to outlet ServerAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a server event"
@@ -126,7 +138,11 @@ context Servers is {
     }
     handler IntakeServerHandler is {
       on command Restaurant.Servers.Server.AddServer {
-        tell command Restaurant.Servers.Server.AddServer to entity Server
+        tell command Restaurant.Servers.Server.AddServer(
+          id = prompt("the id carried by AddServer"),
+          name = prompt("the name carried by AddServer"),
+          section = prompt("the section carried by AddServer")
+        ) to entity Server
       }
     } with {
       briefly as "Dispatches arriving server commands"

@@ -14,7 +14,11 @@ domain BackOffice is {
       }
       handler SupplyRequestsHandler is {
         on command BackOffice.SupplyOrder.Supply.OrderSupply {
-          send command BackOffice.SupplyOrder.Supply.OrderSupply to outlet SupplySubmissions
+          send command BackOffice.SupplyOrder.Supply.OrderSupply(
+            id = prompt("the id carried by OrderSupply"),
+            item = prompt("the item carried by OrderSupply"),
+            quantity = prompt("the quantity carried by OrderSupply")
+          ) to outlet SupplySubmissions
         }
         on other {
           do "ignore requests that are not about supplys"
@@ -40,7 +44,7 @@ domain BackOffice is {
     }
   }
 
-  connector SupplyRequests is {
+  persistent connector SupplyRequests is {
     from outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.SupplySubmissions
     to inlet BackOffice.SupplyOrder.IntakeSupply.Requests
   } with {
@@ -49,7 +53,6 @@ domain BackOffice is {
       |Crosses a context boundary, so it is declared at domain scope and
       |made persistent as RIDDL 2.0 requires.
     }
-    option is persistent
   }
 
 } with {

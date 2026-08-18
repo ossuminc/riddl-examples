@@ -72,7 +72,10 @@ application context ToDoodlesApp is {
     }
     handler DrawingRequestsHandler is {
       on command ToDoodles.Doodle.Drawing.CreateDrawing {
-        send command ToDoodles.Doodle.Drawing.CreateDrawing to outlet DrawingSubmissions
+        send command ToDoodles.Doodle.Drawing.CreateDrawing(
+          id = prompt("the id carried by CreateDrawing"),
+          title = prompt("the title carried by CreateDrawing")
+        ) to outlet DrawingSubmissions
       }
       on other {
         do "ignore interactions that do not start a drawing"
@@ -101,7 +104,10 @@ application context ToDoodlesApp is {
     }
     handler ListRequestsHandler is {
       on command ToDoodles.List.DoodleList.CreateList {
-        send command ToDoodles.List.DoodleList.CreateList to outlet ListSubmissions
+        send command ToDoodles.List.DoodleList.CreateList(
+          id = prompt("the id carried by CreateList"),
+          name = prompt("the name carried by CreateList")
+        ) to outlet ListSubmissions
       }
       on other {
         do "ignore interactions that do not start a list"

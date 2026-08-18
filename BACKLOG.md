@@ -8,7 +8,51 @@ NOTEBOOK.md § HANDOFF.
 
 ---
 
-## 1. Decide the branch-protection posture on `main`
+## 1. ShopifyCart: `Product` and `Checkout` own no commands
+
+**Two completeness warnings**, and the only thing keeping the corpus from
+zero on all four goal kinds:
+
+```
+Entity 'Product' defines no command types; commands are the input messages an entity receives
+Entity 'Checkout' defines no command types; commands are the input messages an entity receives
+```
+
+**Why they appeared.** RIDDL 2.0 makes a message crossing a context seam an
+error unless it is declared in a domain ancestral to both. ShopifyCart's
+`UserInterface` context tells 8 commands into `ShoppingContext`, so on
+2026-08-18 those 8 were hoisted to `domain ShopifyCart` scope — clearing all
+8 errors. `Product` (`UpdateProductPrice`, `UpdateInventory`) and `Checkout`
+(`InitiateCheckout`, `SelectPaymentMethod`, `CompleteCheckout`) had *only*
+seam-crossing commands, so hoisting emptied them.
+
+**The shape to copy is already in the file.** `Cart` draws no warning
+because it still defines `CreateCart` and `ApplyDiscount`
+(`shopify-cart.riddl`, in `entity Cart`), neither of which crosses the seam.
+Verified: after the hoist, `grep` for `command` inside the entity bodies
+returns those two and nothing else.
+
+**Options**, in the order they were judged plausible:
+
+1. Give `Product` and `Checkout` a genuinely entity-local command each —
+   one not sent from `UserInterface`. Mirrors `Cart`. Adds model content,
+   so it wants a human's judgement on what those commands should be.
+2. Route just these two entities' commands through an adaptor instead of
+   hoisting, leaving the command declarations in place. Restores entity
+   ownership; costs an adaptor per context and re-opens the 8 errors until
+   the adaptor is right.
+3. Accept the 2 warnings and move the zero-completeness goal to
+   "seven of eight". Cheapest, and dishonest about the model.
+
+**Not urgent.** `riddlc from src/riddl/ShopifyCart/shopify-cart.conf
+validate` exits **0** today, because the `.conf` hides warnings — so
+riddl's `RunRiddlcOnLocalTest` is green either way. Only
+`bin/validate-corpus.sh`, which forces the flags, shows it.
+
+---
+
+
+## 2. Decide the branch-protection posture on `main`
 
 Every push to `main` prints:
 
@@ -29,7 +73,7 @@ urgent; it is noise either way.
 
 ---
 
-## 2. Standing instruction: keyword-named fields
+## 3. Standing instruction: keyword-named fields
 
 Two fields are named with RIDDL keywords:
 
@@ -48,7 +92,7 @@ is not lost.
 
 ---
 
-## 3. Watch, do not fix: style and usage counts
+## 4. Watch, do not fix: style and usage counts
 
 Out of scope by explicit decision — the goal is zero on errors,
 deprecations, missing and completeness only. Recorded so drift is
@@ -56,15 +100,18 @@ visible:
 
 | Example | style | usage |
 |---|---:|---:|
-| dokn | 34 | 0 |
+| dokn | 39 | 0 |
 | FooBarSuccess | 2 | 2 |
 | FooBarTwoDomains | 0 | 2 |
-| ReactiveBBQ | 65 | 1 |
-| ReactiveSummit | 5 | 0 |
-| ShopifyCart | 14 | 11 |
-| ToDoodles | 10 | 0 |
-| Trello | 46 | 0 |
+| ReactiveBBQ | 78 | 1 |
+| ReactiveSummit | 6 | 0 |
+| ShopifyCart | 32 | 11 |
+| ToDoodles | 12 | 0 |
+| Trello | 53 | 0 |
 | FooBarSameDomain | 0 | 4 |
+
+Counts refreshed 2026-08-18; they rose because the rc.15 migration added
+an `id` field to 46 message types and `id` is a short identifier.
 
 Most style warnings are short identifiers (`id`, `Foo`); most usage
 warnings are types defined for illustration that nothing consumes, which
@@ -72,7 +119,7 @@ is legitimate in a reference corpus.
 
 ---
 
-## 4. Closed, but know this happened
+## 5. Closed, but know this happened
 
 Not work — context, so nobody rediscovers it as a defect.
 

@@ -27,6 +27,7 @@ context Doodle is {
   entity Drawing is {
 
     command CreateDrawing is {
+      id is Id(Drawing),
       title is String
     } with {
       briefly as "Ask for a new doodle to be started"
@@ -76,11 +77,21 @@ context Doodle is {
         set field DrawingState.strokes to "0"
       }
       on command CreateDrawing {
-        morph entity Drawing to state DrawingState with record DrawingData
-        send event DrawingCreated to outlet DrawingAnnouncer.Published
+        morph entity Drawing to state DrawingState with record DrawingData(
+          id = prompt("the id of the resulting Doodle state"),
+          title = prompt("the title of the resulting Doodle state"),
+          strokes = prompt("the strokes of the resulting Doodle state")
+        )
+        send event DrawingCreated(
+          id = prompt("the id carried by DrawingCreated"),
+          title = prompt("the title carried by DrawingCreated")
+        ) to outlet DrawingAnnouncer.Published
       }
       on query WhichDrawing {
-        reply result TheDrawing
+        reply result TheDrawing(
+          id = prompt("the id carried by TheDrawing"),
+          title = prompt("the title carried by TheDrawing")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a drawing"
@@ -108,7 +119,10 @@ context Doodle is {
     }
     handler DrawingAnnouncerHandler is {
       on event DrawingCreated {
-        send event DrawingCreated to outlet DrawingAnnouncer.Published
+        send event DrawingCreated(
+          id = prompt("the id carried by DrawingCreated"),
+          title = prompt("the title carried by DrawingCreated")
+        ) to outlet DrawingAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a drawing event"
@@ -146,7 +160,10 @@ context Doodle is {
     }
     handler IntakeHandler is {
       on command CreateDrawing {
-        tell command CreateDrawing to entity Drawing
+        tell command CreateDrawing(
+          id = prompt("the id carried by CreateDrawing"),
+          title = prompt("the title carried by CreateDrawing")
+        ) to entity Drawing
       }
     } with {
       briefly as "Dispatches arriving commands to the right drawing"

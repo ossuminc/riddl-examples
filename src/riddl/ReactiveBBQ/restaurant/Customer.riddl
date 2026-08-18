@@ -10,6 +10,7 @@ context Customers is {
   entity Customer is {
 
     command RegisterCustomer is {
+      id is Id(Customer),
       name is String,
       phone is String
     } with {
@@ -70,11 +71,20 @@ context Customers is {
         set field Restaurant.Customers.Customer.CustomerFields.id to "a freshly minted identifier"
       }
       on command RegisterCustomer {
-        morph entity Customer to state CustomerState with record Restaurant.Customers.Customer.CustomerFields
-        send event CustomerRegistered to outlet CustomerAnnouncer.Published
+        morph entity Customer to state CustomerState with record Restaurant.Customers.Customer.CustomerFields(
+          id = prompt("the id of the resulting Customer state"),
+          name = prompt("the name of the resulting Customer state"),
+          phone = prompt("the phone of the resulting Customer state")
+        )
+        send event CustomerRegistered(
+          id = prompt("the id carried by CustomerRegistered")
+        ) to outlet CustomerAnnouncer.Published
       }
       on query WhichCustomer {
-        reply result TheCustomer
+        reply result TheCustomer(
+          id = prompt("the id carried by TheCustomer"),
+          summary = prompt("the summary carried by TheCustomer")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a customer"
@@ -99,7 +109,9 @@ context Customers is {
     }
     handler CustomerAnnouncerHandler is {
       on event Restaurant.Customers.Customer.CustomerRegistered {
-        send event Restaurant.Customers.Customer.CustomerRegistered to outlet CustomerAnnouncer.Published
+        send event Restaurant.Customers.Customer.CustomerRegistered(
+          id = prompt("the id carried by CustomerRegistered")
+        ) to outlet CustomerAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a customer event"
@@ -136,7 +148,11 @@ context Customers is {
     }
     handler IntakeCustomerHandler is {
       on command Restaurant.Customers.Customer.RegisterCustomer {
-        tell command Restaurant.Customers.Customer.RegisterCustomer to entity Customer
+        tell command Restaurant.Customers.Customer.RegisterCustomer(
+          id = prompt("the id carried by RegisterCustomer"),
+          name = prompt("the name carried by RegisterCustomer"),
+          phone = prompt("the phone carried by RegisterCustomer")
+        ) to entity Customer
       }
     } with {
       briefly as "Dispatches arriving customer commands"

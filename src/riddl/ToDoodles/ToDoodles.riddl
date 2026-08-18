@@ -20,7 +20,7 @@ domain ToDoodles is {
   include "Application/todoodles"
   include "Epics/epics"
 
-  connector ListRequests is {
+  persistent connector ListRequests is {
     from outlet ToDoodles.ToDoodlesApp.ListRequests.ListSubmissions
     to inlet ToDoodles.List.Intake.Requests
   } with {
@@ -29,10 +29,9 @@ domain ToDoodles is {
       |Like DrawingRequests, this crosses a context boundary and so is
       |declared at domain scope and made persistent.
     }
-    option is persistent
   }
 
-  connector DrawingRequests is {
+  persistent connector DrawingRequests is {
     from outlet ToDoodles.ToDoodlesApp.DrawingRequests.DrawingSubmissions
     to inlet ToDoodles.Doodle.Intake.Requests
   } with {
@@ -42,7 +41,6 @@ domain ToDoodles is {
       |to be declared at domain scope and to be persistent: what the user
       |asked for must not be lost in transit.
     }
-    option is persistent
   }
 
 } with {

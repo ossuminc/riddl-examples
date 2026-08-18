@@ -10,6 +10,7 @@ context SupplyOrder is {
   entity Supply is {
 
     command OrderSupply is {
+      id is Id(Supply),
       item is String,
       quantity is Integer
     } with {
@@ -70,11 +71,20 @@ context SupplyOrder is {
         set field BackOffice.SupplyOrder.Supply.SupplyFields.id to "a freshly minted identifier"
       }
       on command OrderSupply {
-        morph entity Supply to state SupplyState with record BackOffice.SupplyOrder.Supply.SupplyFields
-        send event SupplyOrdered to outlet SupplyAnnouncer.Published
+        morph entity Supply to state SupplyState with record BackOffice.SupplyOrder.Supply.SupplyFields(
+          id = prompt("the id of the resulting Supply state"),
+          item = prompt("the item of the resulting Supply state"),
+          quantity = prompt("the quantity of the resulting Supply state")
+        )
+        send event SupplyOrdered(
+          id = prompt("the id carried by SupplyOrdered")
+        ) to outlet SupplyAnnouncer.Published
       }
       on query WhichSupply {
-        reply result TheSupply
+        reply result TheSupply(
+          id = prompt("the id carried by TheSupply"),
+          summary = prompt("the summary carried by TheSupply")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a supply"
@@ -99,7 +109,9 @@ context SupplyOrder is {
     }
     handler SupplyAnnouncerHandler is {
       on event BackOffice.SupplyOrder.Supply.SupplyOrdered {
-        send event BackOffice.SupplyOrder.Supply.SupplyOrdered to outlet SupplyAnnouncer.Published
+        send event BackOffice.SupplyOrder.Supply.SupplyOrdered(
+          id = prompt("the id carried by SupplyOrdered")
+        ) to outlet SupplyAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a supply event"
@@ -136,7 +148,11 @@ context SupplyOrder is {
     }
     handler IntakeSupplyHandler is {
       on command BackOffice.SupplyOrder.Supply.OrderSupply {
-        tell command BackOffice.SupplyOrder.Supply.OrderSupply to entity Supply
+        tell command BackOffice.SupplyOrder.Supply.OrderSupply(
+          id = prompt("the id carried by OrderSupply"),
+          item = prompt("the item carried by OrderSupply"),
+          quantity = prompt("the quantity carried by OrderSupply")
+        ) to entity Supply
       }
     } with {
       briefly as "Dispatches arriving supply commands"

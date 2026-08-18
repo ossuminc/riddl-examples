@@ -10,6 +10,7 @@ context Orders is {
   entity Order is {
 
     command PlaceOrder is {
+      id is Id(Order),
       customerName is String,
       total is Number
     } with {
@@ -70,11 +71,20 @@ context Orders is {
         set field Restaurant.Orders.Order.OrderFields.id to "a freshly minted identifier"
       }
       on command PlaceOrder {
-        morph entity Order to state OrderState with record Restaurant.Orders.Order.OrderFields
-        send event OrderPlaced to outlet OrderAnnouncer.Published
+        morph entity Order to state OrderState with record Restaurant.Orders.Order.OrderFields(
+          id = prompt("the id of the resulting Order state"),
+          customerName = prompt("the customerName of the resulting Order state"),
+          total = prompt("the total of the resulting Order state")
+        )
+        send event OrderPlaced(
+          id = prompt("the id carried by OrderPlaced")
+        ) to outlet OrderAnnouncer.Published
       }
       on query WhichOrder {
-        reply result TheOrder
+        reply result TheOrder(
+          id = prompt("the id carried by TheOrder"),
+          summary = prompt("the summary carried by TheOrder")
+        )
       }
     } with {
       briefly as "Handles messages addressed to a order"
@@ -99,7 +109,9 @@ context Orders is {
     }
     handler OrderAnnouncerHandler is {
       on event Restaurant.Orders.Order.OrderPlaced {
-        send event Restaurant.Orders.Order.OrderPlaced to outlet OrderAnnouncer.Published
+        send event Restaurant.Orders.Order.OrderPlaced(
+          id = prompt("the id carried by OrderPlaced")
+        ) to outlet OrderAnnouncer.Published
       }
       on other {
         do "ignore anything that is not a order event"
@@ -126,7 +138,11 @@ context Orders is {
     }
     handler IntakeOrderHandler is {
       on command Restaurant.Orders.Order.PlaceOrder {
-        tell command Restaurant.Orders.Order.PlaceOrder to entity Order
+        tell command Restaurant.Orders.Order.PlaceOrder(
+          id = prompt("the id carried by PlaceOrder"),
+          customerName = prompt("the customerName carried by PlaceOrder"),
+          total = prompt("the total carried by PlaceOrder")
+        ) to entity Order
       }
     } with {
       briefly as "Dispatches arriving order commands"

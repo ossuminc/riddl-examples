@@ -8,7 +8,45 @@ NOTEBOOK.md § HANDOFF.
 
 ---
 
-## 1. Decide the branch-protection posture on `main`
+## 1. Blocked: rc.16 Completeness 4b fires on repositories and projectors
+
+**25 false positives** keep `bin/validate-corpus.sh` at exit 1. Not our bug
+and **not to be fixed here** — editing the models would make 25 of them wrong
+to satisfy a check that is itself wrong.
+
+| Example | count |
+|---|---:|
+| ReactiveBBQ | 13 |
+| dokn | 5 |
+| Trello | 3 |
+| ToDoodles | 2 |
+| ReactiveSummit | 1 |
+| ShopifyCart | 1 |
+
+**Verified**, so it need not be re-derived:
+
+- rc.15 and rc.16 on identical sources give 0 and 25. The bump is the cause.
+- `ValidationPass.scala:4589` restricts the check to `Sink` on purpose, but
+  `streamlets` (`AST.scala:769`) is any processor with ports, and
+  `effectiveShape` (`AST.scala:1346`) derives `Sink` from arity — so a
+  repository with one inlet and no outlet qualifies.
+- A minimal repro shows a real `sink` that dispatches stays silent while a
+  `repository` and a `projector` both warn — the check works, its reach does
+  not.
+- rc.16 has no other effect here: no new errors, deprecations or missing
+  warnings, and prettify round-trips clean and idempotent on all eight.
+
+Filed with the repro at
+`riddl/task/2026-08-18-completeness-4b-fires-on-repositories-and-projectors.md`.
+Suggested fix there is `c.streamlets.collect { case s: Streamlet => s }`, the
+idiom `AST.scala:767` already recommends.
+
+**When it lands:** re-run `bin/validate-corpus.sh`, expect exit 0 with no
+model changes, then delete `../bin/riddlc.rc15.bak` and this item.
+
+---
+
+## 2. Decide the branch-protection posture on `main`
 
 Every push to `main` prints:
 
@@ -29,7 +67,7 @@ urgent; it is noise either way.
 
 ---
 
-## 2. Standing instruction: keyword-named fields
+## 3. Standing instruction: keyword-named fields
 
 Two fields are named with RIDDL keywords:
 
@@ -48,7 +86,7 @@ is not lost.
 
 ---
 
-## 3. Watch, do not fix: style and usage counts
+## 4. Watch, do not fix: style and usage counts
 
 Out of scope by explicit decision — the goal is zero on errors,
 deprecations, missing and completeness only. Recorded so drift is
@@ -76,7 +114,7 @@ is legitimate in a reference corpus.
 
 ---
 
-## 4. Closed, but know this happened
+## 5. Closed, but know this happened
 
 Not work — context, so nobody rediscovers it as a defect.
 

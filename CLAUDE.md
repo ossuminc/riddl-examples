@@ -173,7 +173,7 @@ ShopifyCart.
 
 - **sbt**: 2.0.6
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.15` — the pin and the staged `../bin/riddlc` must
+- **RIDDL**: `2.0.0-rc.16` — the pin and the staged `../bin/riddlc` must
   always be the **same build**. When they drift, the library and the
   binary doing the validating disagree, and the corpus result no longer
   says anything about the pin. This has been a released tag since rc.13;
@@ -184,9 +184,20 @@ ShopifyCart.
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.15",
+.configure(With.Riddl.library(version = "2.0.0-rc.16",
   nonJVMDependency = false))
 ```
+
+**Known rc.16 defect — the corpus is red for a compiler reason.** Completeness
+check 4b ("handles messages but does not dispatch to any entity via 'tell'")
+fires on every `repository` and `projector` with an inlet, because
+`streamlets` selects any processor with ports and `effectiveShape` derives
+`Sink` from arity. 25 false positives; the models are correct and must NOT be
+edited to silence it. Filed at
+`riddl/task/2026-08-18-completeness-4b-fires-on-repositories-and-projectors.md`
+with a repro. `bin/validate-corpus.sh` exits 1 until riddlc is fixed — treat
+a non-zero exit as expected ONLY for these 25, and check nothing else has
+crept in.
 
 **Verifying a bump:** `sbt compile` proves nothing here — with no Scala
 sources it succeeds against a stale classpath. Check resolution instead:

@@ -5,14 +5,15 @@
 **Last verified: 2026-08-18**, by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are
-both **`2.0.0-rc.15`**, a released tag. All four riddl artifacts resolve at
-it (`sbt "show Compile/dependencyClasspath"`). The previous staged binary
-is parked at `../bin/riddlc.rc14-164.bak`; delete it once rc.15 has settled.
+both **`2.0.0-rc.16`**, a released tag. All four riddl artifacts resolve at
+it (`sbt "show Compile/dependencyClasspath"`). The previous binary is parked
+at `../bin/riddlc.rc15.bak` — keep it until the rc.16 defect below is fixed,
+since it is the last build the corpus is green under.
 
-**Corpus.** All eight in-scope examples are **zero on all four goal kinds**
-— error, deprecation, missing and completeness — so `bin/validate-corpus.sh`
-**exits 0**. Every `.conf` entry point exits 0 except `FooBarSameDomain`,
-which exits 7 by design.
+**Corpus.** Zero errors, deprecations and missing warnings on all eight.
+**25 completeness warnings are a riddlc defect, not a corpus defect** — see
+In flight — so `bin/validate-corpus.sh` **exits 1 by expectation** right now.
+The models are correct and must not be edited to silence it.
 
 **Round trip verified.** prettify -> validate is clean for all eight, and
 `prettify(prettify(x))` is byte-identical to `prettify(x)` for all eight.
@@ -20,9 +21,22 @@ rc.15 introduced no writer defects.
 
 ### In flight
 
-Nothing. The rc.15 migration is complete, committed and pushed, `task/` is
-empty, and the remaining BACKLOG items are standing watches and decisions
-rather than work in progress.
+**Blocked on riddl: rc.16's Completeness 4b fires on repositories and
+projectors.** 25 false positives across 6 examples (dokn 5, ReactiveBBQ 13,
+Trello 3, ToDoodles 2, ReactiveSummit 1, ShopifyCart 1). rc.15 is clean on
+the identical models.
+
+The check is deliberately Sink-only, but `streamlets` selects *any* processor
+with ports and `effectiveShape` derives `Sink` from arity, so a repository
+with one inlet and no outlet qualifies. There is no honest edit: these
+repositories receive events the entity emitted, so telling that entity back
+inverts the flow. It also contradicts the `do "store …"` idiom riddl itself
+endorsed for repository handlers.
+
+Filed with a repro at
+`riddl/task/2026-08-18-completeness-4b-fires-on-repositories-and-projectors.md`.
+**Do not "fix" the corpus.** When riddlc is fixed, re-run the harness and it
+should return to exit 0 with no model changes at all.
 
 ### Traps
 
@@ -86,16 +100,85 @@ to the task file and note completion in this notebook.
 
 **Last Updated**: August 18, 2026
 
-**Status: COMPLETE.** The corpus is clean under `2.0.0-rc.15` on `main`:
-all eight in-scope examples report zero errors, deprecations, missing
-warnings and completeness warnings, and the harness exits 0.
-FooBarSameDomain remains non-zero by design.
+**Status: blocked on riddl.** Under `2.0.0-rc.16` on `main` the corpus has
+zero errors, deprecations and missing warnings, but 25 completeness warnings
+that are a **riddlc defect** (Completeness 4b reaching repositories and
+projectors). The models are correct and unchanged; the harness exits 1 until
+riddlc is fixed. FooBarSameDomain remains non-zero by design.
 
 Remaining work:
-- None outstanding. `task/` is empty; all three task files closed with
-  verified Results.
+- Await the riddl fix, then re-run `bin/validate-corpus.sh` — it should
+  return to exit 0 with no model changes.
 - The `show … to …` riddlc bug is filed against riddl; once fixed,
   restore the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-18b: rc.16, and a check that outgrew its guard
+
+Upgraded the pin and staged binary to `2.0.0-rc.16`. **The corpus was not
+changed, deliberately.**
+
+### What rc.16 did
+
+Zero new errors, deprecations or missing warnings, and no writer defects —
+prettify still round-trips clean and idempotent on all eight. One change: 25
+completeness warnings, all the same shape, all on repositories.
+
+```
+Handler 'CompanyStoreHandler' in Repository 'CompanyStore' handles messages
+but does not dispatch to any entity via 'tell'
+```
+
+### Why we did not edit the corpus
+
+`ValidationPass.scala:4589` restricts Completeness 4b to sinks, and the
+comment above it explains the reasoning and even records a precedent:
+riddl-models had four such warnings "with no honest edit available -- the
+models were right and the check was wrong."
+
+Two facts defeat the restriction:
+
+- `streamlets` (`AST.scala:769`) is `Processor` filtered by `ports.nonEmpty`
+  — "defined by what it HAS, not by which keyword declared it". A repository
+  with an inlet is in the list.
+- `effectiveShape` (`AST.scala:1346`) falls back to arity, so one inlet and
+  no outlets derives `Sink`.
+
+The premise "a sink carries messages out of the stream and INTO ENTITIES"
+is exactly what a repository is not — it carries them into **storage**. In
+all 25 sites the repository receives an event the entity emitted; telling
+that entity back is a loop. And the shape being warned about is the
+`do "store the identifier carried by the event"` idiom riddl itself endorsed
+for repository handlers when it banned `set` there.
+
+**Projector is affected too** — confirmed on the repro. Any fix must cover
+both.
+
+### The lesson worth keeping
+
+A green corpus is a claim about the compiler as much as about the models.
+When a bump turns 25 sites red at once, and every one of them is the same
+construct that a prior release explicitly endorsed, the cheap read ("the
+corpus needs migrating") is the one to distrust. Reading the rule's source
+took minutes and turned a 25-site rewrite into a bug report.
+
+The tell was in the message itself: it said **Repository** while the
+suggestion said **streamlet handler**. A diagnostic that cannot name its own
+subject consistently is usually firing outside its intended domain.
+
+### Verified
+
+- rc.15 vs rc.16 on identical sources: 0 vs 25. The bump is the cause.
+- Minimal repro isolates it: a `sink` that dispatches stays silent, a
+  `repository` and a `projector` both warn. The check works; its reach does not.
+- prettify round-trips clean and byte-identical on a second pass, all eight.
+- All four artifacts resolve at rc.16.
+
+Note: the first resolution attempt failed with `unauthorized` from GitHub
+Packages despite the jar already being in the Coursier cache. A plain retry
+succeeded — transient, not a credentials problem. Worth a retry before
+diagnosing anything.
 
 ---
 

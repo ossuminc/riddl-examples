@@ -288,8 +288,36 @@ domain ShopifyCart is {
 
       // Commands
 
+      command CreateProduct is {
+        id is Id(Product),
+        sku is SKU
+        name is Name
+        price is Price
+      }
+      with {
+        briefly as "Command to add a new product to the catalogue"
+        described by {
+          | Creates a product in the catalogue. Unlike price and inventory
+          | updates, this originates inside ShoppingContext rather than being
+          | sent in from UserInterface, so it crosses no context seam and is
+          | declared here, on the entity that owns it.
+        }
+      }
+
+
 
       // Events
+      event ProductCreated is {
+        id is Id(Product),
+        productId is ProductId
+      }
+      with {
+        briefly as "Event indicating a product joined the catalogue"
+        described by {
+          | Emitted once a new product has been accepted into the catalogue.
+        }
+      }
+
       event ProductPriceUpdated is {
         id is Id(Product),
         productId is ProductId
@@ -380,6 +408,20 @@ domain ShopifyCart is {
             newStatus = prompt("the newStatus carried by InventoryUpdated")
           ) to entity Product
         }
+
+        on command CreateProduct is {
+          // A creation command either records the new product or refuses it.
+          // Both outcomes are covered, so every path discharges.
+          when prompt("the sku is well formed and not already in the catalogue") then
+            tell event ProductCreated(
+              id = prompt("the id carried by ProductCreated"),
+              productId = prompt("the productId carried by ProductCreated")
+            ) to entity Product
+          else
+            error "Cannot create product"
+          end
+        }
+
       }
       with {
         briefly as "Processes commands for product management"
@@ -1169,9 +1211,38 @@ domain ShopifyCart is {
 
       // Commands
 
+      command CancelCheckout is {
+        id is Id(Checkout),
+        cartId is CartId
+        reason is String
+      }
+      with {
+        briefly as "Command to abandon a checkout before it completes"
+        described by {
+          | Ends a checkout without producing an order, raised inside
+          | ShoppingContext by a timeout or by the shopper backing out. It
+          | crosses no context seam, so it is declared here on the entity
+          | that owns it.
+        }
+      }
+
+
 
 
       // Events
+      event CheckoutCancelled is {
+        id is Id(Checkout),
+        cartId is CartId
+        reason is String
+      }
+      with {
+        briefly as "Event indicating a checkout was abandoned"
+        described by {
+          | Emitted when a checkout ends without completing. The cart itself
+          | survives; only the checkout attempt is discarded.
+        }
+      }
+
       event CheckoutInitiated is {
         id is Id(Checkout),
         cartId is CartId
@@ -1275,6 +1346,21 @@ domain ShopifyCart is {
             error "Cannot complete checkout"
           end
         }
+
+        on command CancelCheckout is {
+          // Abandoning is still processing: the handler records the outcome
+          // or refuses, so every path discharges.
+          when prompt("the checkout is still open") then
+            tell event CheckoutCancelled(
+              id = prompt("the id carried by CheckoutCancelled"),
+              cartId = prompt("the cartId carried by CheckoutCancelled"),
+              reason = prompt("the reason carried by CheckoutCancelled")
+            ) to entity ShopifyCart.ShoppingContext.Checkout
+          else
+            error "Cannot cancel a checkout that has already completed"
+          end
+        }
+
       }
       with {
         briefly as "Processes commands for checkout flow"

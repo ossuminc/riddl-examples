@@ -9,10 +9,10 @@ both **`2.0.0-rc.15`**, a released tag. All four riddl artifacts resolve at
 it (`sbt "show Compile/dependencyClasspath"`). The previous staged binary
 is parked at `../bin/riddlc.rc14-164.bak`; delete it once rc.15 has settled.
 
-**Corpus.** All eight in-scope examples are **zero on error, deprecation
-and missing**. Seven are also zero on completeness; **ShopifyCart carries
-2**, and that is the one open item — see In flight. Every `.conf` entry
-point exits 0 except `FooBarSameDomain`, which exits 7 by design.
+**Corpus.** All eight in-scope examples are **zero on all four goal kinds**
+— error, deprecation, missing and completeness — so `bin/validate-corpus.sh`
+**exits 0**. Every `.conf` entry point exits 0 except `FooBarSameDomain`,
+which exits 7 by design.
 
 **Round trip verified.** prettify -> validate is clean for all eight, and
 `prettify(prettify(x))` is byte-identical to `prettify(x)` for all eight.
@@ -20,15 +20,9 @@ rc.15 introduced no writer defects.
 
 ### In flight
 
-**ShopifyCart entities `Product` and `Checkout` define no command types.**
-Their commands were hoisted to domain scope to clear 8 context-isolation
-seam errors, which is what RIDDL 2.0 requires for a message crossing
-contexts — but it emptied those two entities of locally-defined commands.
-`Cart` does not warn because it still owns `CreateCart` and `ApplyDiscount`,
-neither of which crosses the seam. That is the shape to copy.
-
-The decision is what `Product` and `Checkout` should own locally, and it is
-a modelling call, not a syntax fix. Filed as BACKLOG item 1.
+Nothing. The rc.15 migration is complete, committed and pushed, `task/` is
+empty, and the remaining BACKLOG items are standing watches and decisions
+rather than work in progress.
 
 ### Traps
 
@@ -69,7 +63,8 @@ Each of these has already cost someone time.
 - **BACKLOG.md** — all open work, with the evidence already gathered.
 - **CLAUDE.md** — durable facts: validation procedure, 2.0 syntax rules.
 - **NOTEBOOK.md § Session 2026-08-18** — the rc.15 migration: the five
-  error families, the fix idiom for each, and the tooling used.
+  error families, the fix idiom for each, the tooling used, and why the
+  ShopifyCart hoist needed two new commands to settle.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 
@@ -91,15 +86,14 @@ to the task file and note completion in this notebook.
 
 **Last Updated**: August 18, 2026
 
-**Status: one open item.** The corpus is clean under `2.0.0-rc.15` on
-`main`: all eight in-scope examples report zero errors, deprecations and
-missing warnings, and seven of eight report zero completeness warnings.
-ShopifyCart carries 2 completeness warnings arising from the
-context-isolation hoist — see HANDOFF § In flight and BACKLOG item 1.
+**Status: COMPLETE.** The corpus is clean under `2.0.0-rc.15` on `main`:
+all eight in-scope examples report zero errors, deprecations, missing
+warnings and completeness warnings, and the harness exits 0.
 FooBarSameDomain remains non-zero by design.
 
 Remaining work:
-- ShopifyCart: decide what commands `Product` and `Checkout` own locally.
+- None outstanding. `task/` is empty; all three task files closed with
+  verified Results.
 - The `show … to …` riddlc bug is filed against riddl; once fixed,
   restore the step ToDoodles' epic had to drop.
 
@@ -177,27 +171,40 @@ Two sites resisted it — `type CheckoutRecord is {` is referenced as
 `record CheckoutRecord`, and the scanner only indexed `record` definitions.
 Patched by hand.
 
-### ShopifyCart: the hoist has a cost
+### ShopifyCart: the hoist had a cost, and paying it improved the model
 
 Eight commands crossed the `UserInterface -> ShoppingContext` seam. Hoisting
 them to domain scope cleared all 8 errors — their field types were already
 domain-scoped, so nothing dangled — but it left `Product` and `Checkout`
 defining no commands at all, which is 2 new completeness warnings. `Cart`
-escaped because it still owns `CreateCart` and `ApplyDiscount`. Recorded as
-BACKLOG item 1 rather than patched over with invented commands.
+escaped because it still owns `CreateCart` and `ApplyDiscount`.
+
+The fix was to give each of the two entities a genuinely local command, the
+shape `Cart` already demonstrates: `CreateProduct` / `ProductCreated` and
+`CancelCheckout` / `CheckoutCancelled`, each handled with a `when/else/end`
+so the path discharges either way.
+
+**This was a real gap, not warning-silencing.** `Product` had no creation
+path at all, and `Checkout` had no way to end except by completing — no
+abandon, in a shopping model. The compiler's structural complaint pointed at
+a modelling hole.
+
+The anticipated cost did not materialise: a declared-but-unsent command
+would draw an "unused" usage warning, but because each new command is
+handled and each new event is told, ShopifyCart's usage count stayed at 11.
 
 ### Verified
 
-- `bin/validate-corpus.sh`: 8/8 zero on error/deprecation/missing; 7/8 on
-  completeness.
+- `bin/validate-corpus.sh`: 8/8 zero on all four goal kinds; **exits 0**.
 - Every `.conf` entry point exits 0 except FooBarSameDomain (7, by design),
   which is what riddl's `RunRiddlcOnLocalTest` reads.
 - prettify round trip: validate clean for all eight; second pass
   byte-identical to the first for all eight. No rc.15 writer defects.
 - `sbt "show Compile/dependencyClasspath"`: all four artifacts at rc.15.
 
-Style counts rose (dokn 34 -> 39, ReactiveBBQ 65 -> 78) because the added
-`id` fields are short identifiers. Out of scope by standing decision.
+Style counts rose (dokn 34 -> 39, ReactiveBBQ 65 -> 78, ShopifyCart 14 ->
+36) because the added `id` fields are short identifiers. Out of scope by
+standing decision.
 
 ---
 

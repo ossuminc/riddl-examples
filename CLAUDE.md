@@ -115,7 +115,10 @@ persistent` inside a connector's `with` block is **deprecated**. Write
 command is declared in a domain ancestral to both. Fix by hoisting the
 declaration to the shared domain, or by routing through an adaptor. Hoisting
 can empty an entity of locally-declared commands, which raises a *different*
-completeness warning — see BACKLOG item 1.
+completeness warning ("defines no command types"). The fix is to give that
+entity a genuinely local command — one that does not cross the seam — and
+handle it, as `Cart`/`CreateCart` and `Product`/`CreateProduct` do in
+ShopifyCart.
 
 
 **Handler rules (RIDDL 2.0)**:

@@ -8,45 +8,7 @@ NOTEBOOK.md § HANDOFF.
 
 ---
 
-## 1. Blocked: rc.16 Completeness 4b fires on repositories and projectors
-
-**25 false positives** keep `bin/validate-corpus.sh` at exit 1. Not our bug
-and **not to be fixed here** — editing the models would make 25 of them wrong
-to satisfy a check that is itself wrong.
-
-| Example | count |
-|---|---:|
-| ReactiveBBQ | 13 |
-| dokn | 5 |
-| Trello | 3 |
-| ToDoodles | 2 |
-| ReactiveSummit | 1 |
-| ShopifyCart | 1 |
-
-**Verified**, so it need not be re-derived:
-
-- rc.15 and rc.16 on identical sources give 0 and 25. The bump is the cause.
-- `ValidationPass.scala:4589` restricts the check to `Sink` on purpose, but
-  `streamlets` (`AST.scala:769`) is any processor with ports, and
-  `effectiveShape` (`AST.scala:1346`) derives `Sink` from arity — so a
-  repository with one inlet and no outlet qualifies.
-- A minimal repro shows a real `sink` that dispatches stays silent while a
-  `repository` and a `projector` both warn — the check works, its reach does
-  not.
-- rc.16 has no other effect here: no new errors, deprecations or missing
-  warnings, and prettify round-trips clean and idempotent on all eight.
-
-Filed with the repro at
-`riddl/task/2026-08-18-completeness-4b-fires-on-repositories-and-projectors.md`.
-Suggested fix there is `c.streamlets.collect { case s: Streamlet => s }`, the
-idiom `AST.scala:767` already recommends.
-
-**When it lands:** re-run `bin/validate-corpus.sh`, expect exit 0 with no
-model changes, then delete `../bin/riddlc.rc15.bak` and this item.
-
----
-
-## 2. Decide the branch-protection posture on `main`
+## 1. Decide the branch-protection posture on `main`
 
 Every push to `main` prints:
 
@@ -67,7 +29,7 @@ urgent; it is noise either way.
 
 ---
 
-## 3. Standing instruction: keyword-named fields
+## 2. Standing instruction: keyword-named fields
 
 Two fields are named with RIDDL keywords:
 
@@ -86,35 +48,36 @@ is not lost.
 
 ---
 
-## 4. Watch, do not fix: style and usage counts
+## 3. Watch: style and usage are now ZERO, keep them there
 
-Out of scope by explicit decision — the goal is zero on errors,
-deprecations, missing and completeness only. Recorded so drift is
-visible:
+Previously "watch, do not fix" with 226 style and 20 usage warnings recorded
+as out of scope. That decision is **superseded**: on 2026-08-18 the corpus
+was driven to zero on every message kind, including style and usage.
 
 | Example | style | usage |
 |---|---:|---:|
-| dokn | 39 | 0 |
-| FooBarSuccess | 2 | 2 |
-| FooBarTwoDomains | 0 | 2 |
-| ReactiveBBQ | 78 | 1 |
-| ReactiveSummit | 6 | 0 |
-| ShopifyCart | 36 | 11 |
-| ToDoodles | 12 | 0 |
-| Trello | 53 | 0 |
-| FooBarSameDomain | 0 | 4 |
+| all eight in-scope | 0 | 0 |
 
-Counts refreshed 2026-08-18; they rose because the rc.15 migration added
-an `id` field to 46 message types, plus two new commands and two events in
-ShopifyCart, and `id` is a short identifier.
+`bin/validate-corpus.sh` exits 0 only when the four goal kinds are zero, so
+**style and usage drift will not fail it**. If they matter, check them
+explicitly; the harness reports them in its last two columns.
 
-Most style warnings are short identifiers (`id`, `Foo`); most usage
-warnings are types defined for illustration that nothing consumes, which
-is legitimate in a reference corpus.
+What kept them at zero, so a future change does not undo it cheaply:
+
+- identity fields are named after what they identify (`planetId`, not `id`),
+  because the minimum identifier length is 3 and is not configurable
+- every port-bearing definition carries a shape ascription matching its
+  arity
+- nothing is declared without a consumer: functions are called, repositories
+  have inbound channels, and the fixtures' demonstration types reference
+  each other
+
+**Deleting an unused definition is usually the wrong fix** in a reference
+corpus — it is there to demonstrate something. Give it a real consumer.
 
 ---
 
-## 5. Closed, but know this happened
+## 4. Closed, but know this happened
 
 Not work — context, so nobody rediscovers it as a defect.
 

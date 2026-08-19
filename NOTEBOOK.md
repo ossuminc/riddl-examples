@@ -4,81 +4,60 @@
 
 **Last verified: 2026-08-18**, by running the commands, not from memory.
 
-**Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are
-both **`2.0.0-rc.16`**, a released tag. All four riddl artifacts resolve at
-it (`sbt "show Compile/dependencyClasspath"`). The previous binary is parked
-at `../bin/riddlc.rc15.bak` — keep it until the rc.16 defect below is fixed,
-since it is the last build the corpus is green under.
+**Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
+**`2.0.0-rc.17`**, a released tag that resolves from GitHub Packages. Check
+they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
+projects and has changed under this repo twice now, mid-session both times.
 
-**Corpus.** Zero errors, deprecations and missing warnings on all eight.
-**25 completeness warnings are a riddlc defect, not a corpus defect** — see
-In flight — so `bin/validate-corpus.sh` **exits 1 by expectation** right now.
-The models are correct and must not be edited to silence it.
-
-**Round trip verified.** prettify -> validate is clean for all eight, and
-`prettify(prettify(x))` is byte-identical to `prettify(x)` for all eight.
-rc.15 introduced no writer defects.
+**Corpus: ZERO messages of every kind.** All eight in-scope examples report
+0 errors, 0 deprecations, 0 missing, 0 completeness, 0 style and 0 usage.
+`bin/validate-corpus.sh` exits 0. Every `.conf` entry point exits 0 except
+`FooBarSameDomain`, which exits 7 by design and is untouched. prettify
+round-trips to zero messages and is idempotent on all eight. riddl's EBNF
+validator passes 9/9.
 
 ### In flight
 
-**Blocked on riddl: rc.16's Completeness 4b fires on repositories and
-projectors.** 25 false positives across 6 examples (dokn 5, ReactiveBBQ 13,
-Trello 3, ToDoodles 2, ReactiveSummit 1, ShopifyCart 1). rc.15 is clean on
-the identical models.
-
-The check is deliberately Sink-only, but `streamlets` selects *any* processor
-with ports and `effectiveShape` derives `Sink` from arity, so a repository
-with one inlet and no outlet qualifies. There is no honest edit: these
-repositories receive events the entity emitted, so telling that entity back
-inverts the flow. It also contradicts the `do "store …"` idiom riddl itself
-endorsed for repository handlers.
-
-Filed with a repro at
-`riddl/task/2026-08-18-completeness-4b-fires-on-repositories-and-projectors.md`.
-**Do not "fix" the corpus.** When riddlc is fixed, re-run the harness and it
-should return to exit 0 with no model changes at all.
+Nothing. `task/` is empty.
 
 ### Traps
 
-Each of these has already cost someone time.
-
-- **The pin and the staged binary drift silently.** On 2026-08-17 the
-  NOTEBOOK said rc.13 and `build.sbt` said rc.13, while `../bin/riddlc` was
-  a `rc.14-164` snapshot — so "the corpus is clean" described a compiler
-  nobody had pinned, and a real regression sat unnoticed. **Run
-  `../bin/riddlc version` and compare it to `build.sbt:21` before believing
-  any corpus result.** `../bin/riddlc` is shared with the other projects in
-  `ossuminc/`, so it can change without a commit here.
+- **The pin and the staged binary drift silently, and it has happened
+  repeatedly.** Run `../bin/riddlc version` and compare with `build.sbt:21`
+  before believing any corpus result. During this session the staged binary
+  moved rc.16-19 -> rc.17 while work was in progress, invalidating an
+  earlier measurement.
 - **A corpus regression is not evidence about the release you just
-  installed.** rc.14-164 and rc.15 produced byte-identical results; the
-  breakage predated both. Measure the OLD binary too before attributing
-  fallout to a bump.
-- **riddlc is the test suite, not sbt.** No Scala sources here. `sbt test`
-  reports "No tests to run" and that is correct. Run
-  `bin/validate-corpus.sh`.
+  installed.** rc.14-164 and rc.15 gave byte-identical results once; the
+  breakage predated both. Measure the OLD binary too before blaming a bump.
+- **`$?` after a command substitution is the substitution's status.**
+  `cmd; printf "%s" "$(basename x)" "$?"` reports basename's 0, not cmd's.
+  This produced a table of nine passing `.conf` entry points when one was
+  failing. Capture `rc=$?` on its own line, immediately.
+- **riddlc does not detect duplicate field names in an aggregation.** A
+  rename that collides produces two identically-named fields and validates
+  clean. Audit renames by parsing the result, not by trusting a green run.
+- **riddlc is the test suite, not sbt.** `sbt test` reports "No tests to
+  run" and that is correct. Run `bin/validate-corpus.sh`.
 - **`sbt compile` cannot verify a version bump** — no sources means it
-  succeeds against a stale classpath. Check
-  `sbt "show Compile/dependencyClasspath" | grep riddl` instead. And the
-  corpus never consults `build.sbt` at all: `bin/validate-corpus.sh` shells
-  out to `../bin/riddlc`.
-- **Do not validate through the `.conf` files.** Their `common` blocks
-  hide warnings — ShopifyCart's `.conf` exits 0 today *despite* its 2
-  completeness warnings. The harness passes flags itself for that reason.
+  succeeds against a stale classpath. Use
+  `sbt "show Compile/dependencyClasspath"`. Note ivy-local jars are named
+  `riddl-lib_3.jar` with no version in the filename, so grep the PATH.
+  A first resolution attempt failing `unauthorized` against GitHub Packages
+  has been transient twice; retry before diagnosing.
+- **Do not validate through the `.conf` files** when measuring: their
+  `common` blocks can hide the very warnings being driven to zero.
 - **Validate is not enough after a compiler bump.** Round-trip through
-  `riddlc prettify -s true` and re-validate; two writer defects were once
-  visible only that way. Note prettify writes **`prettify-output.riddl`**,
-  not the input basename — a check for the original filename reports a
-  false failure.
-- **A clean run is not evidence that a check ran.** Prove the check is
-  reachable before trusting a zero.
+  `riddlc prettify -s true` and re-validate. prettify writes
+  **`prettify-output.riddl`**, not the input basename.
 
 ### Pointers
 
-- **BACKLOG.md** — all open work, with the evidence already gathered.
-- **CLAUDE.md** — durable facts: validation procedure, 2.0 syntax rules.
-- **NOTEBOOK.md § Session 2026-08-18** — the rc.15 migration: the five
-  error families, the fix idiom for each, the tooling used, and why the
-  ShopifyCart hoist needed two new commands to settle.
+- **BACKLOG.md** — all open work.
+- **CLAUDE.md** — the 2.0 streaming rules, shape-ascription arity table,
+  and identity-field naming, all of which the corpus now depends on.
+- **NOTEBOOK.md § Session 2026-08-18c** — how the boundary migration was
+  derived and what it cost.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 
@@ -100,17 +79,103 @@ to the task file and note completion in this notebook.
 
 **Last Updated**: August 18, 2026
 
-**Status: blocked on riddl.** Under `2.0.0-rc.16` on `main` the corpus has
-zero errors, deprecations and missing warnings, but 25 completeness warnings
-that are a **riddlc defect** (Completeness 4b reaching repositories and
-projectors). The models are correct and unchanged; the harness exits 1 until
-riddlc is fixed. FooBarSameDomain remains non-zero by design.
+**Status: COMPLETE.** The corpus validates with **zero messages of every
+kind** under `2.0.0-rc.17` on `main`. FooBarSameDomain remains non-zero by
+design.
 
 Remaining work:
-- Await the riddl fix, then re-run `bin/validate-corpus.sh` — it should
-  return to exit 0 with no model changes.
-- The `show … to …` riddlc bug is filed against riddl; once fixed,
-  restore the step ToDoodles' epic had to drop.
+- None outstanding. `task/` is empty.
+- The `show … to …` riddlc bug is filed against riddl; once fixed, restore
+  the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-18c: rc.17, and the corpus to zero on everything
+
+Upgraded to `2.0.0-rc.17` and drove all eight in-scope examples to zero
+errors, deprecations, missing, completeness, style and usage.
+
+### The version asked for was not the version staged
+
+The request was to pin `2.0.0-rc.16-18-3005b2e` and validate with the staged
+binary. Those turned out to be three different things: the staged
+`../bin/riddlc` was rc.16-19 when work started and **rc.17 by the time it
+finished**, having been rebuilt mid-session, while an incoming task file
+named rc.16-20. rc.17 was chosen because it matches the binary and is a
+released tag; rc.16-18 exists only in `~/.ivy2/local` and could not be
+resolved by CI or another machine. The compiler code at rc.16-18 and
+rc.16-19 is identical — the commit between them touches only NOTEBOOK.md.
+
+### The two rules that restructured the corpus
+
+rc.16 made a connector crossing a context boundary land on the CONTEXT's own
+portlets, and required every processor to own the ports it uses. 50 errors
+and 62 completeness warnings.
+
+The shape was not invented: riddl-models had already migrated to zero, so it
+was read out of that corpus. Three facts had to be established by probing
+before anything could be written, and each one shaped the result:
+
+- a connector cannot be sourced from a context's inlet, so a context's
+  inbound port is consumed only by its own handler
+- an outlet carries exactly one connector, so fan-out needs several outlets
+  — which is what forces one dispatch outlet per entity, and turns a
+  two-store announcer into a `router`
+- `tell` does not connect a port, so an entity's inlet needs a real
+  connector even where a handler already tells it
+
+Once the announcer sources and intake sinks were redundant, deleting them
+was not tidying but the actual consequence: the entity owns its outlet and
+the boundary owns the inbound side, leaving nothing for them to do.
+
+### The rename that broke thirteen types, silently
+
+Renaming `id` after the thing it identifies is what the short-identifier
+rule wants, and it removed 183 style warnings. But thirteen ShopifyCart
+types already carried a business `cartId`/`productId` **alongside** the
+`Id(Cart)` field added for the rc.15 completeness rule, so the rename
+produced two fields of the same name — and **riddlc validated it clean**.
+
+It does not check for duplicate field names in an aggregation. The corpus
+was green, round-tripped, and wrong. Caught only by parsing the rename's own
+output and counting field names per definition.
+
+**The rule this repo keeps relearning, now in a third form: a green run is
+evidence only in proportion to what it actually checks.** First it was
+scoverage measuring nothing, then sbt caching tests away, then a compiler
+that had drifted from its pin. This time the check simply did not exist.
+
+### The style and usage tail was mostly modelling, not tidying
+
+Fixing "unused" by deleting is the tempting move and mostly the wrong one.
+Every unused definition here got a real consumer instead: the ten cart-maths
+functions are called from the handlers they were written for, the
+ProductRepository got the inbound channel it never had, MenuPlant's types
+are consumed by OrderSupply, and the FooBar fixtures' demonstration types
+now reference each other across the sibling domains — which is what those
+examples exist to show anyway.
+
+Two small discoveries: `call` needs its `function` keyword (`call f(...)`
+does not parse), and capitalising FooBarSuccess's `foo`/`bar` to `Foo`/`Bar`
+BREAKS the fixture, because `type Foo` inside `domain Foo` shadows the
+domain and stops `Foo.Info` resolving. The lower-case names were
+load-bearing; they became `FooEntry`/`BarEntry`.
+
+### A measurement bug worth remembering
+
+A loop reporting exit codes for the nine `.conf` entry points showed all
+nine passing, including the negative fixture that must fail. The cause was
+`$?` read after a command substitution in the same `printf`, so it carried
+`basename`'s status. Nearly reported a broken fixture as healthy.
+
+### Verified
+
+- `bin/validate-corpus.sh` exits 0; 8/8 at zero on all six message kinds
+- prettify round trip: zero messages of ANY kind on all eight, second pass
+  byte-identical to the first
+- every `.conf` exits 0 but FooBarSameDomain's deliberate 7
+- riddl's EBNF validator 9/9 — and it still lists Trello as
+  expected-to-fail, which is now stale
 
 ---
 

@@ -63,7 +63,8 @@ context SupplyOrder as flow is {
     command OrderSupply is {
       supplyId is Id(Supply),
       item is String,
-      quantity is Integer
+      quantity is Integer,
+      plannedAs is BackOffice.MenuPlant.PlantSchedule
     } with {
       briefly as "Ask for a supply to be recorded"
       described as {

@@ -15,7 +15,8 @@ domain Foo is {
   include "Foo/foo"
 
   type Foo is {
-    info: Root.Foo.Info
+    info: Root.Foo.Info,
+    peer: Root.Bar.Bar
   } with {
     briefly as "A type that reaches Foo's Info by a root-qualified path"
     described as {
@@ -38,7 +39,8 @@ domain Bar is {
   include "Bar/bar"
 
   type Bar is {
-    info: Root.Bar.Info
+    info: Root.Bar.Info,
+    peer: Root.Foo.Foo
   } with {
     briefly as "A type that reaches Bar's Info by a root-qualified path"
     described as {

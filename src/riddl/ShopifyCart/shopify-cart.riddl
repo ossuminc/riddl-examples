@@ -1071,6 +1071,27 @@ domain ShopifyCart is {
         }
 
         on command AddToCart is {
+          let appendItemToCartResult = call function appendItemToCart(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns"),
+            quantity = prompt("the quantity requested")
+          )
+          let calculateSubtotalResult = call function calculateSubtotal(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns"),
+            quantity = prompt("the quantity requested")
+          )
+          let calculateTaxesResult = call function calculateTaxes(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns"),
+            quantity = prompt("the quantity requested")
+          )
+          let calculateTotalResult = call function calculateTotal(
+            subtotal = prompt("the running subtotal"),
+            taxes = prompt("the taxes computed so far"),
+            shipping = prompt("the shipping cost"),
+            discount = prompt("the discount applied")
+          )
           // Check if product exists and is in stock
           when prompt("productExists(command.productId) && isInStock(command.productId)") then
             // Get product details and calculate new cart state
@@ -1096,6 +1117,18 @@ domain ShopifyCart is {
         }
 
         on command RemoveFromCart is {
+          let removeItemFromCartResult = call function removeItemFromCart(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns")
+          )
+          let calculateSubtotalAfterRemovalResult = call function calculateSubtotalAfterRemoval(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns")
+          )
+          let calculateTaxesAfterRemovalResult = call function calculateTaxesAfterRemoval(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns")
+          )
           // Update cart state
           morph entity Cart to state CartData with record CartRecord(
             cartId = prompt("the cartId of the resulting ShoppingContext state"),
@@ -1113,6 +1146,21 @@ domain ShopifyCart is {
 
         // FIXED: Ambiguous reference by using fully qualified path
         on command ShopifyCart.UpdateQuantity is {
+          let updateItemQuantityResult = call function updateItemQuantity(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns"),
+            quantity = prompt("the quantity requested")
+          )
+          let calculateSubtotalAfterUpdateResult = call function calculateSubtotalAfterUpdate(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns"),
+            quantity = prompt("the quantity requested")
+          )
+          let calculateTaxesAfterUpdateResult = call function calculateTaxesAfterUpdate(
+            items = prompt("the cart's current items"),
+            productId = prompt("the product this concerns"),
+            quantity = prompt("the quantity requested")
+          )
           // Validate new quantity. Three outcomes, so the guards nest rather
           // than sitting side by side — side-by-side guards leave a path where
           // none matches and nothing is recorded.
@@ -1481,10 +1529,6 @@ domain ShopifyCart is {
 
       // Message handlers
       handler CartRepositoryHandler is {
-        on event ShopifyCart.ShoppingContext.Cart.CartCreated {
-          do "store the cart identifier carried by the event"
-        }
-
         on event CartCreated is {
           do "Create new cart record in Cart repository"
         }
@@ -1523,7 +1567,14 @@ domain ShopifyCart is {
     }
 
     // Repository for Product data
-    repository ProductRepository is {
+    repository ProductRepository as sink is {
+
+      inlet Recorded is type ShoppingEvent with {
+        briefly as "Where product events arrive to be persisted"
+        described as {
+          |The repository learns of product changes through this inlet.
+        }
+      }
 
       schema ProductData is flat of
         product as record ProductRecord
@@ -1600,6 +1651,11 @@ domain ShopifyCart is {
         end
       } reverted by {
         do "No action needed for cart validation revert"
+          tell command ShopifyCart.AddToCart(
+            cartId = prompt("the cart being restored"),
+            productId = prompt("the product to put back"),
+            quantity = prompt("the quantity to put back")
+          ) to entity Cart
       }
       with {
         briefly as "Validates cart exists and contains items"
@@ -1621,6 +1677,10 @@ domain ShopifyCart is {
         end
       } reverted by {
         do "No action needed for inventory validation revert"
+          tell command ShopifyCart.UpdateInventory(
+            productId = prompt("the product whose inventory is restored"),
+            newQuantity = prompt("the quantity held before this step ran")
+          ) to entity Product
       }
       with {
         briefly as "Confirms sufficient inventory for all items"
@@ -1646,6 +1706,11 @@ domain ShopifyCart is {
         // Refund payment if necessary
         when prompt("paymentWasProcessed") then
           do "Refund payment via paymentService"
+          tell command CancelCheckout(
+            checkoutId = prompt("the checkout being unwound"),
+            cartId = prompt("the cart this checkout was for"),
+            reason = prompt("why the saga is compensating")
+          ) to entity ShopifyCart.ShoppingContext.Checkout
         end
       }
       with {
@@ -1667,6 +1732,11 @@ domain ShopifyCart is {
         // Cancel order if created
         when prompt("orderWasCreated") then
           do "Cancel order via orderService"
+          tell command CancelCheckout(
+            checkoutId = prompt("the checkout being unwound"),
+            cartId = prompt("the cart this checkout was for"),
+            reason = prompt("why the saga is compensating")
+          ) to entity ShopifyCart.ShoppingContext.Checkout
         end
       }
       with {
@@ -1684,6 +1754,10 @@ domain ShopifyCart is {
         do "Reduce inventory for all purchased items via inventoryService"
       } reverted by {
         do "Restore inventory levels for all items via inventoryService"
+          tell command ShopifyCart.UpdateInventory(
+            productId = prompt("the product whose inventory is restored"),
+            newQuantity = prompt("the quantity held before this step ran")
+          ) to entity Product
       } with {
         briefly as "Reduces inventory levels for purchased items"
         described by {
@@ -1700,6 +1774,11 @@ domain ShopifyCart is {
         do "Send order confirmation email to customer"
       } reverted by {
         do "No action needed for email revert"
+          tell command CancelCheckout(
+            checkoutId = prompt("the checkout being unwound"),
+            cartId = prompt("the cart this checkout was for"),
+            reason = prompt("why the saga is compensating")
+          ) to entity ShopifyCart.ShoppingContext.Checkout
       } with {
         briefly as "Sends order confirmation to customer"
         described by {
@@ -1749,7 +1828,7 @@ domain ShopifyCart is {
       }
     }
 
-    processor ShoppingAnnouncer as merge is {
+    processor ShoppingAnnouncer as router is {
       inlet FromProduct is type ShoppingEvent with {
         briefly as "Events arriving from Product"
         described as {
@@ -1768,6 +1847,14 @@ domain ShopifyCart is {
         briefly as "Events arriving from Checkout"
         described as {
           |Each entity publishes on its own outlet; this merges the three.
+        }
+      }
+
+      outlet PublishedProduct is type ShoppingEvent with {
+        briefly as "Where product events go to be stored"
+        described as {
+          |An outlet carries exactly one connector, so a second store needs a
+          |second outlet.
         }
       }
 
@@ -1860,6 +1947,15 @@ domain ShopifyCart is {
       briefly as "Carries this entity's events to the context's announcer"
       described as {
         |Publishing goes out the entity's own outlet and merges downstream.
+      }
+    }
+
+    connector RecordingProduct is {
+      from outlet ShopifyCart.ShoppingContext.ShoppingAnnouncer.PublishedProduct to inlet ShopifyCart.ShoppingContext.ProductRepository.Recorded
+    } with {
+      briefly as "Carries product events to the product store"
+      described as {
+        |Gives ProductRepository the inbound channel it previously lacked.
       }
     }
 

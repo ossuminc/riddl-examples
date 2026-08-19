@@ -15,7 +15,8 @@ domain Foo is {
   include "Foo/foo"
 
   type FooEntry is {
-    info: Foo.Info
+    info: Foo.Info,
+    peer: Bar.BarEntry
   } with {
     briefly as "A type that reaches its own domain's Info by qualified path"
     described as {
@@ -40,7 +41,8 @@ domain Bar is {
   include "Bar/bar"
 
   type BarEntry is {
-    info: Bar.Info
+    info: Bar.Info,
+    peer: Foo.FooEntry
   } with {
     briefly as "A type that reaches its own domain's Info by qualified path"
     described as {

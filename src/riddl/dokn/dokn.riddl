@@ -149,7 +149,7 @@ domain dokn is {
         }
       }
 
-      record fields is {
+      record Fields is {
         companyId is dokn.Companies.CompanyId,
         mailingAddress is dokn.Companies.Address,
         primaryContactName is String,
@@ -162,7 +162,7 @@ domain dokn is {
         }
       }
 
-      initial state CompanyBase of record dokn.Companies.Company.fields with {
+      initial state CompanyBase of record dokn.Companies.Company.Fields with {
         briefly as "The state of one company"
         described as {
           |A company has a single state; its fields change but its kind does not.
@@ -177,14 +177,14 @@ domain dokn is {
           ) to outlet dokn.Companies.Company.CompanyEvents
         }
         on event CompanyAdded {
-          morph entity Company to state CompanyBase with record dokn.Companies.Company.fields(
+          morph entity Company to state CompanyBase with record dokn.Companies.Company.Fields(
             companyId = prompt("the companyId of the resulting Company state"),
             mailingAddress = prompt("the mailingAddress of the resulting Company state"),
             primaryContactName = prompt("the primaryContactName of the resulting Company state"),
             primaryContactPhone = prompt("the primaryContactPhone of the resulting Company state"),
             primaryContactEmail = prompt("the primaryContactEmail of the resulting Company state")
           )
-          set field dokn.Companies.Company.fields.companyId to "the identifier carried by the event"
+          set field dokn.Companies.Company.Fields.companyId to "the identifier carried by the event"
         }
         on query WhichCompany {
           reply result TheCompany(
@@ -216,7 +216,7 @@ domain dokn is {
         }
       }
       schema Store is flat
-        of Held as record dokn.Companies.Company.fields
+        of Held as record dokn.Companies.Company.Fields
       with {
         briefly as "How companys are laid out in storage"
         described as {
@@ -378,7 +378,7 @@ domain dokn is {
         }
       }
 
-      record fields is {
+      record Fields is {
         driverId is dokn.Drivers.DriverId,
         name is String,
         mobile is dokn.Drivers.MobileNumber,
@@ -390,7 +390,7 @@ domain dokn is {
         }
       }
 
-      initial state DriverBase of record dokn.Drivers.Driver.fields with {
+      initial state DriverBase of record dokn.Drivers.Driver.Fields with {
         briefly as "The state of one driver"
         described as {
           |A driver has a single state; its fields change but its kind does not.
@@ -405,13 +405,13 @@ domain dokn is {
           ) to outlet dokn.Drivers.Driver.DriverEvents
         }
         on event DriverAddedToCompany {
-          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.fields(
+          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.Fields(
             driverId = prompt("the driverId of the resulting Driver state"),
             name = prompt("the name of the resulting Driver state"),
             mobile = prompt("the mobile of the resulting Driver state"),
             onDutyTime = prompt("the onDutyTime of the resulting Driver state")
           )
-          set field dokn.Drivers.Driver.fields.driverId to "the identifier carried by the event"
+          set field dokn.Drivers.Driver.Fields.driverId to "the identifier carried by the event"
         }
         on query WhichDriver {
           reply result TheDriver(
@@ -443,7 +443,7 @@ domain dokn is {
         }
       }
       schema Store is flat
-        of Held as record dokn.Drivers.Driver.fields
+        of Held as record dokn.Drivers.Driver.Fields
       with {
         briefly as "How drivers are laid out in storage"
         described as {
@@ -585,7 +585,7 @@ domain dokn is {
         }
       }
 
-      record fields is {
+      record Fields is {
         noteId is dokn.Notes.NoteId,
         text is String,
         upvoteCount is Integer,
@@ -598,7 +598,7 @@ domain dokn is {
         }
       }
 
-      initial state NoteBase of record dokn.Notes.Note.fields with {
+      initial state NoteBase of record dokn.Notes.Note.Fields with {
         briefly as "The state of one note"
         described as {
           |A note has a single state; its fields change but its kind does not.
@@ -613,14 +613,14 @@ domain dokn is {
           ) to outlet dokn.Notes.Note.NoteEvents
         }
         on event NoteCaptured {
-          morph entity Note to state NoteBase with record dokn.Notes.Note.fields(
+          morph entity Note to state NoteBase with record dokn.Notes.Note.Fields(
             noteId = prompt("the noteId of the resulting Note state"),
             text = prompt("the text of the resulting Note state"),
             upvoteCount = prompt("the upvoteCount of the resulting Note state"),
             downvoteCount = prompt("the downvoteCount of the resulting Note state"),
             approved = prompt("the approved of the resulting Note state")
           )
-          set field dokn.Notes.Note.fields.noteId to "the identifier carried by the event"
+          set field dokn.Notes.Note.Fields.noteId to "the identifier carried by the event"
         }
         on query WhichNote {
           reply result TheNote(
@@ -652,7 +652,7 @@ domain dokn is {
         }
       }
       schema Store is flat
-        of Held as record dokn.Notes.Note.fields
+        of Held as record dokn.Notes.Note.Fields
       with {
         briefly as "How notes are laid out in storage"
         described as {
@@ -791,7 +791,7 @@ domain dokn is {
         }
       }
 
-      record fields is {
+      record Fields is {
         mediaId is dokn.Media.MediaId,
         path is String
       } with {
@@ -801,7 +801,7 @@ domain dokn is {
         }
       }
 
-      initial state MediumBase of record dokn.Media.Medium.fields with {
+      initial state MediumBase of record dokn.Media.Medium.Fields with {
         briefly as "The state of one medium"
         described as {
           |A medium has a single state; its fields change but its kind does not.
@@ -816,11 +816,11 @@ domain dokn is {
           ) to outlet dokn.Media.Medium.MediumEvents
         }
         on event MediumStored {
-          morph entity Medium to state MediumBase with record dokn.Media.Medium.fields(
+          morph entity Medium to state MediumBase with record dokn.Media.Medium.Fields(
             mediaId = prompt("the mediaId of the resulting Medium state"),
             path = prompt("the path of the resulting Medium state")
           )
-          set field dokn.Media.Medium.fields.mediaId to "the identifier carried by the event"
+          set field dokn.Media.Medium.Fields.mediaId to "the identifier carried by the event"
         }
         on query WhichMedium {
           reply result TheMedium(
@@ -852,7 +852,7 @@ domain dokn is {
         }
       }
       schema Store is flat
-        of Held as record dokn.Media.Medium.fields
+        of Held as record dokn.Media.Medium.Fields
       with {
         briefly as "How mediums are laid out in storage"
         described as {
@@ -951,7 +951,7 @@ domain dokn is {
       }
     }
 
-    type LoadingMethod is any of { dock, tailgate, forklift, none } with {
+    type LoadingMethod is any of { Dock, Tailgate, Forklift, None } with {
       briefly as "How freight is moved on and off a vehicle"
       described as {
         |Drivers need to know this before they arrive.
@@ -1015,7 +1015,7 @@ domain dokn is {
         }
       }
 
-      record fields is {
+      record Fields is {
         locationId is dokn.Locations.LocationId,
         label is String,
         address is dokn.Locations.Address,
@@ -1028,7 +1028,7 @@ domain dokn is {
         }
       }
 
-      initial state LocationBase of record dokn.Locations.Location.fields with {
+      initial state LocationBase of record dokn.Locations.Location.Fields with {
         briefly as "The state of one location"
         described as {
           |A location has a single state; its fields change but its kind does not.
@@ -1043,14 +1043,14 @@ domain dokn is {
           ) to outlet dokn.Locations.Location.LocationEvents
         }
         on event DeliveryLocationAdded {
-          morph entity Location to state LocationBase with record dokn.Locations.Location.fields(
+          morph entity Location to state LocationBase with record dokn.Locations.Location.Fields(
             locationId = prompt("the locationId of the resulting Location state"),
             label = prompt("the label of the resulting Location state"),
             address = prompt("the address of the resulting Location state"),
             ticketCount = prompt("the ticketCount of the resulting Location state"),
             loadingMethod = prompt("the loadingMethod of the resulting Location state")
           )
-          set field dokn.Locations.Location.fields.locationId to "the identifier carried by the event"
+          set field dokn.Locations.Location.Fields.locationId to "the identifier carried by the event"
         }
         on query WhichLocation {
           reply result TheLocation(
@@ -1082,7 +1082,7 @@ domain dokn is {
         }
       }
       schema Store is flat
-        of Held as record dokn.Locations.Location.fields
+        of Held as record dokn.Locations.Location.Fields
       with {
         briefly as "How locations are laid out in storage"
         described as {

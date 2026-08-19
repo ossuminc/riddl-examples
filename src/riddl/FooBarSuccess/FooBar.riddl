@@ -14,7 +14,7 @@ author Reid is {
 domain Foo is {
   include "Foo/foo"
 
-  type foo is {
+  type FooEntry is {
     info: Foo.Info
   } with {
     briefly as "A type that reaches its own domain's Info by qualified path"
@@ -39,7 +39,7 @@ domain Foo is {
 domain Bar is {
   include "Bar/bar"
 
-  type bar is {
+  type BarEntry is {
     info: Bar.Info
   } with {
     briefly as "A type that reaches its own domain's Info by qualified path"

@@ -1,4 +1,4 @@
-context Kitchen is {
+context Kitchen as flow is {
 
   inlet OrderViewerIn is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
     briefly as "Where orderviewer commands enter this context"
@@ -33,7 +33,7 @@ context Kitchen is {
     }
   }
 
-  entity OrderViewer is {
+  entity OrderViewer as flow is {
 
     inlet OrderViewerCommands is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Kitchen is {
     }
 
     command ShowOrders is {
-      id is Id(OrderViewer),
+      orderViewerId is Id(OrderViewer),
       viewType is String,
       station is String
     } with {
@@ -61,7 +61,7 @@ context Kitchen is {
     }
 
     query WhichOrderViewer is {
-      id is Restaurant.Kitchen.OrderViewerId
+      orderViewerId is Restaurant.Kitchen.OrderViewerId
     } with {
       briefly as "Ask for the current state of one orderviewer"
       described as {
@@ -70,7 +70,7 @@ context Kitchen is {
     }
 
     result TheOrderViewer is {
-      id is Restaurant.Kitchen.OrderViewerId,
+      orderViewerId is Restaurant.Kitchen.OrderViewerId,
       summary is String
     } with {
       briefly as "The answer to a WhichOrderViewer query"
@@ -80,7 +80,7 @@ context Kitchen is {
     }
 
     event OrdersShown is {
-      id is Restaurant.Kitchen.OrderViewerId
+      orderViewerId is Restaurant.Kitchen.OrderViewerId
     } with {
       briefly as "Records that the kitchen display was refreshed"
       described as {
@@ -89,7 +89,7 @@ context Kitchen is {
     }
 
     record OrderViewerFields is {
-      id is Restaurant.Kitchen.OrderViewerId,
+      orderViewerId is Restaurant.Kitchen.OrderViewerId,
       viewType is String,
       station is String
     } with {
@@ -108,21 +108,21 @@ context Kitchen is {
 
     handler OrderViewerHandler is {
       on init {
-        set field Restaurant.Kitchen.OrderViewer.OrderViewerFields.id to "a freshly minted identifier"
+        set field Restaurant.Kitchen.OrderViewer.OrderViewerFields.orderViewerId to "a freshly minted identifier"
       }
       on command ShowOrders {
         morph entity OrderViewer to state OrderViewerState with record Restaurant.Kitchen.OrderViewer.OrderViewerFields(
-          id = prompt("the id of the resulting OrderViewer state"),
+          orderViewerId = prompt("the orderViewerId of the resulting OrderViewer state"),
           viewType = prompt("the viewType of the resulting OrderViewer state"),
           station = prompt("the station of the resulting OrderViewer state")
         )
         send event OrdersShown(
-          id = prompt("the id carried by OrdersShown")
+          orderViewerId = prompt("the orderViewerId carried by OrdersShown")
         ) to outlet Restaurant.Kitchen.OrderViewer.OrderViewerEvents
       }
       on query WhichOrderViewer {
         reply result TheOrderViewer(
-          id = prompt("the id carried by TheOrderViewer"),
+          orderViewerId = prompt("the orderViewerId carried by TheOrderViewer"),
           summary = prompt("the summary carried by TheOrderViewer")
         )
       }
@@ -142,7 +142,7 @@ context Kitchen is {
 
 
 
-  repository OrderViewerStore is {
+  repository OrderViewerStore as sink is {
     inlet Recorded is event Restaurant.Kitchen.OrderViewer.OrdersShown with {
       briefly as "Where orderviewer events arrive to be persisted"
       described as {

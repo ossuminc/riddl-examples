@@ -111,7 +111,7 @@ domain ShopifyCart is {
   // UserInterface -> ShoppingContext seam, so RIDDL 2.0 requires them to be
   // declared in a domain ancestral to both contexts.
   command UpdateProductPrice is {
-    id is Id(Product),
+    productId is Id(Product),
     productId is ProductId
     newPrice is Price
   }
@@ -124,7 +124,7 @@ domain ShopifyCart is {
   }
 
   command UpdateInventory is {
-    id is Id(Product),
+    productId is Id(Product),
     productId is ProductId
     newQuantity is Quantity
   }
@@ -137,7 +137,7 @@ domain ShopifyCart is {
   }
 
   command AddToCart is {
-    id is Id(Cart),
+    cartId is Id(Cart),
     cartId is CartId
     productId is ProductId
     quantity is Quantity
@@ -152,7 +152,7 @@ domain ShopifyCart is {
   }
 
   command RemoveFromCart is {
-    id is Id(Cart),
+    cartId is Id(Cart),
     cartId is CartId
     productId is ProductId
   }
@@ -165,7 +165,7 @@ domain ShopifyCart is {
   }
 
   command UpdateQuantity is {
-    id is Id(Cart),
+    cartId is Id(Cart),
     cartId is CartId
     productId is ProductId
     quantity is Quantity
@@ -180,7 +180,7 @@ domain ShopifyCart is {
   }
 
   command InitiateCheckout is {
-    id is Id(Checkout),
+    checkoutId is Id(Checkout),
     cartId is CartId
     customerEmail is Email
     customerName is Name
@@ -196,7 +196,7 @@ domain ShopifyCart is {
   }
 
   command SelectPaymentMethod is {
-    id is Id(Checkout),
+    checkoutId is Id(Checkout),
     cartId is CartId
     paymentType is String
     paymentDetails is String
@@ -210,7 +210,7 @@ domain ShopifyCart is {
   }
 
   command CompleteCheckout is {
-    id is Id(Checkout),
+    checkoutId is Id(Checkout),
     cartId is CartId
   }
   with {
@@ -222,7 +222,7 @@ domain ShopifyCart is {
     }
   }
 
-  context ShoppingContext is {
+  context ShoppingContext as split is {
 
     inlet Failures is record Riddl.GeneratorError with {
       option error-sink
@@ -329,7 +329,7 @@ domain ShopifyCart is {
     }
 
     // Product Entity
-    entity Product is {
+    entity Product as flow is {
 
       inlet ProductCommands is type ShopifyCart.ShopperCommand with {
         briefly as "Where this entity receives its commands"
@@ -347,7 +347,7 @@ domain ShopifyCart is {
 
 
       query WhichProduct is {
-        id is ProductIdentity
+        productId is ProductIdentity
       } with {
         briefly as "Ask for the current state of one product"
         described as {
@@ -356,7 +356,7 @@ domain ShopifyCart is {
       }
 
       result TheProduct is {
-        id is ProductIdentity,
+        productId is ProductIdentity,
         summary is String
       } with {
         briefly as "The answer to a WhichProduct query"
@@ -378,7 +378,7 @@ domain ShopifyCart is {
       // Commands
 
       command CreateProduct is {
-        id is Id(Product),
+        productId is Id(Product),
         sku is SKU
         name is Name
         price is Price
@@ -397,7 +397,7 @@ domain ShopifyCart is {
 
       // Events
       event ProductCreated is {
-        id is Id(Product),
+        productId is Id(Product),
         productId is ProductId
       }
       with {
@@ -408,7 +408,7 @@ domain ShopifyCart is {
       }
 
       event ProductPriceUpdated is {
-        id is Id(Product),
+        productId is Id(Product),
         productId is ProductId
         oldPrice is Price
         newPrice is Price
@@ -422,7 +422,7 @@ domain ShopifyCart is {
       }
 
       event InventoryUpdated is {
-        id is Id(Product),
+        productId is Id(Product),
         productId is ProductId
         oldQuantity is Quantity
         newQuantity is Quantity
@@ -440,7 +440,7 @@ domain ShopifyCart is {
       handler ProductCommandHandler is {
         on query WhichProduct {
           reply result TheProduct(
-            id = prompt("the id carried by TheProduct"),
+            productId = prompt("the productId carried by TheProduct"),
             summary = prompt("the summary carried by TheProduct")
           )
         }
@@ -466,7 +466,7 @@ domain ShopifyCart is {
             )
             // Emit event
             tell event ProductPriceUpdated(
-              id = prompt("the id carried by ProductPriceUpdated"),
+              productId = prompt("the productId carried by ProductPriceUpdated"),
               productId = prompt("the productId carried by ProductPriceUpdated"),
               oldPrice = prompt("the oldPrice carried by ProductPriceUpdated"),
               newPrice = prompt("the newPrice carried by ProductPriceUpdated")
@@ -490,7 +490,7 @@ domain ShopifyCart is {
           )
           // Emit event
           tell event InventoryUpdated(
-            id = prompt("the id carried by InventoryUpdated"),
+            productId = prompt("the productId carried by InventoryUpdated"),
             productId = prompt("the productId carried by InventoryUpdated"),
             oldQuantity = prompt("the oldQuantity carried by InventoryUpdated"),
             newQuantity = prompt("the newQuantity carried by InventoryUpdated"),
@@ -503,7 +503,7 @@ domain ShopifyCart is {
           // Both outcomes are covered, so every path discharges.
           when prompt("the sku is well formed and not already in the catalogue") then
             tell event ProductCreated(
-              id = prompt("the id carried by ProductCreated"),
+              productId = prompt("the productId carried by ProductCreated"),
               productId = prompt("the productId carried by ProductCreated")
             ) to entity Product
           else
@@ -566,7 +566,7 @@ domain ShopifyCart is {
     }
 
     // Cart Entity
-    entity Cart is {
+    entity Cart as flow is {
 
       inlet CartCommands is type ShopifyCart.ShopperCommand with {
         briefly as "Where this entity receives its commands"
@@ -584,7 +584,7 @@ domain ShopifyCart is {
 
 
       query WhichCart is {
-        id is CartIdentity
+        cartId is CartIdentity
       } with {
         briefly as "Ask for the current state of one cart"
         described as {
@@ -593,7 +593,7 @@ domain ShopifyCart is {
       }
 
       result TheCart is {
-        id is CartIdentity,
+        cartId is CartIdentity,
         summary is String
       } with {
         briefly as "The answer to a WhichCart query"
@@ -994,7 +994,7 @@ domain ShopifyCart is {
 
       // Events
       event CartCreated is {
-        id is Id(Cart),
+        cartId is Id(Cart),
         cartId is CartId
       }
       with {
@@ -1006,7 +1006,7 @@ domain ShopifyCart is {
       }
 
       event ItemAddedToCart is {
-        id is Id(Cart),
+        cartId is Id(Cart),
         cartId is CartId
         productId is ProductId
         quantity is Quantity
@@ -1022,7 +1022,7 @@ domain ShopifyCart is {
       }
 
       event ItemRemovedFromCart is {
-        id is Id(Cart),
+        cartId is Id(Cart),
         cartId is CartId
         productId is ProductId
       }
@@ -1035,7 +1035,7 @@ domain ShopifyCart is {
       }
 
       event CartQuantityUpdated is {
-        id is Id(Cart),
+        cartId is Id(Cart),
         cartId is CartId
         productId is ProductId
         oldQuantity is Quantity
@@ -1050,7 +1050,7 @@ domain ShopifyCart is {
       }
 
       event DiscountApplied is {
-        id is Id(Cart),
+        cartId is Id(Cart),
         cartId is CartId
         discountCode is String
         discountAmount is Price
@@ -1067,7 +1067,7 @@ domain ShopifyCart is {
       handler CartCommandHandler is {
         on query WhichCart {
           reply result TheCart(
-            id = prompt("the id carried by TheCart"),
+            cartId = prompt("the cartId carried by TheCart"),
             summary = prompt("the summary carried by TheCart")
           )
         }
@@ -1090,7 +1090,7 @@ domain ShopifyCart is {
 
           // Emit event
           tell event CartCreated(
-            id = prompt("the id carried by CartCreated"),
+            cartId = prompt("the cartId carried by CartCreated"),
             cartId = prompt("the cartId carried by CartCreated")
           ) to entity Cart
         }
@@ -1111,7 +1111,7 @@ domain ShopifyCart is {
             )
             // Emit event
             tell event ItemAddedToCart(
-              id = prompt("the id carried by ItemAddedToCart"),
+              cartId = prompt("the cartId carried by ItemAddedToCart"),
               cartId = prompt("the cartId carried by ItemAddedToCart"),
               productId = prompt("the productId carried by ItemAddedToCart"),
               quantity = prompt("the quantity carried by ItemAddedToCart"),
@@ -1136,7 +1136,7 @@ domain ShopifyCart is {
           )
           // Emit event
           tell event ItemRemovedFromCart(
-            id = prompt("the id carried by ItemRemovedFromCart"),
+            cartId = prompt("the cartId carried by ItemRemovedFromCart"),
             cartId = prompt("the cartId carried by ItemRemovedFromCart"),
             productId = prompt("the productId carried by ItemRemovedFromCart")
           ) to entity Cart
@@ -1160,7 +1160,7 @@ domain ShopifyCart is {
             )
             // Emit event
             tell event CartQuantityUpdated(
-              id = prompt("the id carried by CartQuantityUpdated"),
+              cartId = prompt("the cartId carried by CartQuantityUpdated"),
               cartId = prompt("the cartId carried by CartQuantityUpdated"),
               productId = prompt("the productId carried by CartQuantityUpdated"),
               oldQuantity = prompt("the oldQuantity carried by CartQuantityUpdated"),
@@ -1182,7 +1182,7 @@ domain ShopifyCart is {
                 total = prompt("the total of the resulting ShoppingContext state")
               )
               tell event ItemRemovedFromCart(
-                id = prompt("the id carried by ItemRemovedFromCart"),
+                cartId = prompt("the cartId carried by ItemRemovedFromCart"),
                 cartId = prompt("the cartId carried by ItemRemovedFromCart"),
                 productId = prompt("the productId carried by ItemRemovedFromCart")
               ) to entity Cart
@@ -1207,7 +1207,7 @@ domain ShopifyCart is {
             )
             // Emit event
             tell event DiscountApplied(
-              id = prompt("the id carried by DiscountApplied"),
+              cartId = prompt("the cartId carried by DiscountApplied"),
               cartId = prompt("the cartId carried by DiscountApplied"),
               discountCode = prompt("the discountCode carried by DiscountApplied"),
               discountAmount = prompt("the discountAmount carried by DiscountApplied")
@@ -1279,7 +1279,7 @@ domain ShopifyCart is {
     }
 
     // Checkout Process
-    entity Checkout is {
+    entity Checkout as flow is {
 
       inlet CheckoutCommands is type ShopifyCart.ShopperCommand with {
         briefly as "Where this entity receives its commands"
@@ -1297,7 +1297,7 @@ domain ShopifyCart is {
 
 
       query WhichCheckout is {
-        id is CheckoutIdentity
+        checkoutId is CheckoutIdentity
       } with {
         briefly as "Ask for the current state of one checkout"
         described as {
@@ -1306,7 +1306,7 @@ domain ShopifyCart is {
       }
 
       result TheCheckout is {
-        id is CheckoutIdentity,
+        checkoutId is CheckoutIdentity,
         summary is String
       } with {
         briefly as "The answer to a WhichCheckout query"
@@ -1329,7 +1329,7 @@ domain ShopifyCart is {
       // Commands
 
       command CancelCheckout is {
-        id is Id(Checkout),
+        checkoutId is Id(Checkout),
         cartId is CartId
         reason is String
       }
@@ -1348,7 +1348,7 @@ domain ShopifyCart is {
 
       // Events
       event CheckoutCancelled is {
-        id is Id(Checkout),
+        checkoutId is Id(Checkout),
         cartId is CartId
         reason is String
       }
@@ -1361,7 +1361,7 @@ domain ShopifyCart is {
       }
 
       event CheckoutInitiated is {
-        id is Id(Checkout),
+        checkoutId is Id(Checkout),
         cartId is CartId
         customerEmail is Email
       }
@@ -1374,7 +1374,7 @@ domain ShopifyCart is {
       }
 
       event PaymentMethodSelected is {
-        id is Id(Checkout),
+        checkoutId is Id(Checkout),
         cartId is CartId
         paymentType is String
       }
@@ -1387,7 +1387,7 @@ domain ShopifyCart is {
       }
 
       event CheckoutCompleted is {
-        id is Id(Checkout),
+        checkoutId is Id(Checkout),
         cartId is CartId
         orderId is UUID
       }
@@ -1403,7 +1403,7 @@ domain ShopifyCart is {
       handler CheckoutCommandHandler is {
         on query WhichCheckout {
           reply result TheCheckout(
-            id = prompt("the id carried by TheCheckout"),
+            checkoutId = prompt("the checkoutId carried by TheCheckout"),
             summary = prompt("the summary carried by TheCheckout")
           )
         }
@@ -1425,7 +1425,7 @@ domain ShopifyCart is {
           // Emit event
           // FIXED: Ambiguous reference by using fully qualified path
           tell event CheckoutInitiated(
-            id = prompt("the id carried by CheckoutInitiated"),
+            checkoutId = prompt("the checkoutId carried by CheckoutInitiated"),
             cartId = prompt("the cartId carried by CheckoutInitiated"),
             customerEmail = prompt("the customerEmail carried by CheckoutInitiated")
           ) to entity ShopifyCart.ShoppingContext.Checkout
@@ -1443,7 +1443,7 @@ domain ShopifyCart is {
           // Emit event
           // FIXED: Ambiguous reference by using fully qualified path
           tell event PaymentMethodSelected(
-            id = prompt("the id carried by PaymentMethodSelected"),
+            checkoutId = prompt("the checkoutId carried by PaymentMethodSelected"),
             cartId = prompt("the cartId carried by PaymentMethodSelected"),
             paymentType = prompt("the paymentType carried by PaymentMethodSelected")
           ) to entity ShopifyCart.ShoppingContext.Checkout
@@ -1455,7 +1455,7 @@ domain ShopifyCart is {
             // Process payment, Create order, Clear cart
             // Emit event with new order ID
             tell event CheckoutCompleted(
-              id = prompt("the id carried by CheckoutCompleted"),
+              checkoutId = prompt("the checkoutId carried by CheckoutCompleted"),
               cartId = prompt("the cartId carried by CheckoutCompleted"),
               orderId = prompt("the orderId carried by CheckoutCompleted")
             ) to entity ShopifyCart.ShoppingContext.Checkout
@@ -1469,7 +1469,7 @@ domain ShopifyCart is {
           // or refuses, so every path discharges.
           when prompt("the checkout is still open") then
             tell event CheckoutCancelled(
-              id = prompt("the id carried by CheckoutCancelled"),
+              checkoutId = prompt("the checkoutId carried by CheckoutCancelled"),
               cartId = prompt("the cartId carried by CheckoutCancelled"),
               reason = prompt("the reason carried by CheckoutCancelled")
             ) to entity ShopifyCart.ShoppingContext.Checkout
@@ -1499,7 +1499,7 @@ domain ShopifyCart is {
     }
 
     // Repository for Cart data
-    repository CartRepository is {
+    repository CartRepository as sink is {
 
       inlet Recorded is type ShoppingEvent with {
         briefly as "Where shopping events arrive to be persisted"
@@ -1630,7 +1630,7 @@ domain ShopifyCart is {
 
       step ValidateCart is {
         tell command ShopifyCart.RemoveFromCart(
-          id = prompt("the id carried by RemoveFromCart"),
+          cartId = prompt("the cartId carried by RemoveFromCart"),
           cartId = prompt("the cartId carried by RemoveFromCart"),
           productId = prompt("the productId carried by RemoveFromCart")
         ) to entity Cart
@@ -1654,7 +1654,7 @@ domain ShopifyCart is {
 
       step ValidateInventory is {
         tell command ShopifyCart.UpdateInventory(
-          id = prompt("the id carried by UpdateInventory"),
+          productId = prompt("the productId carried by UpdateInventory"),
           productId = prompt("the productId carried by UpdateInventory"),
           newQuantity = prompt("the newQuantity carried by UpdateInventory")
         ) to entity Product
@@ -1678,7 +1678,7 @@ domain ShopifyCart is {
 
       step ProcessPayment is {
         tell command ShopifyCart.CompleteCheckout(
-          id = prompt("the id carried by CompleteCheckout"),
+          checkoutId = prompt("the checkoutId carried by CompleteCheckout"),
           cartId = prompt("the cartId carried by CompleteCheckout")
         ) to entity ShopifyCart.ShoppingContext.Checkout
         // Process payment with payment provider
@@ -1705,7 +1705,7 @@ domain ShopifyCart is {
 
       step CreateOrder is {
         tell command ShopifyCart.CompleteCheckout(
-          id = prompt("the id carried by CompleteCheckout"),
+          checkoutId = prompt("the checkoutId carried by CompleteCheckout"),
           cartId = prompt("the cartId carried by CompleteCheckout")
         ) to entity ShopifyCart.ShoppingContext.Checkout
         do "Create order from cart using orderService"
@@ -1726,7 +1726,7 @@ domain ShopifyCart is {
 
       step UpdateInventoryLevels is {
         tell command ShopifyCart.UpdateInventory(
-          id = prompt("the id carried by UpdateInventory"),
+          productId = prompt("the productId carried by UpdateInventory"),
           productId = prompt("the productId carried by UpdateInventory"),
           newQuantity = prompt("the newQuantity carried by UpdateInventory")
         ) to entity Product
@@ -1743,7 +1743,7 @@ domain ShopifyCart is {
 
       step SendConfirmation is {
         tell command ShopifyCart.CompleteCheckout(
-          id = prompt("the id carried by CompleteCheckout"),
+          checkoutId = prompt("the checkoutId carried by CompleteCheckout"),
           cartId = prompt("the cartId carried by CompleteCheckout")
         ) to entity ShopifyCart.ShoppingContext.Checkout
         do "Send order confirmation email to customer"
@@ -1829,7 +1829,7 @@ domain ShopifyCart is {
       handler ShoppingAnnouncerHandler is {
         on event ShopifyCart.ShoppingContext.Cart.CartCreated {
           send event ShopifyCart.ShoppingContext.Cart.CartCreated(
-            id = prompt("the id carried by CartCreated"),
+            cartId = prompt("the cartId carried by CartCreated"),
             cartId = prompt("the cartId carried by CartCreated")
           ) to outlet ShoppingAnnouncer.Published
         }
@@ -1993,7 +1993,7 @@ domain ShopifyCart is {
   record ProductPriceDetails is { ??? }
 
 
-  application context UserInterface is {
+  application context UserInterface as flow is {
 
     inlet ShopperStaged is type ShopifyCart.ShopperCommand with {
       briefly as "Where the application's requests collect"
@@ -2041,7 +2041,7 @@ domain ShopifyCart is {
       handler ShopperRequestsHandler is {
         on command ShopifyCart.AddToCart {
           send command ShopifyCart.AddToCart(
-            id = prompt("the id carried by AddToCart"),
+            cartId = prompt("the cartId carried by AddToCart"),
             cartId = prompt("the cartId carried by AddToCart"),
             productId = prompt("the productId carried by AddToCart"),
             quantity = prompt("the quantity carried by AddToCart")
@@ -2066,7 +2066,7 @@ domain ShopifyCart is {
     handler InteractionRouter is {
       on command ShopifyCart.AddToCart {
         tell command ShopifyCart.AddToCart(
-          id = prompt("the id carried by AddToCart"),
+          cartId = prompt("the cartId carried by AddToCart"),
           cartId = prompt("the cartId carried by AddToCart"),
           productId = prompt("the productId carried by AddToCart"),
           quantity = prompt("the quantity carried by AddToCart")
@@ -2074,14 +2074,14 @@ domain ShopifyCart is {
       }
       on command ShopifyCart.RemoveFromCart {
         tell command ShopifyCart.RemoveFromCart(
-          id = prompt("the id carried by RemoveFromCart"),
+          cartId = prompt("the cartId carried by RemoveFromCart"),
           cartId = prompt("the cartId carried by RemoveFromCart"),
           productId = prompt("the productId carried by RemoveFromCart")
         ) to entity Cart
       }
       on command ShopifyCart.UpdateQuantity {
         tell command ShopifyCart.UpdateQuantity(
-          id = prompt("the id carried by UpdateQuantity"),
+          cartId = prompt("the cartId carried by UpdateQuantity"),
           cartId = prompt("the cartId carried by UpdateQuantity"),
           productId = prompt("the productId carried by UpdateQuantity"),
           quantity = prompt("the quantity carried by UpdateQuantity")
@@ -2089,7 +2089,7 @@ domain ShopifyCart is {
       }
       on command ShopifyCart.InitiateCheckout {
         tell command ShopifyCart.InitiateCheckout(
-          id = prompt("the id carried by InitiateCheckout"),
+          checkoutId = prompt("the checkoutId carried by InitiateCheckout"),
           cartId = prompt("the cartId carried by InitiateCheckout"),
           customerEmail = prompt("the customerEmail carried by InitiateCheckout"),
           customerName = prompt("the customerName carried by InitiateCheckout"),
@@ -2099,7 +2099,7 @@ domain ShopifyCart is {
       }
       on command ShopifyCart.SelectPaymentMethod {
         tell command ShopifyCart.SelectPaymentMethod(
-          id = prompt("the id carried by SelectPaymentMethod"),
+          checkoutId = prompt("the checkoutId carried by SelectPaymentMethod"),
           cartId = prompt("the cartId carried by SelectPaymentMethod"),
           paymentType = prompt("the paymentType carried by SelectPaymentMethod"),
           paymentDetails = prompt("the paymentDetails carried by SelectPaymentMethod")
@@ -2107,20 +2107,20 @@ domain ShopifyCart is {
       }
       on command ShopifyCart.CompleteCheckout {
         tell command ShopifyCart.CompleteCheckout(
-          id = prompt("the id carried by CompleteCheckout"),
+          checkoutId = prompt("the checkoutId carried by CompleteCheckout"),
           cartId = prompt("the cartId carried by CompleteCheckout")
         ) to entity ShopifyCart.ShoppingContext.Checkout
       }
       on command ShopifyCart.UpdateProductPrice {
         tell command ShopifyCart.UpdateProductPrice(
-          id = prompt("the id carried by UpdateProductPrice"),
+          productId = prompt("the productId carried by UpdateProductPrice"),
           productId = prompt("the productId carried by UpdateProductPrice"),
           newPrice = prompt("the newPrice carried by UpdateProductPrice")
         ) to entity Product
       }
       on command ShopifyCart.UpdateInventory {
         tell command ShopifyCart.UpdateInventory(
-          id = prompt("the id carried by UpdateInventory"),
+          productId = prompt("the productId carried by UpdateInventory"),
           productId = prompt("the productId carried by UpdateInventory"),
           newQuantity = prompt("the newQuantity carried by UpdateInventory")
         ) to entity Product

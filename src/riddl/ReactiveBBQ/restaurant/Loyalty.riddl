@@ -1,4 +1,4 @@
-context Loyalty is {
+context Loyalty as flow is {
 
   inlet LoyaltyAccountIn is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
     briefly as "Where loyaltyaccount commands enter this context"
@@ -33,7 +33,7 @@ context Loyalty is {
     }
   }
 
-  entity LoyaltyAccount is {
+  entity LoyaltyAccount as flow is {
 
     inlet LoyaltyAccountCommands is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Loyalty is {
     }
 
     command AccruePoints is {
-      id is Id(LoyaltyAccount),
+      loyaltyAccountId is Id(LoyaltyAccount),
       points is Number,
       accrualRate is Real,
       redemptionRate is Real
@@ -62,7 +62,7 @@ context Loyalty is {
     }
 
     query WhichLoyaltyAccount is {
-      id is Restaurant.Loyalty.LoyaltyId
+      loyaltyId is Restaurant.Loyalty.LoyaltyId
     } with {
       briefly as "Ask for the current state of one loyaltyaccount"
       described as {
@@ -71,7 +71,7 @@ context Loyalty is {
     }
 
     result TheLoyaltyAccount is {
-      id is Restaurant.Loyalty.LoyaltyId,
+      loyaltyId is Restaurant.Loyalty.LoyaltyId,
       summary is String
     } with {
       briefly as "The answer to a WhichLoyaltyAccount query"
@@ -81,7 +81,7 @@ context Loyalty is {
     }
 
     event PointsAccrued is {
-      id is Restaurant.Loyalty.LoyaltyId
+      loyaltyId is Restaurant.Loyalty.LoyaltyId
     } with {
       briefly as "Records that a customer earned loyalty points"
       described as {
@@ -90,7 +90,7 @@ context Loyalty is {
     }
 
     record LoyaltyAccountFields is {
-      id is Restaurant.Loyalty.LoyaltyId,
+      loyaltyId is Restaurant.Loyalty.LoyaltyId,
       points is Number,
       accrualRate is Real,
       redemptionRate is Real
@@ -110,22 +110,22 @@ context Loyalty is {
 
     handler LoyaltyAccountHandler is {
       on init {
-        set field Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields.id to "a freshly minted identifier"
+        set field Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields.loyaltyId to "a freshly minted identifier"
       }
       on command AccruePoints {
         morph entity LoyaltyAccount to state LoyaltyAccountState with record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields(
-          id = prompt("the id of the resulting LoyaltyAccount state"),
+          loyaltyId = prompt("the loyaltyId of the resulting LoyaltyAccount state"),
           points = prompt("the points of the resulting LoyaltyAccount state"),
           accrualRate = prompt("the accrualRate of the resulting LoyaltyAccount state"),
           redemptionRate = prompt("the redemptionRate of the resulting LoyaltyAccount state")
         )
         send event PointsAccrued(
-          id = prompt("the id carried by PointsAccrued")
+          loyaltyId = prompt("the loyaltyId carried by PointsAccrued")
         ) to outlet Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountEvents
       }
       on query WhichLoyaltyAccount {
         reply result TheLoyaltyAccount(
-          id = prompt("the id carried by TheLoyaltyAccount"),
+          loyaltyId = prompt("the loyaltyId carried by TheLoyaltyAccount"),
           summary = prompt("the summary carried by TheLoyaltyAccount")
         )
       }
@@ -145,7 +145,7 @@ context Loyalty is {
 
 
 
-  repository LoyaltyAccountStore is {
+  repository LoyaltyAccountStore as sink is {
     inlet Recorded is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
       briefly as "Where loyaltyaccount events arrive to be persisted"
       described as {

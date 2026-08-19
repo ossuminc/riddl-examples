@@ -1,4 +1,4 @@
-context Marketing is {
+context Marketing as flow is {
 
   inlet Failures is record Riddl.GeneratorError with {
     option error-sink
@@ -44,7 +44,7 @@ context Marketing is {
     }
   }
 
-  entity Campaign is {
+  entity Campaign as flow is {
 
     inlet CampaignCommands is command Corporate.Marketing.Campaign.LaunchCampaign with {
       briefly as "Where this entity receives its commands"
@@ -61,7 +61,7 @@ context Marketing is {
     }
 
     command LaunchCampaign is {
-      id is Id(Campaign),
+      campaignId is Id(Campaign),
       title is String,
       budget is Number
     } with {
@@ -72,7 +72,7 @@ context Marketing is {
     }
 
     query WhichCampaign is {
-      id is Corporate.Marketing.CampaignId
+      campaignId is Corporate.Marketing.CampaignId
     } with {
       briefly as "Ask for the current state of one campaign"
       described as {
@@ -81,7 +81,7 @@ context Marketing is {
     }
 
     result TheCampaign is {
-      id is Corporate.Marketing.CampaignId,
+      campaignId is Corporate.Marketing.CampaignId,
       summary is String
     } with {
       briefly as "The answer to a WhichCampaign query"
@@ -91,7 +91,7 @@ context Marketing is {
     }
 
     event CampaignLaunched is {
-      id is Corporate.Marketing.CampaignId
+      campaignId is Corporate.Marketing.CampaignId
     } with {
       briefly as "Records that a marketing campaign was launched"
       described as {
@@ -100,7 +100,7 @@ context Marketing is {
     }
 
     record CampaignFields is {
-      id is Corporate.Marketing.CampaignId,
+      campaignId is Corporate.Marketing.CampaignId,
       title is String,
       budget is Number
     } with {
@@ -119,21 +119,21 @@ context Marketing is {
 
     handler CampaignHandler is {
       on init {
-        set field Corporate.Marketing.Campaign.CampaignFields.id to "a freshly minted identifier"
+        set field Corporate.Marketing.Campaign.CampaignFields.campaignId to "a freshly minted identifier"
       }
       on command LaunchCampaign {
         morph entity Campaign to state CampaignState with record Corporate.Marketing.Campaign.CampaignFields(
-          id = prompt("the id of the resulting Campaign state"),
+          campaignId = prompt("the campaignId of the resulting Campaign state"),
           title = prompt("the title of the resulting Campaign state"),
           budget = prompt("the budget of the resulting Campaign state")
         )
         send event CampaignLaunched(
-          id = prompt("the id carried by CampaignLaunched")
+          campaignId = prompt("the campaignId carried by CampaignLaunched")
         ) to outlet Corporate.Marketing.Campaign.CampaignEvents
       }
       on query WhichCampaign {
         reply result TheCampaign(
-          id = prompt("the id carried by TheCampaign"),
+          campaignId = prompt("the campaignId carried by TheCampaign"),
           summary = prompt("the summary carried by TheCampaign")
         )
       }
@@ -153,7 +153,7 @@ context Marketing is {
 
 
 
-  repository CampaignStore is {
+  repository CampaignStore as sink is {
     inlet Recorded is event Corporate.Marketing.Campaign.CampaignLaunched with {
       briefly as "Where campaign events arrive to be persisted"
       described as {

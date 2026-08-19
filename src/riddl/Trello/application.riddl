@@ -1,4 +1,4 @@
-application context TrelloUI is {
+application context TrelloUI as router is {
 
   inlet UserManagementStaged is type Trello.UserManagement.UserManagementCommand with {
     briefly as "Where the application's UserManagement requests collect"
@@ -156,7 +156,7 @@ application context TrelloUI is {
       handler UserManagementRequestsHandler is {
         on command Trello.UserManagement.Account.CreateAccount {
           send command Trello.UserManagement.Account.CreateAccount(
-            id = prompt("the id carried by CreateAccount"),
+            accountId = prompt("the accountId carried by CreateAccount"),
             username = prompt("the username carried by CreateAccount"),
             email = prompt("the email carried by CreateAccount")
           ) to outlet Trello.TrelloUI.UserManagementRequests.Staged
@@ -187,7 +187,7 @@ application context TrelloUI is {
       handler WorkspaceManagementRequestsHandler is {
         on command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
           send command Trello.WorkspaceManagement.Workspace.CreateWorkspace(
-            id = prompt("the id carried by CreateWorkspace"),
+            workspaceId = prompt("the workspaceId carried by CreateWorkspace"),
             name = prompt("the name carried by CreateWorkspace"),
             visibility = prompt("the visibility carried by CreateWorkspace")
           ) to outlet Trello.TrelloUI.WorkspaceManagementRequests.Staged
@@ -218,7 +218,7 @@ application context TrelloUI is {
       handler BoardManagementRequestsHandler is {
         on command Trello.BoardManagement.Board.CreateBoard {
           send command Trello.BoardManagement.Board.CreateBoard(
-            id = prompt("the id carried by CreateBoard"),
+            boardId = prompt("the boardId carried by CreateBoard"),
             title = prompt("the title carried by CreateBoard"),
             visibility = prompt("the visibility carried by CreateBoard")
           ) to outlet Trello.TrelloUI.BoardManagementRequests.Staged

@@ -1,4 +1,4 @@
-context Tables is {
+context Tables as flow is {
 
   inlet TableIn is command Restaurant.Tables.Table.AddTable with {
     briefly as "Where table commands enter this context"
@@ -33,7 +33,7 @@ context Tables is {
     }
   }
 
-  entity Table is {
+  entity Table as flow is {
 
     inlet TableCommands is command Restaurant.Tables.Table.AddTable with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Tables is {
     }
 
     command AddTable is {
-      id is Id(Table),
+      tableId is Id(Table),
       seats is Integer,
       section is String
     } with {
@@ -61,7 +61,7 @@ context Tables is {
     }
 
     query WhichTable is {
-      id is Restaurant.Tables.TableId
+      tableId is Restaurant.Tables.TableId
     } with {
       briefly as "Ask for the current state of one table"
       described as {
@@ -70,7 +70,7 @@ context Tables is {
     }
 
     result TheTable is {
-      id is Restaurant.Tables.TableId,
+      tableId is Restaurant.Tables.TableId,
       summary is String
     } with {
       briefly as "The answer to a WhichTable query"
@@ -80,7 +80,7 @@ context Tables is {
     }
 
     event TableAdded is {
-      id is Restaurant.Tables.TableId
+      tableId is Restaurant.Tables.TableId
     } with {
       briefly as "Records that a table was put into service"
       described as {
@@ -89,7 +89,7 @@ context Tables is {
     }
 
     record TableFields is {
-      id is Restaurant.Tables.TableId,
+      tableId is Restaurant.Tables.TableId,
       seats is Integer,
       section is String
     } with {
@@ -108,21 +108,21 @@ context Tables is {
 
     handler TableHandler is {
       on init {
-        set field Restaurant.Tables.Table.TableFields.id to "a freshly minted identifier"
+        set field Restaurant.Tables.Table.TableFields.tableId to "a freshly minted identifier"
       }
       on command AddTable {
         morph entity Table to state TableState with record Restaurant.Tables.Table.TableFields(
-          id = prompt("the id of the resulting Table state"),
+          tableId = prompt("the tableId of the resulting Table state"),
           seats = prompt("the seats of the resulting Table state"),
           section = prompt("the section of the resulting Table state")
         )
         send event TableAdded(
-          id = prompt("the id carried by TableAdded")
+          tableId = prompt("the tableId carried by TableAdded")
         ) to outlet Restaurant.Tables.Table.TableEvents
       }
       on query WhichTable {
         reply result TheTable(
-          id = prompt("the id carried by TheTable"),
+          tableId = prompt("the tableId carried by TheTable"),
           summary = prompt("the summary carried by TheTable")
         )
       }
@@ -142,7 +142,7 @@ context Tables is {
 
 
 
-  repository TableStore is {
+  repository TableStore as sink is {
     inlet Recorded is event Restaurant.Tables.Table.TableAdded with {
       briefly as "Where table events arrive to be persisted"
       described as {

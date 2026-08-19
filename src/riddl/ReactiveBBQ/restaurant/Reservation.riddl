@@ -1,4 +1,4 @@
-context Reservations is {
+context Reservations as flow is {
 
   inlet ReservationIn is command Restaurant.Reservations.Reservation.BookTable with {
     briefly as "Where reservation commands enter this context"
@@ -33,7 +33,7 @@ context Reservations is {
     }
   }
 
-  entity Reservation is {
+  entity Reservation as flow is {
 
     inlet ReservationCommands is command Restaurant.Reservations.Reservation.BookTable with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Reservations is {
     }
 
     command BookTable is {
-      id is Id(Reservation),
+      reservationId is Id(Reservation),
       partyName is String,
       phoneNumber is String,
       time is Time,
@@ -63,7 +63,7 @@ context Reservations is {
     }
 
     query WhichReservation is {
-      id is Restaurant.Reservations.ReservationId
+      reservationId is Restaurant.Reservations.ReservationId
     } with {
       briefly as "Ask for the current state of one reservation"
       described as {
@@ -72,7 +72,7 @@ context Reservations is {
     }
 
     result TheReservation is {
-      id is Restaurant.Reservations.ReservationId,
+      reservationId is Restaurant.Reservations.ReservationId,
       summary is String
     } with {
       briefly as "The answer to a WhichReservation query"
@@ -82,7 +82,7 @@ context Reservations is {
     }
 
     event TableBooked is {
-      id is Restaurant.Reservations.ReservationId
+      reservationId is Restaurant.Reservations.ReservationId
     } with {
       briefly as "Records that a party reserved a table"
       described as {
@@ -91,7 +91,7 @@ context Reservations is {
     }
 
     record ReservationFields is {
-      id is Restaurant.Reservations.ReservationId,
+      reservationId is Restaurant.Reservations.ReservationId,
       partyName is String,
       phoneNumber is String,
       time is Time,
@@ -112,23 +112,23 @@ context Reservations is {
 
     handler ReservationHandler is {
       on init {
-        set field Restaurant.Reservations.Reservation.ReservationFields.id to "a freshly minted identifier"
+        set field Restaurant.Reservations.Reservation.ReservationFields.reservationId to "a freshly minted identifier"
       }
       on command BookTable {
         morph entity Reservation to state ReservationState with record Restaurant.Reservations.Reservation.ReservationFields(
-          id = prompt("the id of the resulting Reservation state"),
+          reservationId = prompt("the reservationId of the resulting Reservation state"),
           partyName = prompt("the partyName of the resulting Reservation state"),
           phoneNumber = prompt("the phoneNumber of the resulting Reservation state"),
           time = prompt("the time of the resulting Reservation state"),
           date = prompt("the date of the resulting Reservation state")
         )
         send event TableBooked(
-          id = prompt("the id carried by TableBooked")
+          reservationId = prompt("the reservationId carried by TableBooked")
         ) to outlet Restaurant.Reservations.Reservation.ReservationEvents
       }
       on query WhichReservation {
         reply result TheReservation(
-          id = prompt("the id carried by TheReservation"),
+          reservationId = prompt("the reservationId carried by TheReservation"),
           summary = prompt("the summary carried by TheReservation")
         )
       }
@@ -148,7 +148,7 @@ context Reservations is {
 
 
 
-  repository ReservationStore is {
+  repository ReservationStore as sink is {
     inlet Recorded is event Restaurant.Reservations.Reservation.TableBooked with {
       briefly as "Where reservation events arrive to be persisted"
       described as {

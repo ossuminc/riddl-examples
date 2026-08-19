@@ -1,4 +1,4 @@
-context Menus is {
+context Menus as router is {
 
   inlet MenuIn is command Restaurant.Menus.Menu.ComposeMenu with {
     briefly as "Where menu commands enter this context"
@@ -60,7 +60,7 @@ context Menus is {
     }
   }
 
-  entity MenuItem is {
+  entity MenuItem as flow is {
 
     inlet MenuItemCommands is command Restaurant.Menus.MenuItem.AddMenuItem with {
       briefly as "Where this entity receives its commands"
@@ -77,7 +77,7 @@ context Menus is {
     }
 
     command AddMenuItem is {
-      id is Id(MenuItem),
+      menuItemId is Id(MenuItem),
       name is String,
       description is String,
       price is Number
@@ -89,7 +89,7 @@ context Menus is {
     }
 
     query WhichMenuItem is {
-      id is Restaurant.Menus.MenuItemId
+      menuItemId is Restaurant.Menus.MenuItemId
     } with {
       briefly as "Ask for the current state of one menuitem"
       described as {
@@ -98,7 +98,7 @@ context Menus is {
     }
 
     result TheMenuItem is {
-      id is Restaurant.Menus.MenuItemId,
+      menuItemId is Restaurant.Menus.MenuItemId,
       summary is String
     } with {
       briefly as "The answer to a WhichMenuItem query"
@@ -108,7 +108,7 @@ context Menus is {
     }
 
     event MenuItemAdded is {
-      id is Restaurant.Menus.MenuItemId
+      menuItemId is Restaurant.Menus.MenuItemId
     } with {
       briefly as "Records that a dish was added to the catalogue"
       described as {
@@ -117,7 +117,7 @@ context Menus is {
     }
 
     record MenuItemFields is {
-      id is Restaurant.Menus.MenuItemId,
+      menuItemId is Restaurant.Menus.MenuItemId,
       name is String,
       description is String,
       price is Number
@@ -137,22 +137,22 @@ context Menus is {
 
     handler MenuItemHandler is {
       on init {
-        set field Restaurant.Menus.MenuItem.MenuItemFields.id to "a freshly minted identifier"
+        set field Restaurant.Menus.MenuItem.MenuItemFields.menuItemId to "a freshly minted identifier"
       }
       on command AddMenuItem {
         morph entity MenuItem to state MenuItemState with record Restaurant.Menus.MenuItem.MenuItemFields(
-          id = prompt("the id of the resulting MenuItem state"),
+          menuItemId = prompt("the menuItemId of the resulting MenuItem state"),
           name = prompt("the name of the resulting MenuItem state"),
           description = prompt("the description of the resulting MenuItem state"),
           price = prompt("the price of the resulting MenuItem state")
         )
         send event MenuItemAdded(
-          id = prompt("the id carried by MenuItemAdded")
+          menuItemId = prompt("the menuItemId carried by MenuItemAdded")
         ) to outlet Restaurant.Menus.MenuItem.MenuItemEvents
       }
       on query WhichMenuItem {
         reply result TheMenuItem(
-          id = prompt("the id carried by TheMenuItem"),
+          menuItemId = prompt("the menuItemId carried by TheMenuItem"),
           summary = prompt("the summary carried by TheMenuItem")
         )
       }
@@ -172,7 +172,7 @@ context Menus is {
 
 
 
-  repository MenuItemStore is {
+  repository MenuItemStore as sink is {
     inlet Recorded is event Restaurant.Menus.MenuItem.MenuItemAdded with {
       briefly as "Where menuitem events arrive to be persisted"
       described as {
@@ -229,7 +229,7 @@ context Menus is {
     }
   }
 
-  entity Menu is {
+  entity Menu as flow is {
 
     inlet MenuCommands is command Restaurant.Menus.Menu.ComposeMenu with {
       briefly as "Where this entity receives its commands"
@@ -246,7 +246,7 @@ context Menus is {
     }
 
     command ComposeMenu is {
-      id is Id(Menu),
+      menuId is Id(Menu),
       title is String,
       season is String
     } with {
@@ -257,7 +257,7 @@ context Menus is {
     }
 
     query WhichMenu is {
-      id is Restaurant.Menus.MenuId
+      menuId is Restaurant.Menus.MenuId
     } with {
       briefly as "Ask for the current state of one menu"
       described as {
@@ -266,7 +266,7 @@ context Menus is {
     }
 
     result TheMenu is {
-      id is Restaurant.Menus.MenuId,
+      menuId is Restaurant.Menus.MenuId,
       summary is String
     } with {
       briefly as "The answer to a WhichMenu query"
@@ -276,7 +276,7 @@ context Menus is {
     }
 
     event MenuComposed is {
-      id is Restaurant.Menus.MenuId
+      menuId is Restaurant.Menus.MenuId
     } with {
       briefly as "Records that a menu was composed from the catalogue"
       described as {
@@ -285,7 +285,7 @@ context Menus is {
     }
 
     record MenuFields is {
-      id is Restaurant.Menus.MenuId,
+      menuId is Restaurant.Menus.MenuId,
       title is String,
       season is String
     } with {
@@ -304,21 +304,21 @@ context Menus is {
 
     handler MenuHandler is {
       on init {
-        set field Restaurant.Menus.Menu.MenuFields.id to "a freshly minted identifier"
+        set field Restaurant.Menus.Menu.MenuFields.menuId to "a freshly minted identifier"
       }
       on command ComposeMenu {
         morph entity Menu to state MenuState with record Restaurant.Menus.Menu.MenuFields(
-          id = prompt("the id of the resulting Menu state"),
+          menuId = prompt("the menuId of the resulting Menu state"),
           title = prompt("the title of the resulting Menu state"),
           season = prompt("the season of the resulting Menu state")
         )
         send event MenuComposed(
-          id = prompt("the id carried by MenuComposed")
+          menuId = prompt("the menuId carried by MenuComposed")
         ) to outlet Restaurant.Menus.Menu.MenuEvents
       }
       on query WhichMenu {
         reply result TheMenu(
-          id = prompt("the id carried by TheMenu"),
+          menuId = prompt("the menuId carried by TheMenu"),
           summary = prompt("the summary carried by TheMenu")
         )
       }
@@ -338,7 +338,7 @@ context Menus is {
 
 
 
-  repository MenuStore is {
+  repository MenuStore as sink is {
     inlet Recorded is event Restaurant.Menus.Menu.MenuComposed with {
       briefly as "Where menu events arrive to be persisted"
       described as {

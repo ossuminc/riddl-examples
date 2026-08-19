@@ -1,4 +1,4 @@
-context Orders is {
+context Orders as flow is {
 
   inlet OrderIn is command Restaurant.Orders.Order.PlaceOrder with {
     briefly as "Where order commands enter this context"
@@ -33,7 +33,7 @@ context Orders is {
     }
   }
 
-  entity Order is {
+  entity Order as flow is {
 
     inlet OrderCommands is command Restaurant.Orders.Order.PlaceOrder with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Orders is {
     }
 
     command PlaceOrder is {
-      id is Id(Order),
+      orderId is Id(Order),
       customerName is String,
       total is Number
     } with {
@@ -61,7 +61,7 @@ context Orders is {
     }
 
     query WhichOrder is {
-      id is Restaurant.Orders.OrderId
+      orderId is Restaurant.Orders.OrderId
     } with {
       briefly as "Ask for the current state of one order"
       described as {
@@ -70,7 +70,7 @@ context Orders is {
     }
 
     result TheOrder is {
-      id is Restaurant.Orders.OrderId,
+      orderId is Restaurant.Orders.OrderId,
       summary is String
     } with {
       briefly as "The answer to a WhichOrder query"
@@ -80,7 +80,7 @@ context Orders is {
     }
 
     event OrderPlaced is {
-      id is Restaurant.Orders.OrderId
+      orderId is Restaurant.Orders.OrderId
     } with {
       briefly as "Records that a customer placed an order"
       described as {
@@ -89,7 +89,7 @@ context Orders is {
     }
 
     record OrderFields is {
-      id is Restaurant.Orders.OrderId,
+      orderId is Restaurant.Orders.OrderId,
       customerName is String,
       total is Number
     } with {
@@ -108,21 +108,21 @@ context Orders is {
 
     handler OrderHandler is {
       on init {
-        set field Restaurant.Orders.Order.OrderFields.id to "a freshly minted identifier"
+        set field Restaurant.Orders.Order.OrderFields.orderId to "a freshly minted identifier"
       }
       on command PlaceOrder {
         morph entity Order to state OrderState with record Restaurant.Orders.Order.OrderFields(
-          id = prompt("the id of the resulting Order state"),
+          orderId = prompt("the orderId of the resulting Order state"),
           customerName = prompt("the customerName of the resulting Order state"),
           total = prompt("the total of the resulting Order state")
         )
         send event OrderPlaced(
-          id = prompt("the id carried by OrderPlaced")
+          orderId = prompt("the orderId carried by OrderPlaced")
         ) to outlet Restaurant.Orders.Order.OrderEvents
       }
       on query WhichOrder {
         reply result TheOrder(
-          id = prompt("the id carried by TheOrder"),
+          orderId = prompt("the orderId carried by TheOrder"),
           summary = prompt("the summary carried by TheOrder")
         )
       }
@@ -142,7 +142,7 @@ context Orders is {
 
 
 
-  repository OrderStore is {
+  repository OrderStore as sink is {
     inlet Recorded is event Restaurant.Orders.Order.OrderPlaced with {
       briefly as "Where order events arrive to be persisted"
       described as {

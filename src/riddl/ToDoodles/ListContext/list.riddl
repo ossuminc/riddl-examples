@@ -1,4 +1,4 @@
-context List is {
+context List as flow is {
 
   inlet DoodleListIn is command ToDoodles.List.DoodleList.CreateList with {
     briefly as "Where doodlelist commands enter this context"
@@ -43,7 +43,7 @@ context List is {
   }
 
   record DoodleListData is {
-    id is ListId,
+    listId is ListId,
     name is String,
     entries is many DoodleKey
   } with {
@@ -60,7 +60,7 @@ context List is {
 
 
 
-  entity DoodleList is {
+  entity DoodleList as flow is {
 
     inlet DoodleListCommands is command ToDoodles.List.DoodleList.CreateList with {
       briefly as "Where this entity receives its commands"
@@ -77,7 +77,7 @@ context List is {
     }
 
     command CreateList is {
-      id is Id(DoodleList),
+      doodleListId is Id(DoodleList),
       name is String
     } with {
       briefly as "Ask for a new, empty doodle list"
@@ -97,7 +97,7 @@ context List is {
     }
 
     query WhichList is {
-      id is ListId
+      listId is ListId
     } with {
       briefly as "Ask for the current contents of one list"
       described as {
@@ -106,7 +106,7 @@ context List is {
     }
 
     result TheList is {
-      id is ListId,
+      listId is ListId,
       name is String
     } with {
       briefly as "The answer to a WhichList query"
@@ -116,7 +116,7 @@ context List is {
     }
 
     event ListCreated is {
-      id is ListId,
+      listId is ListId,
       name is String
     } with {
       briefly as "A new list came into being"
@@ -148,12 +148,12 @@ context List is {
       }
       on command CreateList {
         morph entity DoodleList to state DoodleListState with record DoodleListData(
-          id = prompt("the id of the resulting List state"),
+          listId = prompt("the listId of the resulting List state"),
           name = prompt("the name of the resulting List state"),
           entries = prompt("the entries of the resulting List state")
         )
         send event ListCreated(
-          id = prompt("the id carried by ListCreated"),
+          listId = prompt("the listId carried by ListCreated"),
           name = prompt("the name carried by ListCreated")
         ) to outlet ToDoodles.List.DoodleList.DoodleListEvents
       }
@@ -166,7 +166,7 @@ context List is {
       }
       on query WhichList {
         reply result TheList(
-          id = prompt("the id carried by TheList"),
+          listId = prompt("the listId carried by TheList"),
           name = prompt("the name carried by TheList")
         )
       }
@@ -196,7 +196,7 @@ context List is {
 
 
 
-  repository Lists is {
+  repository Lists as sink is {
     inlet Recorded is type ListEvent with {
       briefly as "Where list events arrive to be persisted"
       described as {

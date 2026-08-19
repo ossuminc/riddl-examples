@@ -1,4 +1,4 @@
-context Locations is {
+context Locations as flow is {
 
   inlet LocationIn is command Restaurant.Locations.Location.OpenLocation with {
     briefly as "Where location commands enter this context"
@@ -33,7 +33,7 @@ context Locations is {
     }
   }
 
-  entity Location is {
+  entity Location as flow is {
 
     inlet LocationCommands is command Restaurant.Locations.Location.OpenLocation with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Locations is {
     }
 
     command OpenLocation is {
-      id is Id(Location),
+      locationId is Id(Location),
       name is String,
       city is String
     } with {
@@ -61,7 +61,7 @@ context Locations is {
     }
 
     query WhichLocation is {
-      id is Restaurant.Locations.LocationId
+      locationId is Restaurant.Locations.LocationId
     } with {
       briefly as "Ask for the current state of one location"
       described as {
@@ -70,7 +70,7 @@ context Locations is {
     }
 
     result TheLocation is {
-      id is Restaurant.Locations.LocationId,
+      locationId is Restaurant.Locations.LocationId,
       summary is String
     } with {
       briefly as "The answer to a WhichLocation query"
@@ -80,7 +80,7 @@ context Locations is {
     }
 
     event LocationOpened is {
-      id is Restaurant.Locations.LocationId
+      locationId is Restaurant.Locations.LocationId
     } with {
       briefly as "Records that a restaurant location opened"
       described as {
@@ -89,7 +89,7 @@ context Locations is {
     }
 
     record LocationFields is {
-      id is Restaurant.Locations.LocationId,
+      locationId is Restaurant.Locations.LocationId,
       name is String,
       city is String
     } with {
@@ -108,21 +108,21 @@ context Locations is {
 
     handler LocationHandler is {
       on init {
-        set field Restaurant.Locations.Location.LocationFields.id to "a freshly minted identifier"
+        set field Restaurant.Locations.Location.LocationFields.locationId to "a freshly minted identifier"
       }
       on command OpenLocation {
         morph entity Location to state LocationState with record Restaurant.Locations.Location.LocationFields(
-          id = prompt("the id of the resulting Location state"),
+          locationId = prompt("the locationId of the resulting Location state"),
           name = prompt("the name of the resulting Location state"),
           city = prompt("the city of the resulting Location state")
         )
         send event LocationOpened(
-          id = prompt("the id carried by LocationOpened")
+          locationId = prompt("the locationId carried by LocationOpened")
         ) to outlet Restaurant.Locations.Location.LocationEvents
       }
       on query WhichLocation {
         reply result TheLocation(
-          id = prompt("the id carried by TheLocation"),
+          locationId = prompt("the locationId carried by TheLocation"),
           summary = prompt("the summary carried by TheLocation")
         )
       }
@@ -142,7 +142,7 @@ context Locations is {
 
 
 
-  repository LocationStore is {
+  repository LocationStore as sink is {
     inlet Recorded is event Restaurant.Locations.Location.LocationOpened with {
       briefly as "Where location events arrive to be persisted"
       described as {

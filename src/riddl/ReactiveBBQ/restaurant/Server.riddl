@@ -1,4 +1,4 @@
-context Servers is {
+context Servers as flow is {
 
   inlet ServerIn is command Restaurant.Servers.Server.AddServer with {
     briefly as "Where server commands enter this context"
@@ -33,7 +33,7 @@ context Servers is {
     }
   }
 
-  entity Server is {
+  entity Server as flow is {
 
     inlet ServerCommands is command Restaurant.Servers.Server.AddServer with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Servers is {
     }
 
     command AddServer is {
-      id is Id(Server),
+      serverId is Id(Server),
       name is String,
       section is String
     } with {
@@ -61,7 +61,7 @@ context Servers is {
     }
 
     query WhichServer is {
-      id is Restaurant.Servers.ServerId
+      serverId is Restaurant.Servers.ServerId
     } with {
       briefly as "Ask for the current state of one server"
       described as {
@@ -70,7 +70,7 @@ context Servers is {
     }
 
     result TheServer is {
-      id is Restaurant.Servers.ServerId,
+      serverId is Restaurant.Servers.ServerId,
       summary is String
     } with {
       briefly as "The answer to a WhichServer query"
@@ -80,7 +80,7 @@ context Servers is {
     }
 
     event ServerAdded is {
-      id is Restaurant.Servers.ServerId
+      serverId is Restaurant.Servers.ServerId
     } with {
       briefly as "Records that a server joined the roster"
       described as {
@@ -89,7 +89,7 @@ context Servers is {
     }
 
     record ServerFields is {
-      id is Restaurant.Servers.ServerId,
+      serverId is Restaurant.Servers.ServerId,
       name is String,
       section is String
     } with {
@@ -108,21 +108,21 @@ context Servers is {
 
     handler ServerHandler is {
       on init {
-        set field Restaurant.Servers.Server.ServerFields.id to "a freshly minted identifier"
+        set field Restaurant.Servers.Server.ServerFields.serverId to "a freshly minted identifier"
       }
       on command AddServer {
         morph entity Server to state ServerState with record Restaurant.Servers.Server.ServerFields(
-          id = prompt("the id of the resulting Server state"),
+          serverId = prompt("the serverId of the resulting Server state"),
           name = prompt("the name of the resulting Server state"),
           section = prompt("the section of the resulting Server state")
         )
         send event ServerAdded(
-          id = prompt("the id carried by ServerAdded")
+          serverId = prompt("the serverId carried by ServerAdded")
         ) to outlet Restaurant.Servers.Server.ServerEvents
       }
       on query WhichServer {
         reply result TheServer(
-          id = prompt("the id carried by TheServer"),
+          serverId = prompt("the serverId carried by TheServer"),
           summary = prompt("the summary carried by TheServer")
         )
       }
@@ -142,7 +142,7 @@ context Servers is {
 
 
 
-  repository ServerStore is {
+  repository ServerStore as sink is {
     inlet Recorded is event Restaurant.Servers.Server.ServerAdded with {
       briefly as "Where server events arrive to be persisted"
       described as {

@@ -1,4 +1,4 @@
-context Doodle is {
+context Doodle as flow is {
 
   inlet DrawingIn is command ToDoodles.Doodle.Drawing.CreateDrawing with {
     briefly as "Where drawing commands enter this context"
@@ -45,7 +45,7 @@ context Doodle is {
   }
 
   record DrawingData is {
-    id is DoodleId,
+    doodleId is DoodleId,
     title is String,
     strokes is Natural
   } with {
@@ -60,7 +60,7 @@ context Doodle is {
 
 
 
-  entity Drawing is {
+  entity Drawing as flow is {
 
     inlet DrawingCommands is command ToDoodles.Doodle.Drawing.CreateDrawing with {
       briefly as "Where this entity receives its commands"
@@ -77,7 +77,7 @@ context Doodle is {
     }
 
     command CreateDrawing is {
-      id is Id(Drawing),
+      drawingId is Id(Drawing),
       title is String
     } with {
       briefly as "Ask for a new doodle to be started"
@@ -87,7 +87,7 @@ context Doodle is {
     }
 
     query WhichDrawing is {
-      id is DoodleId
+      doodleId is DoodleId
     } with {
       briefly as "Ask for the current state of one doodle"
       described as {
@@ -96,7 +96,7 @@ context Doodle is {
     }
 
     result TheDrawing is {
-      id is DoodleId,
+      doodleId is DoodleId,
       title is String
     } with {
       briefly as "The answer to a WhichDrawing query"
@@ -106,7 +106,7 @@ context Doodle is {
     }
 
     event DrawingCreated is {
-      id is DoodleId,
+      doodleId is DoodleId,
       title is String
     } with {
       briefly as "A new doodle came into being"
@@ -128,18 +128,18 @@ context Doodle is {
       }
       on command CreateDrawing {
         morph entity Drawing to state DrawingState with record DrawingData(
-          id = prompt("the id of the resulting Doodle state"),
+          doodleId = prompt("the doodleId of the resulting Doodle state"),
           title = prompt("the title of the resulting Doodle state"),
           strokes = prompt("the strokes of the resulting Doodle state")
         )
         send event DrawingCreated(
-          id = prompt("the id carried by DrawingCreated"),
+          doodleId = prompt("the doodleId carried by DrawingCreated"),
           title = prompt("the title carried by DrawingCreated")
         ) to outlet ToDoodles.Doodle.Drawing.DrawingEvents
       }
       on query WhichDrawing {
         reply result TheDrawing(
-          id = prompt("the id carried by TheDrawing"),
+          doodleId = prompt("the doodleId carried by TheDrawing"),
           title = prompt("the title carried by TheDrawing")
         )
       }
@@ -161,7 +161,7 @@ context Doodle is {
 
 
 
-  repository Drawings is {
+  repository Drawings as sink is {
     inlet Recorded is event DrawingCreated with {
       briefly as "Where drawing events arrive to be persisted"
       described as {

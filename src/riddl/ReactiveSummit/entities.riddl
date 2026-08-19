@@ -1,4 +1,4 @@
-context ToDoList is {
+context ToDoList as flow is {
 
   inlet ItemIn is command ToDoItem.AddItem with {
     briefly as "Where item commands enter this context"
@@ -56,7 +56,7 @@ context ToDoList is {
     }
   }
 
-  entity ToDoItem is {
+  entity ToDoItem as flow is {
 
     inlet ItemCommands is command ToDoItem.AddItem with {
       briefly as "Where this entity receives its commands"
@@ -73,7 +73,7 @@ context ToDoList is {
     }
 
     command AddItem is {
-      id is Id(ToDoItem),
+      toDoItemId is Id(ToDoItem),
       content is ItemContent
     } with {
       briefly as "Ask for a new item to be put on the list"
@@ -83,7 +83,7 @@ context ToDoList is {
     }
 
     command CompleteItem is {
-      id is ItemId
+      itemId is ItemId
     } with {
       briefly as "Mark an item as finished"
       described as {
@@ -92,7 +92,7 @@ context ToDoList is {
     }
 
     query WhichItem is {
-      id is ItemId
+      itemId is ItemId
     } with {
       briefly as "Ask for the current state of one item"
       described as {
@@ -101,7 +101,7 @@ context ToDoList is {
     }
 
     result TheItem is {
-      id is ItemId,
+      itemId is ItemId,
       itemDescription is String
     } with {
       briefly as "The answer to a WhichItem query"
@@ -120,7 +120,7 @@ context ToDoList is {
     }
 
     event ItemCompleted is {
-      id is ItemId
+      itemId is ItemId
     } with {
       briefly as "An item was finished"
       described as {
@@ -183,12 +183,12 @@ context ToDoList is {
           completedAt = prompt("the completedAt of the resulting ToDoItem state")
         )
         send event ItemCompleted(
-          id = prompt("the id carried by ItemCompleted")
+          itemId = prompt("the itemId carried by ItemCompleted")
         ) to outlet ReactiveSummit.ToDoList.ToDoItem.ItemEvents
       }
       on query WhichItem {
         reply result TheItem(
-          id = prompt("the id carried by TheItem"),
+          itemId = prompt("the itemId carried by TheItem"),
           itemDescription = prompt("the itemDescription carried by TheItem")
         )
       }
@@ -219,7 +219,7 @@ context ToDoList is {
 
 
 
-  repository Items is {
+  repository Items as sink is {
     inlet Recorded is type ItemEvent with {
       briefly as "Where item events arrive to be persisted"
       described as {

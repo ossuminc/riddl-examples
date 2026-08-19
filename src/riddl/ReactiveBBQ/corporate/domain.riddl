@@ -2,7 +2,7 @@ domain Corporate is {
 
   include "Marketing"
 
-  context CorporateFrontEnd is {
+  context CorporateFrontEnd as flow is {
 
     inlet CampaignStaged is command Corporate.Marketing.Campaign.LaunchCampaign with {
       briefly as "Where the front end's campaign requests collect"
@@ -48,7 +48,7 @@ domain Corporate is {
       handler CampaignRequestsHandler is {
         on command Corporate.Marketing.Campaign.LaunchCampaign {
           send command Corporate.Marketing.Campaign.LaunchCampaign(
-            id = prompt("the id carried by LaunchCampaign"),
+            campaignId = prompt("the campaignId carried by LaunchCampaign"),
             title = prompt("the title carried by LaunchCampaign"),
             budget = prompt("the budget carried by LaunchCampaign")
           ) to outlet Corporate.CorporateFrontEnd.CampaignRequests.Staged

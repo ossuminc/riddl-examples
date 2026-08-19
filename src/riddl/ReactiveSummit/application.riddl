@@ -1,4 +1,4 @@
-application context ToDoListUI is {
+application context ToDoListUI as flow is {
 
   inlet ItemStaged is command ReactiveSummit.ToDoList.ToDoItem.AddItem with {
     briefly as "Where the application's requests collect"
@@ -112,7 +112,7 @@ application context ToDoListUI is {
     handler ItemRequestsHandler is {
       on command ReactiveSummit.ToDoList.ToDoItem.AddItem {
         send command ReactiveSummit.ToDoList.ToDoItem.AddItem(
-          id = prompt("the id carried by AddItem"),
+          toDoItemId = prompt("the toDoItemId carried by AddItem"),
           content = prompt("the content carried by AddItem")
         ) to outlet ReactiveSummit.ToDoListUI.ItemRequests.Staged
       }

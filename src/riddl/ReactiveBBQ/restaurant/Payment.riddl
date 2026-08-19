@@ -1,4 +1,4 @@
-context Payments is {
+context Payments as flow is {
 
   inlet PaymentIn is command Restaurant.Payments.Payment.Pay with {
     briefly as "Where payment commands enter this context"
@@ -33,7 +33,7 @@ context Payments is {
     }
   }
 
-  entity Payment is {
+  entity Payment as flow is {
 
     inlet PaymentCommands is command Restaurant.Payments.Payment.Pay with {
       briefly as "Where this entity receives its commands"
@@ -50,7 +50,7 @@ context Payments is {
     }
 
     command Pay is {
-      id is Id(Payment),
+      paymentId is Id(Payment),
       orderAmount is Number,
       tipAmount is Number,
       cardToken is String
@@ -62,7 +62,7 @@ context Payments is {
     }
 
     query WhichPayment is {
-      id is Restaurant.Payments.PaymentId
+      paymentId is Restaurant.Payments.PaymentId
     } with {
       briefly as "Ask for the current state of one payment"
       described as {
@@ -71,7 +71,7 @@ context Payments is {
     }
 
     result ThePayment is {
-      id is Restaurant.Payments.PaymentId,
+      paymentId is Restaurant.Payments.PaymentId,
       summary is String
     } with {
       briefly as "The answer to a WhichPayment query"
@@ -81,7 +81,7 @@ context Payments is {
     }
 
     event Paid is {
-      id is Restaurant.Payments.PaymentId
+      paymentId is Restaurant.Payments.PaymentId
     } with {
       briefly as "Records that a customer paid for their order"
       described as {
@@ -90,7 +90,7 @@ context Payments is {
     }
 
     record PaymentFields is {
-      id is Restaurant.Payments.PaymentId,
+      paymentId is Restaurant.Payments.PaymentId,
       orderAmount is Number,
       tipAmount is Number,
       cardToken is String
@@ -110,20 +110,20 @@ context Payments is {
 
     handler PaymentHandler is {
       on init {
-        set field Restaurant.Payments.Payment.PaymentFields.id to "a freshly minted identifier"
+        set field Restaurant.Payments.Payment.PaymentFields.paymentId to "a freshly minted identifier"
       }
       on command Pay {
         morph entity Payment to state PaymentState with record Restaurant.Payments.Payment.PaymentFields(
-          id = prompt("the id of the resulting Payment state"),
+          paymentId = prompt("the paymentId of the resulting Payment state"),
           orderAmount = prompt("the orderAmount of the resulting Payment state"),
           tipAmount = prompt("the tipAmount of the resulting Payment state"),
           cardToken = prompt("the cardToken of the resulting Payment state")
         )
-        send event Paid(id = prompt("the id carried by Paid")) to outlet Restaurant.Payments.Payment.PaymentEvents
+        send event Paid(paymentId = prompt("the paymentId carried by Paid")) to outlet Restaurant.Payments.Payment.PaymentEvents
       }
       on query WhichPayment {
         reply result ThePayment(
-          id = prompt("the id carried by ThePayment"),
+          paymentId = prompt("the paymentId carried by ThePayment"),
           summary = prompt("the summary carried by ThePayment")
         )
       }
@@ -143,7 +143,7 @@ context Payments is {
 
 
 
-  repository PaymentStore is {
+  repository PaymentStore as sink is {
     inlet Recorded is event Restaurant.Payments.Payment.Paid with {
       briefly as "Where payment events arrive to be persisted"
       described as {

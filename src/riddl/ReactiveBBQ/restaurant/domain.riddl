@@ -11,7 +11,7 @@ domain Restaurant is {
   include "Server"
   include "Table"
 
-  context RestaurantFrontEnd is {
+  context RestaurantFrontEnd as router is {
 
     inlet CustomerStaged is command Restaurant.Customers.Customer.RegisterCustomer with {
       briefly as "Where the front end's customer requests collect"
@@ -317,7 +317,7 @@ domain Restaurant is {
       handler CustomerRequestsHandler is {
         on command Restaurant.Customers.Customer.RegisterCustomer {
           send command Restaurant.Customers.Customer.RegisterCustomer(
-            id = prompt("the id carried by RegisterCustomer"),
+            customerId = prompt("the customerId carried by RegisterCustomer"),
             name = prompt("the name carried by RegisterCustomer"),
             phone = prompt("the phone carried by RegisterCustomer")
           ) to outlet Restaurant.RestaurantFrontEnd.CustomerRequests.Staged
@@ -348,7 +348,7 @@ domain Restaurant is {
       handler TableRequestsHandler is {
         on command Restaurant.Tables.Table.AddTable {
           send command Restaurant.Tables.Table.AddTable(
-            id = prompt("the id carried by AddTable"),
+            tableId = prompt("the tableId carried by AddTable"),
             seats = prompt("the seats carried by AddTable"),
             section = prompt("the section carried by AddTable")
           ) to outlet Restaurant.RestaurantFrontEnd.TableRequests.Staged
@@ -379,7 +379,7 @@ domain Restaurant is {
       handler ServerRequestsHandler is {
         on command Restaurant.Servers.Server.AddServer {
           send command Restaurant.Servers.Server.AddServer(
-            id = prompt("the id carried by AddServer"),
+            serverId = prompt("the serverId carried by AddServer"),
             name = prompt("the name carried by AddServer"),
             section = prompt("the section carried by AddServer")
           ) to outlet Restaurant.RestaurantFrontEnd.ServerRequests.Staged
@@ -410,7 +410,7 @@ domain Restaurant is {
       handler LocationRequestsHandler is {
         on command Restaurant.Locations.Location.OpenLocation {
           send command Restaurant.Locations.Location.OpenLocation(
-            id = prompt("the id carried by OpenLocation"),
+            locationId = prompt("the locationId carried by OpenLocation"),
             name = prompt("the name carried by OpenLocation"),
             city = prompt("the city carried by OpenLocation")
           ) to outlet Restaurant.RestaurantFrontEnd.LocationRequests.Staged
@@ -441,7 +441,7 @@ domain Restaurant is {
       handler OrderRequestsHandler is {
         on command Restaurant.Orders.Order.PlaceOrder {
           send command Restaurant.Orders.Order.PlaceOrder(
-            id = prompt("the id carried by PlaceOrder"),
+            orderId = prompt("the orderId carried by PlaceOrder"),
             customerName = prompt("the customerName carried by PlaceOrder"),
             total = prompt("the total carried by PlaceOrder")
           ) to outlet Restaurant.RestaurantFrontEnd.OrderRequests.Staged
@@ -472,7 +472,7 @@ domain Restaurant is {
       handler PaymentRequestsHandler is {
         on command Restaurant.Payments.Payment.Pay {
           send command Restaurant.Payments.Payment.Pay(
-            id = prompt("the id carried by Pay"),
+            paymentId = prompt("the paymentId carried by Pay"),
             orderAmount = prompt("the orderAmount carried by Pay"),
             tipAmount = prompt("the tipAmount carried by Pay"),
             cardToken = prompt("the cardToken carried by Pay")
@@ -504,7 +504,7 @@ domain Restaurant is {
       handler ReservationRequestsHandler is {
         on command Restaurant.Reservations.Reservation.BookTable {
           send command Restaurant.Reservations.Reservation.BookTable(
-            id = prompt("the id carried by BookTable"),
+            reservationId = prompt("the reservationId carried by BookTable"),
             partyName = prompt("the partyName carried by BookTable"),
             phoneNumber = prompt("the phoneNumber carried by BookTable"),
             time = prompt("the time carried by BookTable"),
@@ -537,7 +537,7 @@ domain Restaurant is {
       handler OrderViewerRequestsHandler is {
         on command Restaurant.Kitchen.OrderViewer.ShowOrders {
           send command Restaurant.Kitchen.OrderViewer.ShowOrders(
-            id = prompt("the id carried by ShowOrders"),
+            orderViewerId = prompt("the orderViewerId carried by ShowOrders"),
             viewType = prompt("the viewType carried by ShowOrders"),
             station = prompt("the station carried by ShowOrders")
           ) to outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.Staged
@@ -568,7 +568,7 @@ domain Restaurant is {
       handler MenuItemRequestsHandler is {
         on command Restaurant.Menus.MenuItem.AddMenuItem {
           send command Restaurant.Menus.MenuItem.AddMenuItem(
-            id = prompt("the id carried by AddMenuItem"),
+            menuItemId = prompt("the menuItemId carried by AddMenuItem"),
             name = prompt("the name carried by AddMenuItem"),
             description = prompt("the description carried by AddMenuItem"),
             price = prompt("the price carried by AddMenuItem")
@@ -600,7 +600,7 @@ domain Restaurant is {
       handler MenuRequestsHandler is {
         on command Restaurant.Menus.Menu.ComposeMenu {
           send command Restaurant.Menus.Menu.ComposeMenu(
-            id = prompt("the id carried by ComposeMenu"),
+            menuId = prompt("the menuId carried by ComposeMenu"),
             title = prompt("the title carried by ComposeMenu"),
             season = prompt("the season carried by ComposeMenu")
           ) to outlet Restaurant.RestaurantFrontEnd.MenuRequests.Staged
@@ -631,7 +631,7 @@ domain Restaurant is {
       handler LoyaltyAccountRequestsHandler is {
         on command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
           send command Restaurant.Loyalty.LoyaltyAccount.AccruePoints(
-            id = prompt("the id carried by AccruePoints"),
+            loyaltyAccountId = prompt("the loyaltyAccountId carried by AccruePoints"),
             points = prompt("the points carried by AccruePoints"),
             accrualRate = prompt("the accrualRate carried by AccruePoints"),
             redemptionRate = prompt("the redemptionRate carried by AccruePoints")

@@ -1,4 +1,4 @@
-application context ToDoodlesApp is {
+application context ToDoodlesApp as router is {
 
   inlet DrawingStaged is command ToDoodles.Doodle.Drawing.CreateDrawing with {
     briefly as "Where the application's drawing requests collect"
@@ -135,7 +135,7 @@ application context ToDoodlesApp is {
     handler DrawingRequestsHandler is {
       on command ToDoodles.Doodle.Drawing.CreateDrawing {
         send command ToDoodles.Doodle.Drawing.CreateDrawing(
-          id = prompt("the id carried by CreateDrawing"),
+          drawingId = prompt("the drawingId carried by CreateDrawing"),
           title = prompt("the title carried by CreateDrawing")
         ) to outlet ToDoodles.ToDoodlesApp.DrawingRequests.Staged
       }
@@ -167,7 +167,7 @@ application context ToDoodlesApp is {
     handler ListRequestsHandler is {
       on command ToDoodles.List.DoodleList.CreateList {
         send command ToDoodles.List.DoodleList.CreateList(
-          id = prompt("the id carried by CreateList"),
+          doodleListId = prompt("the doodleListId carried by CreateList"),
           name = prompt("the name carried by CreateList")
         ) to outlet ToDoodles.ToDoodlesApp.ListRequests.Staged
       }

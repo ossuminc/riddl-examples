@@ -1,4 +1,4 @@
-context Customers is {
+context Customers as flow is {
 
   inlet Failures is record Riddl.GeneratorError with {
     option error-sink
@@ -44,7 +44,7 @@ context Customers is {
     }
   }
 
-  entity Customer is {
+  entity Customer as flow is {
 
     inlet CustomerCommands is command Restaurant.Customers.Customer.RegisterCustomer with {
       briefly as "Where this entity receives its commands"
@@ -61,7 +61,7 @@ context Customers is {
     }
 
     command RegisterCustomer is {
-      id is Id(Customer),
+      customerId is Id(Customer),
       name is String,
       phone is String
     } with {
@@ -72,7 +72,7 @@ context Customers is {
     }
 
     query WhichCustomer is {
-      id is Restaurant.Customers.CustomerId
+      customerId is Restaurant.Customers.CustomerId
     } with {
       briefly as "Ask for the current state of one customer"
       described as {
@@ -81,7 +81,7 @@ context Customers is {
     }
 
     result TheCustomer is {
-      id is Restaurant.Customers.CustomerId,
+      customerId is Restaurant.Customers.CustomerId,
       summary is String
     } with {
       briefly as "The answer to a WhichCustomer query"
@@ -91,7 +91,7 @@ context Customers is {
     }
 
     event CustomerRegistered is {
-      id is Restaurant.Customers.CustomerId
+      customerId is Restaurant.Customers.CustomerId
     } with {
       briefly as "Records that a diner registered with the restaurant"
       described as {
@@ -100,7 +100,7 @@ context Customers is {
     }
 
     record CustomerFields is {
-      id is Restaurant.Customers.CustomerId,
+      customerId is Restaurant.Customers.CustomerId,
       name is String,
       phone is String
     } with {
@@ -119,21 +119,21 @@ context Customers is {
 
     handler CustomerHandler is {
       on init {
-        set field Restaurant.Customers.Customer.CustomerFields.id to "a freshly minted identifier"
+        set field Restaurant.Customers.Customer.CustomerFields.customerId to "a freshly minted identifier"
       }
       on command RegisterCustomer {
         morph entity Customer to state CustomerState with record Restaurant.Customers.Customer.CustomerFields(
-          id = prompt("the id of the resulting Customer state"),
+          customerId = prompt("the customerId of the resulting Customer state"),
           name = prompt("the name of the resulting Customer state"),
           phone = prompt("the phone of the resulting Customer state")
         )
         send event CustomerRegistered(
-          id = prompt("the id carried by CustomerRegistered")
+          customerId = prompt("the customerId carried by CustomerRegistered")
         ) to outlet Restaurant.Customers.Customer.CustomerEvents
       }
       on query WhichCustomer {
         reply result TheCustomer(
-          id = prompt("the id carried by TheCustomer"),
+          customerId = prompt("the customerId carried by TheCustomer"),
           summary = prompt("the summary carried by TheCustomer")
         )
       }
@@ -153,7 +153,7 @@ context Customers is {
 
 
 
-  repository CustomerStore is {
+  repository CustomerStore as sink is {
     inlet Recorded is event Restaurant.Customers.Customer.CustomerRegistered with {
       briefly as "Where customer events arrive to be persisted"
       described as {

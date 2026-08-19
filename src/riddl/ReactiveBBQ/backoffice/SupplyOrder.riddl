@@ -1,4 +1,4 @@
-context SupplyOrder is {
+context SupplyOrder as flow is {
 
   inlet Failures is record Riddl.GeneratorError with {
     option error-sink
@@ -44,7 +44,7 @@ context SupplyOrder is {
     }
   }
 
-  entity Supply is {
+  entity Supply as flow is {
 
     inlet SupplyCommands is command BackOffice.SupplyOrder.Supply.OrderSupply with {
       briefly as "Where this entity receives its commands"
@@ -61,7 +61,7 @@ context SupplyOrder is {
     }
 
     command OrderSupply is {
-      id is Id(Supply),
+      supplyId is Id(Supply),
       item is String,
       quantity is Integer
     } with {
@@ -72,7 +72,7 @@ context SupplyOrder is {
     }
 
     query WhichSupply is {
-      id is BackOffice.SupplyOrder.SupplyId
+      supplyId is BackOffice.SupplyOrder.SupplyId
     } with {
       briefly as "Ask for the current state of one supply"
       described as {
@@ -81,7 +81,7 @@ context SupplyOrder is {
     }
 
     result TheSupply is {
-      id is BackOffice.SupplyOrder.SupplyId,
+      supplyId is BackOffice.SupplyOrder.SupplyId,
       summary is String
     } with {
       briefly as "The answer to a WhichSupply query"
@@ -91,7 +91,7 @@ context SupplyOrder is {
     }
 
     event SupplyOrdered is {
-      id is BackOffice.SupplyOrder.SupplyId
+      supplyId is BackOffice.SupplyOrder.SupplyId
     } with {
       briefly as "Records that a restaurant ordered stock from a warehouse"
       described as {
@@ -100,7 +100,7 @@ context SupplyOrder is {
     }
 
     record SupplyFields is {
-      id is BackOffice.SupplyOrder.SupplyId,
+      supplyId is BackOffice.SupplyOrder.SupplyId,
       item is String,
       quantity is Integer
     } with {
@@ -119,21 +119,21 @@ context SupplyOrder is {
 
     handler SupplyHandler is {
       on init {
-        set field BackOffice.SupplyOrder.Supply.SupplyFields.id to "a freshly minted identifier"
+        set field BackOffice.SupplyOrder.Supply.SupplyFields.supplyId to "a freshly minted identifier"
       }
       on command OrderSupply {
         morph entity Supply to state SupplyState with record BackOffice.SupplyOrder.Supply.SupplyFields(
-          id = prompt("the id of the resulting Supply state"),
+          supplyId = prompt("the supplyId of the resulting Supply state"),
           item = prompt("the item of the resulting Supply state"),
           quantity = prompt("the quantity of the resulting Supply state")
         )
         send event SupplyOrdered(
-          id = prompt("the id carried by SupplyOrdered")
+          supplyId = prompt("the supplyId carried by SupplyOrdered")
         ) to outlet BackOffice.SupplyOrder.Supply.SupplyEvents
       }
       on query WhichSupply {
         reply result TheSupply(
-          id = prompt("the id carried by TheSupply"),
+          supplyId = prompt("the supplyId carried by TheSupply"),
           summary = prompt("the summary carried by TheSupply")
         )
       }
@@ -153,7 +153,7 @@ context SupplyOrder is {
 
 
 
-  repository SupplyStore is {
+  repository SupplyStore as sink is {
     inlet Recorded is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
       briefly as "Where supply events arrive to be persisted"
       described as {

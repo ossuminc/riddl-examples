@@ -3,7 +3,7 @@ domain BackOffice is {
   include "SupplyOrder"
   include "MenuPlant"
 
-  context BackOfficeFrontEnd is {
+  context BackOfficeFrontEnd as flow is {
 
     inlet SupplyStaged is command BackOffice.SupplyOrder.Supply.OrderSupply with {
       briefly as "Where the front end's supply requests collect"
@@ -49,7 +49,7 @@ domain BackOffice is {
       handler SupplyRequestsHandler is {
         on command BackOffice.SupplyOrder.Supply.OrderSupply {
           send command BackOffice.SupplyOrder.Supply.OrderSupply(
-            id = prompt("the id carried by OrderSupply"),
+            supplyId = prompt("the supplyId carried by OrderSupply"),
             item = prompt("the item carried by OrderSupply"),
             quantity = prompt("the quantity carried by OrderSupply")
           ) to outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.Staged

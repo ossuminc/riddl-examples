@@ -121,6 +121,34 @@ handle it, as `Cart`/`CreateCart` and `Product`/`CreateProduct` do in
 ShopifyCart.
 
 
+**Discharging a response obligation (rc.19+)**. `yields`/`replies` is declared
+on the MESSAGE, so every handler of a command declaring `yields event E` owes an
+`E`. Only four things discharge it:
+
+- `yield` / `reply` — produce the declared response
+- `error` / `require` — refuse (declining IS processing)
+- **`forward`** — delegate: whatever handles this downstream produces it
+
+**`send` and `tell` no longer discharge anything.** A boundary handler that
+merely passes the message on must say `forward`:
+
+```riddl
+on request: command AddCompany {
+  forward request to outlet dokn.Companies.CompanyDispatch
+}
+```
+
+`forward` takes `to outlet`/`to inlet` like `send`, or `to <processor>` like
+`tell`.
+
+**`forward` is NOT a drop-in for `send`.** It is an ERROR unless the handled
+command declares `yields` (or the query declares `replies`) — there must be an
+obligation to delegate. In this corpus only dokn's five commands declare one,
+so only dokn's handlers may use it; the other ~65 boundary handlers delegate
+just as truly and must keep `send`. Before converting, check which shape you
+have: a handler that emits some OTHER event is not delegating and needs an
+explicit `error`/`require` or a `yield` instead.
+
 **Streaming: the context is the boundary (rc.16+)**. Two rules that
 restructure any pre-2.0 model, and the corpus was migrated to them:
 
@@ -227,7 +255,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 
 - **sbt**: 2.0.6
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.17` — the pin and the staged `../bin/riddlc` must
+- **RIDDL**: `2.0.0-rc.19` — the pin and the staged `../bin/riddlc` must
   always be the **same build**. When they drift, the library and the
   binary doing the validating disagree, and the corpus result no longer
   says anything about the pin. This has been a released tag since rc.13;
@@ -238,7 +266,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.17",
+.configure(With.Riddl.library(version = "2.0.0-rc.19",
   nonJVMDependency = false))
 ```
 

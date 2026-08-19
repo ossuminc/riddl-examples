@@ -2,10 +2,10 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-18**, by running the commands, not from memory.
+**Last verified: 2026-08-19**, by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.17`**, a released tag that resolves from GitHub Packages. Check
+**`2.0.0-rc.19`**, a released tag that resolves from GitHub Packages. Check
 they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
 projects and has changed under this repo twice now, mid-session both times.
 
@@ -45,6 +45,13 @@ Nothing. `task/` is empty.
   `riddl-lib_3.jar` with no version in the filename, so grep the PATH.
   A first resolution attempt failing `unauthorized` against GitHub Packages
   has been transient twice; retry before diagnosing.
+- **An EMPTY Coursier cache directory blocks resolution forever.** A failed
+  fetch can leave `~/Library/Caches/Coursier/v1/https/maven.pkg.github.com/
+  ossuminc/_/com/ossuminc/<mod>/<version>/` created but empty, and every
+  later attempt then reports `unauthorized` no matter how good the
+  credentials are. Diagnose by curling the pom with sbt's own credential: if
+  that returns 302/200, the credential is fine and the cache is the problem.
+  `rmdir` the empty version directories and re-run.
 - **Do not validate through the `.conf` files** when measuring: their
   `common` blocks can hide the very warnings being driven to zero.
 - **Validate is not enough after a compiler bump.** Round-trip through
@@ -77,16 +84,84 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: August 18, 2026
+**Last Updated**: August 19, 2026
 
 **Status: COMPLETE.** The corpus validates with **zero messages of every
-kind** under `2.0.0-rc.17` on `main`. FooBarSameDomain remains non-zero by
+kind** under `2.0.0-rc.19` on `main`. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
 - None outstanding. `task/` is empty.
 - The `show … to …` riddlc bug is filed against riddl; once fixed, restore
   the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-19: rc.19, and `forward` is not a synonym for `send`
+
+Upgraded to `2.0.0-rc.19` (staged binary was already there) and migrated the
+ten handlers rc.19 moved. Corpus back to zero on every message kind.
+
+### What rc.19 changed
+
+A new `forward` statement, and a narrowing: only `yield`/`reply`,
+`error`/`require` and `forward` discharge a response obligation. `send` and
+`tell` no longer do. Since `yields` is declared on the MESSAGE, every handler
+of a command declaring `yields event E` owes an `E`, and a handler that
+merely passes the command along previously had no way to say so.
+
+Ten findings, all in dokn — exactly what the incoming task predicted, and
+all the delegation shape rather than the "decline-by-recording" shape it
+warned would need a semantic decision instead of an edit. Checked before
+touching anything, which the task explicitly asked for.
+
+### The mistake worth recording
+
+The task's acceptance criteria say "delegation handlers say `forward`, not
+`send`". The corpus has **75** handlers that delegate a bound message, and
+converting all of them looked like the faithful reading. It produced **65
+new errors**:
+
+```
+'forward' is only allowed in a clause handling a command that declares
+'yields' or a query that declares 'replies'; there is no response
+obligation here to delegate
+```
+
+`forward` is not a better `send`; it is a statement about an obligation, and
+it needs one to exist. Exactly five types in this corpus declare
+`yields`/`replies`, all dokn's commands — so only dokn's handlers may use it.
+The other 65 delegate just as truly and must keep `send`.
+
+Reverted and re-applied by that rule — resolve each `send <binding>` to the
+command its clause handles, convert only where that command declares
+`yields` — which lands precisely the ten the task named. **Deriving the rule
+from the compiler's own message beat generalising from the task's prose**,
+and the corpus-wide sweep was the wrong instinct even though it was aimed at
+the right criterion.
+
+### A resolution failure that was not a credentials failure
+
+`sbt` reported `unauthorized` for every rc.19 artifact, twice, and I have
+seen that be transient here before. It was not: rc.19 *is* published, and
+curling the pom with sbt's OWN credential returned 302, then 200 and a full
+1.38MB jar when following the redirect. Credentials were never the problem.
+
+The cause was four **empty** Coursier cache directories left by the first
+failed fetch. Once created, every later attempt short-circuits to
+`unauthorized`. `rmdir` them and resolution succeeds immediately. Now a
+trap in HANDOFF, because the error text points squarely at the wrong thing.
+
+### Verified
+
+- `bin/validate-corpus.sh` exits 0; 8/8 at zero on all six message kinds
+- prettify round trip: zero messages of ANY kind on all eight, second pass
+  byte-identical
+- every `.conf` exits 0 but FooBarSameDomain's deliberate 7 — measured with
+  `rc=$?` on its own line, after last session's substitution bug
+- all four artifacts resolve at rc.19
+- riddl's EBNF validator 9/9, and its stale expected-to-fail entry for
+  Trello is gone
 
 ---
 

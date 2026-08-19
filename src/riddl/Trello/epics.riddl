@@ -26,7 +26,7 @@ epic BoardManagementEpic is {
     step take form NewBoard from user Member
     step send command Trello.BoardManagement.Board.CreateBoard
       from source Trello.TrelloUI.BoardManagementRequests
-      to sink Trello.BoardManagement.BoardManagementIntake
+      to context Trello.BoardManagement
   } with {
     briefly as "Creating a board from the boards page"
     described as {
@@ -40,10 +40,10 @@ epic BoardManagementEpic is {
       so that "they can track a specific task"
     step send command Trello.BoardManagement.CardList.AddList
       from source Trello.TrelloUI.BoardManagementRequests
-      to sink Trello.BoardManagement.BoardManagementIntake
+      to context Trello.BoardManagement
     step send command Trello.BoardManagement.Card.AddCard
       from source Trello.TrelloUI.BoardManagementRequests
-      to sink Trello.BoardManagement.BoardManagementIntake
+      to context Trello.BoardManagement
   } with {
     briefly as "Filling a board with lists and cards"
     described as {
@@ -57,7 +57,7 @@ epic BoardManagementEpic is {
       so that "they can update its status"
     step send command Trello.BoardManagement.Card.MoveCard
       from source Trello.TrelloUI.BoardManagementRequests
-      to sink Trello.BoardManagement.BoardManagementIntake
+      to context Trello.BoardManagement
   } with {
     briefly as "Moving a card between lists"
     described as {
@@ -84,13 +84,13 @@ epic CardDetailEpic is {
       so that "responsibility and timing are clear"
     step send command Trello.BoardManagement.Card.EditCard
       from source Trello.TrelloUI.BoardManagementRequests
-      to sink Trello.BoardManagement.BoardManagementIntake
+      to context Trello.BoardManagement
     step send command Trello.BoardManagement.Card.AssignMember
       from source Trello.TrelloUI.BoardManagementRequests
-      to sink Trello.BoardManagement.BoardManagementIntake
+      to context Trello.BoardManagement
     step send command Trello.BoardManagement.Card.SetDueDate
       from source Trello.TrelloUI.BoardManagementRequests
-      to sink Trello.BoardManagement.BoardManagementIntake
+      to context Trello.BoardManagement
   } with {
     briefly as "Filling in a card"
     described as {
@@ -115,10 +115,10 @@ epic WorkspaceManagementEpic is {
       so that "a team can share boards"
     step send command Trello.WorkspaceManagement.Workspace.CreateWorkspace
       from source Trello.TrelloUI.WorkspaceManagementRequests
-      to sink Trello.WorkspaceManagement.WorkspaceManagementIntake
+      to context Trello.WorkspaceManagement
     step send command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember
       from source Trello.TrelloUI.WorkspaceManagementRequests
-      to sink Trello.WorkspaceManagement.WorkspaceManagementIntake
+      to context Trello.WorkspaceManagement
   } with {
     briefly as "Standing up a workspace"
     described as {
@@ -144,10 +144,10 @@ epic NotificationEpic is {
       so that "they can focus on new ones"
     step send command Trello.UserManagement.Notification.MarkAsRead
       from source Trello.TrelloUI.UserManagementRequests
-      to sink Trello.UserManagement.UserManagementIntake
+      to context Trello.UserManagement
     step send command Trello.UserManagement.Notification.MarkAllAsRead
       from source Trello.TrelloUI.UserManagementRequests
-      to sink Trello.UserManagement.UserManagementIntake
+      to context Trello.UserManagement
   } with {
     briefly as "Clearing the notification list"
     described as {

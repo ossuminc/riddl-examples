@@ -5,8 +5,42 @@ domain BackOffice is {
 
   context BackOfficeFrontEnd is {
 
+    inlet SupplyStaged is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+      briefly as "Where the front end's supply requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet SupplySubmissions is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+      briefly as "Where supply requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingSupply is {
+      from outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.Staged to inlet BackOffice.BackOfficeFrontEnd.SupplyStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    handler BackOfficeFrontEndBoundary is {
+      on orderSupply: command BackOffice.SupplyOrder.Supply.OrderSupply {
+        send orderSupply to outlet BackOffice.BackOfficeFrontEnd.SupplySubmissions
+      }
+    } with {
+      briefly as "Republishes staged requests on the context's own outlets"
+      described as {
+        |The front end's internals stay private; peers see only these outlets.
+      }
+    }
+
     processor SupplyRequests as source is {
-      outlet SupplySubmissions is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+      outlet Staged is command BackOffice.SupplyOrder.Supply.OrderSupply with {
         briefly as "Where supply requests leave the front end"
         described as {
           |Requests reach the SupplyOrder context over a domain-scoped connector.
@@ -18,7 +52,7 @@ domain BackOffice is {
             id = prompt("the id carried by OrderSupply"),
             item = prompt("the item carried by OrderSupply"),
             quantity = prompt("the quantity carried by OrderSupply")
-          ) to outlet SupplySubmissions
+          ) to outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.Staged
         }
         on other {
           do "ignore requests that are not about supplys"
@@ -45,8 +79,8 @@ domain BackOffice is {
   }
 
   persistent connector SupplyRequests is {
-    from outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.SupplySubmissions
-    to inlet BackOffice.SupplyOrder.IntakeSupply.Requests
+    from outlet BackOffice.BackOfficeFrontEnd.SupplySubmissions
+    to inlet BackOffice.SupplyOrder.SupplyIn
   } with {
     briefly as "Carries supply requests from the front end to SupplyOrder"
     described as {

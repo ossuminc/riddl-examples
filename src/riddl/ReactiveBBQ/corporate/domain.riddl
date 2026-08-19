@@ -4,8 +4,42 @@ domain Corporate is {
 
   context CorporateFrontEnd is {
 
+    inlet CampaignStaged is command Corporate.Marketing.Campaign.LaunchCampaign with {
+      briefly as "Where the front end's campaign requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet CampaignSubmissions is command Corporate.Marketing.Campaign.LaunchCampaign with {
+      briefly as "Where campaign requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingCampaign is {
+      from outlet Corporate.CorporateFrontEnd.CampaignRequests.Staged to inlet Corporate.CorporateFrontEnd.CampaignStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    handler CorporateFrontEndBoundary is {
+      on launchCampaign: command Corporate.Marketing.Campaign.LaunchCampaign {
+        send launchCampaign to outlet Corporate.CorporateFrontEnd.CampaignSubmissions
+      }
+    } with {
+      briefly as "Republishes staged requests on the context's own outlets"
+      described as {
+        |The front end's internals stay private; peers see only these outlets.
+      }
+    }
+
     processor CampaignRequests as source is {
-      outlet CampaignSubmissions is command Corporate.Marketing.Campaign.LaunchCampaign with {
+      outlet Staged is command Corporate.Marketing.Campaign.LaunchCampaign with {
         briefly as "Where campaign requests leave the front end"
         described as {
           |Requests reach the Marketing context over a domain-scoped connector.
@@ -17,7 +51,7 @@ domain Corporate is {
             id = prompt("the id carried by LaunchCampaign"),
             title = prompt("the title carried by LaunchCampaign"),
             budget = prompt("the budget carried by LaunchCampaign")
-          ) to outlet CampaignSubmissions
+          ) to outlet Corporate.CorporateFrontEnd.CampaignRequests.Staged
         }
         on other {
           do "ignore requests that are not about campaigns"
@@ -44,8 +78,8 @@ domain Corporate is {
   }
 
   persistent connector CampaignRequests is {
-    from outlet Corporate.CorporateFrontEnd.CampaignRequests.CampaignSubmissions
-    to inlet Corporate.Marketing.IntakeCampaign.Requests
+    from outlet Corporate.CorporateFrontEnd.CampaignSubmissions
+    to inlet Corporate.Marketing.CampaignIn
   } with {
     briefly as "Carries campaign requests from the front end to Marketing"
     described as {

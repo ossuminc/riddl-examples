@@ -1,5 +1,64 @@
 context UserManagement is {
 
+  inlet Failures is record Riddl.GeneratorError with {
+    option error-sink
+    briefly as "Where hard errors go"
+    described as {
+      |RIDDL 2.0 wants every domain to name a destination for failures no
+      |handler can recover from. An error-sink inlet is infrastructure
+      |rather than dataflow, so it does not count toward this processor's
+      |arity.
+    }
+  }
+
+  inlet UserManagementIn is type Trello.UserManagement.UserManagementCommand with {
+    briefly as "Where commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet AccountDispatch is type Trello.UserManagement.UserManagementCommand with {
+    briefly as "Where entering commands bound for Account are handed inward"
+    described as {
+      |One outlet per entity: an outlet carries exactly one connector.
+    }
+  }
+
+  outlet NotificationDispatch is type Trello.UserManagement.UserManagementCommand with {
+    briefly as "Where entering commands bound for Notification are handed inward"
+    described as {
+      |One outlet per entity: an outlet carries exactly one connector.
+    }
+  }
+
+  handler UserManagementBoundary is {
+    on createAccount: command Trello.UserManagement.Account.CreateAccount {
+      send createAccount to outlet Trello.UserManagement.AccountDispatch
+    }
+    on updateProfile: command Trello.UserManagement.Account.UpdateProfile {
+      send updateProfile to outlet Trello.UserManagement.AccountDispatch
+    }
+    on updateSettings: command Trello.UserManagement.Account.UpdateSettings {
+      send updateSettings to outlet Trello.UserManagement.AccountDispatch
+    }
+    on createNotification: command Trello.UserManagement.Notification.CreateNotification {
+      send createNotification to outlet Trello.UserManagement.NotificationDispatch
+    }
+    on markAsRead: command Trello.UserManagement.Notification.MarkAsRead {
+      send markAsRead to outlet Trello.UserManagement.NotificationDispatch
+    }
+    on markAllAsRead: command Trello.UserManagement.Notification.MarkAllAsRead {
+      send markAllAsRead to outlet Trello.UserManagement.NotificationDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary to the entity that owns it"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type AccountId is Id(Trello.UserManagement.Account) with {
     briefly as "Unique identifier for one user"
     described as {
@@ -8,6 +67,20 @@ context UserManagement is {
   }
 
   entity Account is {
+
+    inlet AccountCommands is type Trello.UserManagement.UserManagementCommand with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet AccountEvents is type Trello.UserManagement.UserManagementEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command CreateAccount is {
       id is Id(Account),
@@ -146,6 +219,20 @@ context UserManagement is {
   }
 
   entity Notification is {
+
+    inlet NotificationCommands is type Trello.UserManagement.UserManagementCommand with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet NotificationEvents is type Trello.UserManagement.UserManagementEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command CreateNotification is {
       id is Id(Notification),
@@ -302,7 +389,21 @@ context UserManagement is {
     }
   }
 
-  processor UserManagementAnnouncer as source is {
+  processor UserManagementAnnouncer as merge is {
+    inlet FromAccount is type Trello.UserManagement.UserManagementEvent with {
+      briefly as "Events arriving from Account"
+      described as {
+        |Each entity publishes on its own outlet; this merges them.
+      }
+    }
+
+    inlet FromNotification is type Trello.UserManagement.UserManagementEvent with {
+      briefly as "Events arriving from Notification"
+      described as {
+        |Each entity publishes on its own outlet; this merges them.
+      }
+    }
+
     outlet Published is type Trello.UserManagement.UserManagementEvent with {
       briefly as "Where UserManagement publishes what happened"
       described as {
@@ -331,71 +432,6 @@ context UserManagement is {
     }
   }
 
-  processor UserManagementIntake as sink is {
-  inlet Failures is record Riddl.GeneratorError with {
-    option error-sink
-    briefly as "Where hard errors go"
-    described as {
-      |RIDDL 2.0 wants every domain to name a destination for failures no
-      |handler can recover from. An error-sink inlet is infrastructure
-      |rather than dataflow, so it does not count toward this processor's
-      |arity.
-    }
-  }
-    inlet Requests is type Trello.UserManagement.UserManagementCommand with {
-      briefly as "Where commands arrive from the application"
-      described as {
-        |Everything UserManagement is asked to do enters here.
-      }
-    }
-    handler UserManagementIntakeHandler is {
-      on command Trello.UserManagement.Account.CreateAccount {
-        tell command Trello.UserManagement.Account.CreateAccount(
-          id = prompt("the id carried by CreateAccount"),
-          username = prompt("the username carried by CreateAccount"),
-          email = prompt("the email carried by CreateAccount")
-        ) to entity Account
-      }
-      on command Trello.UserManagement.Account.UpdateProfile {
-        tell command Trello.UserManagement.Account.UpdateProfile(
-          id = prompt("the id carried by UpdateProfile")
-        ) to entity Account
-      }
-      on command Trello.UserManagement.Account.UpdateSettings {
-        tell command Trello.UserManagement.Account.UpdateSettings(
-          id = prompt("the id carried by UpdateSettings")
-        ) to entity Account
-      }
-      on command Trello.UserManagement.Notification.CreateNotification {
-        tell command Trello.UserManagement.Notification.CreateNotification(
-          id = prompt("the id carried by CreateNotification"),
-          text = prompt("the text carried by CreateNotification"),
-          read = prompt("the read carried by CreateNotification")
-        ) to entity Notification
-      }
-      on command Trello.UserManagement.Notification.MarkAsRead {
-        tell command Trello.UserManagement.Notification.MarkAsRead(
-          id = prompt("the id carried by MarkAsRead")
-        ) to entity Notification
-      }
-      on command Trello.UserManagement.Notification.MarkAllAsRead {
-        tell command Trello.UserManagement.Notification.MarkAllAsRead(
-          id = prompt("the id carried by MarkAllAsRead")
-        ) to entity Notification
-      }
-    } with {
-      briefly as "Dispatches arriving commands to the entity that owns them"
-      described as {
-        |The witness pass requires a receiving on-clause for every command
-        |an epic step sends here, so each is handled explicitly.
-      }
-    }
-  } with {
-    briefly as "The context's front door"
-    described as {
-      |A sink receiving messages addressed to UserManagement.
-    }
-  }
 
   repository UserManagementStore is {
     inlet Recorded is type Trello.UserManagement.UserManagementEvent with {
@@ -430,7 +466,7 @@ context UserManagement is {
   }
 
   connector ErrorReporting is {
-    from outlet Riddl.ForeverEmpty.void to inlet Trello.UserManagement.UserManagementIntake.Failures
+    from outlet Riddl.ForeverEmpty.void to inlet Trello.UserManagement.Failures
   } with {
     briefly as "Terminates the error-sink inlet"
     described as {
@@ -438,6 +474,42 @@ context UserManagement is {
       |generators at runtime, not from anything the model declares. The
       |predefined ForeverEmpty source exists for exactly this: a port that
       |must be connected but has no modelled producer.
+    }
+  }
+
+  connector AddressingAccount is {
+    from outlet Trello.UserManagement.AccountDispatch to inlet Trello.UserManagement.Account.AccountCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
+  connector AddressingNotification is {
+    from outlet Trello.UserManagement.NotificationDispatch to inlet Trello.UserManagement.Notification.NotificationCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
+  connector AnnouncingAccount is {
+    from outlet Trello.UserManagement.Account.AccountEvents to inlet Trello.UserManagement.UserManagementAnnouncer.FromAccount
+  } with {
+    briefly as "Carries this entity's events to the context's announcer"
+    described as {
+      |Publishing goes out the entity's own outlet and merges downstream.
+    }
+  }
+
+  connector AnnouncingNotification is {
+    from outlet Trello.UserManagement.Notification.NotificationEvents to inlet Trello.UserManagement.UserManagementAnnouncer.FromNotification
+  } with {
+    briefly as "Carries this entity's events to the context's announcer"
+    described as {
+      |Publishing goes out the entity's own outlet and merges downstream.
     }
   }
 
@@ -460,6 +532,38 @@ context UserManagement is {
 
 context WorkspaceManagement is {
 
+  inlet WorkspaceManagementIn is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+    briefly as "Where commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet WorkspaceDispatch is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+    briefly as "Where entering commands bound for Workspace are handed inward"
+    described as {
+      |One outlet per entity: an outlet carries exactly one connector.
+    }
+  }
+
+  handler WorkspaceManagementBoundary is {
+    on createWorkspace: command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
+      send createWorkspace to outlet Trello.WorkspaceManagement.WorkspaceDispatch
+    }
+    on addWorkspaceMember: command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember {
+      send addWorkspaceMember to outlet Trello.WorkspaceManagement.WorkspaceDispatch
+    }
+    on updateWorkspaceSettings: command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings {
+      send updateWorkspaceSettings to outlet Trello.WorkspaceManagement.WorkspaceDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary to the entity that owns it"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type WorkspaceId is Id(Trello.WorkspaceManagement.Workspace) with {
     briefly as "Unique identifier for one workspace"
     described as {
@@ -468,6 +572,20 @@ context WorkspaceManagement is {
   }
 
   entity Workspace is {
+
+    inlet WorkspaceCommands is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet WorkspaceEvents is type Trello.WorkspaceManagement.WorkspaceManagementEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command CreateWorkspace is {
       id is Id(Workspace),
@@ -568,7 +686,7 @@ context WorkspaceManagement is {
         )
         send event WorkspaceCreated(
           id = prompt("the id carried by WorkspaceCreated")
-        ) to outlet WorkspaceManagementAnnouncer.Published
+        ) to outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents
       }
       on command AddWorkspaceMember {
         morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
@@ -578,7 +696,7 @@ context WorkspaceManagement is {
         )
         send event WorkspaceMemberAdded(
           id = prompt("the id carried by WorkspaceMemberAdded")
-        ) to outlet WorkspaceManagementAnnouncer.Published
+        ) to outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents
       }
       on command UpdateWorkspaceSettings {
         morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
@@ -588,7 +706,7 @@ context WorkspaceManagement is {
         )
         send event WorkspaceCreated(
           id = prompt("the id carried by WorkspaceCreated")
-        ) to outlet WorkspaceManagementAnnouncer.Published
+        ) to outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents
       }
       on query WhichWorkspace {
         reply result TheWorkspace(
@@ -633,73 +751,7 @@ context WorkspaceManagement is {
     }
   }
 
-  processor WorkspaceManagementAnnouncer as source is {
-    outlet Published is type Trello.WorkspaceManagement.WorkspaceManagementEvent with {
-      briefly as "Where WorkspaceManagement publishes what happened"
-      described as {
-        |Events leave this context through this outlet.
-      }
-    }
-    handler WorkspaceManagementAnnouncerHandler is {
-      on event Trello.WorkspaceManagement.Workspace.WorkspaceCreated {
-        send event Trello.WorkspaceManagement.Workspace.WorkspaceCreated(
-          id = prompt("the id carried by WorkspaceCreated")
-        ) to outlet WorkspaceManagementAnnouncer.Published
-      }
-      on other {
-        do "publish any other event this context raises"
-      }
-    } with {
-      briefly as "Publishes WorkspaceManagement events"
-      described as {
-        |Puts each event an entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The context's publication point"
-    described as {
-      |A source streamlet carrying what WorkspaceManagement wants known elsewhere.
-    }
-  }
 
-  processor WorkspaceManagementIntake as sink is {
-    inlet Requests is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
-      briefly as "Where commands arrive from the application"
-      described as {
-        |Everything WorkspaceManagement is asked to do enters here.
-      }
-    }
-    handler WorkspaceManagementIntakeHandler is {
-      on command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
-        tell command Trello.WorkspaceManagement.Workspace.CreateWorkspace(
-          id = prompt("the id carried by CreateWorkspace"),
-          name = prompt("the name carried by CreateWorkspace"),
-          visibility = prompt("the visibility carried by CreateWorkspace")
-        ) to entity Workspace
-      }
-      on command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember {
-        tell command Trello.WorkspaceManagement.Workspace.AddWorkspaceMember(
-          id = prompt("the id carried by AddWorkspaceMember")
-        ) to entity Workspace
-      }
-      on command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings {
-        tell command Trello.WorkspaceManagement.Workspace.UpdateWorkspaceSettings(
-          id = prompt("the id carried by UpdateWorkspaceSettings")
-        ) to entity Workspace
-      }
-    } with {
-      briefly as "Dispatches arriving commands to the entity that owns them"
-      described as {
-        |The witness pass requires a receiving on-clause for every command
-        |an epic step sends here, so each is handled explicitly.
-      }
-    }
-  } with {
-    briefly as "The context's front door"
-    described as {
-      |A sink receiving messages addressed to WorkspaceManagement.
-    }
-  }
 
   repository WorkspaceManagementStore is {
     inlet Recorded is type Trello.WorkspaceManagement.WorkspaceManagementEvent with {
@@ -733,8 +785,17 @@ context WorkspaceManagement is {
     }
   }
 
+  connector AddressingWorkspace is {
+    from outlet Trello.WorkspaceManagement.WorkspaceDispatch to inlet Trello.WorkspaceManagement.Workspace.WorkspaceCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector WorkspaceManagementRecording is {
-    from outlet WorkspaceManagementAnnouncer.Published to inlet WorkspaceManagementStore.Recorded
+    from outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents to inlet WorkspaceManagementStore.Recorded
   } with {
     briefly as "Carries WorkspaceManagement events to storage"
     described as {
@@ -752,6 +813,86 @@ context WorkspaceManagement is {
 
 context BoardManagement is {
 
+  inlet BoardManagementIn is type Trello.BoardManagement.BoardManagementCommand with {
+    briefly as "Where commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet BoardDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+    briefly as "Where entering commands bound for Board are handed inward"
+    described as {
+      |One outlet per entity: an outlet carries exactly one connector.
+    }
+  }
+
+  outlet CardListDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+    briefly as "Where entering commands bound for CardList are handed inward"
+    described as {
+      |One outlet per entity: an outlet carries exactly one connector.
+    }
+  }
+
+  outlet CardDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+    briefly as "Where entering commands bound for Card are handed inward"
+    described as {
+      |One outlet per entity: an outlet carries exactly one connector.
+    }
+  }
+
+  outlet ActivityDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+    briefly as "Where entering commands bound for Activity are handed inward"
+    described as {
+      |One outlet per entity: an outlet carries exactly one connector.
+    }
+  }
+
+  handler BoardManagementBoundary is {
+    on createBoard: command Trello.BoardManagement.Board.CreateBoard {
+      send createBoard to outlet Trello.BoardManagement.BoardDispatch
+    }
+    on addBoardMember: command Trello.BoardManagement.Board.AddBoardMember {
+      send addBoardMember to outlet Trello.BoardManagement.BoardDispatch
+    }
+    on addList: command Trello.BoardManagement.CardList.AddList {
+      send addList to outlet Trello.BoardManagement.CardListDispatch
+    }
+    on moveList: command Trello.BoardManagement.CardList.MoveList {
+      send moveList to outlet Trello.BoardManagement.CardListDispatch
+    }
+    on addCard: command Trello.BoardManagement.Card.AddCard {
+      send addCard to outlet Trello.BoardManagement.CardDispatch
+    }
+    on editCard: command Trello.BoardManagement.Card.EditCard {
+      send editCard to outlet Trello.BoardManagement.CardDispatch
+    }
+    on moveCard: command Trello.BoardManagement.Card.MoveCard {
+      send moveCard to outlet Trello.BoardManagement.CardDispatch
+    }
+    on assignMember: command Trello.BoardManagement.Card.AssignMember {
+      send assignMember to outlet Trello.BoardManagement.CardDispatch
+    }
+    on addComment: command Trello.BoardManagement.Card.AddComment {
+      send addComment to outlet Trello.BoardManagement.CardDispatch
+    }
+    on addChecklist: command Trello.BoardManagement.Card.AddChecklist {
+      send addChecklist to outlet Trello.BoardManagement.CardDispatch
+    }
+    on setDueDate: command Trello.BoardManagement.Card.SetDueDate {
+      send setDueDate to outlet Trello.BoardManagement.CardDispatch
+    }
+    on recordActivity: command Trello.BoardManagement.Activity.RecordActivity {
+      send recordActivity to outlet Trello.BoardManagement.ActivityDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary to the entity that owns it"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type BoardId is Id(Trello.BoardManagement.Board) with {
     briefly as "Unique identifier for one board"
     described as {
@@ -760,6 +901,20 @@ context BoardManagement is {
   }
 
   entity Board is {
+
+    inlet BoardCommands is type Trello.BoardManagement.BoardManagementCommand with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet BoardEvents is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command CreateBoard is {
       id is Id(Board),
@@ -880,6 +1035,20 @@ context BoardManagement is {
 
   entity CardList is {
 
+    inlet CardListCommands is type Trello.BoardManagement.BoardManagementCommand with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet CardListEvents is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
+
     command AddList is {
       id is Id(CardList),
       title is String,
@@ -998,6 +1167,20 @@ context BoardManagement is {
   }
 
   entity Card is {
+
+    inlet CardCommands is type Trello.BoardManagement.BoardManagementCommand with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet CardEvents is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command AddCard is {
       id is Id(Card),
@@ -1222,6 +1405,20 @@ context BoardManagement is {
 
   entity Activity is {
 
+    inlet ActivityCommands is type Trello.BoardManagement.BoardManagementCommand with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet ActivityEvents is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
+
     command RecordActivity is {
       id is Id(Activity),
       summary is String,
@@ -1347,7 +1544,35 @@ context BoardManagement is {
     }
   }
 
-  processor BoardManagementAnnouncer as source is {
+  processor BoardManagementAnnouncer as merge is {
+    inlet FromBoard is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Events arriving from Board"
+      described as {
+        |Each entity publishes on its own outlet; this merges them.
+      }
+    }
+
+    inlet FromCardList is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Events arriving from CardList"
+      described as {
+        |Each entity publishes on its own outlet; this merges them.
+      }
+    }
+
+    inlet FromCard is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Events arriving from Card"
+      described as {
+        |Each entity publishes on its own outlet; this merges them.
+      }
+    }
+
+    inlet FromActivity is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Events arriving from Activity"
+      described as {
+        |Each entity publishes on its own outlet; this merges them.
+      }
+    }
+
     outlet Published is type Trello.BoardManagement.BoardManagementEvent with {
       briefly as "Where BoardManagement publishes what happened"
       described as {
@@ -1376,96 +1601,6 @@ context BoardManagement is {
     }
   }
 
-  processor BoardManagementIntake as sink is {
-    inlet Requests is type Trello.BoardManagement.BoardManagementCommand with {
-      briefly as "Where commands arrive from the application"
-      described as {
-        |Everything BoardManagement is asked to do enters here.
-      }
-    }
-    handler BoardManagementIntakeHandler is {
-      on command Trello.BoardManagement.Board.CreateBoard {
-        tell command Trello.BoardManagement.Board.CreateBoard(
-          id = prompt("the id carried by CreateBoard"),
-          title = prompt("the title carried by CreateBoard"),
-          visibility = prompt("the visibility carried by CreateBoard")
-        ) to entity Board
-      }
-      on command Trello.BoardManagement.Board.AddBoardMember {
-        tell command Trello.BoardManagement.Board.AddBoardMember(
-          id = prompt("the id carried by AddBoardMember")
-        ) to entity Board
-      }
-      on command Trello.BoardManagement.CardList.AddList {
-        tell command Trello.BoardManagement.CardList.AddList(
-          id = prompt("the id carried by AddList"),
-          title = prompt("the title carried by AddList"),
-          position = prompt("the position carried by AddList")
-        ) to entity CardList
-      }
-      on command Trello.BoardManagement.CardList.MoveList {
-        tell command Trello.BoardManagement.CardList.MoveList(
-          id = prompt("the id carried by MoveList")
-        ) to entity CardList
-      }
-      on command Trello.BoardManagement.Card.AddCard {
-        tell command Trello.BoardManagement.Card.AddCard(
-          id = prompt("the id carried by AddCard"),
-          title = prompt("the title carried by AddCard"),
-          description = prompt("the description carried by AddCard"),
-          dueDate = prompt("the dueDate carried by AddCard")
-        ) to entity Card
-      }
-      on command Trello.BoardManagement.Card.EditCard {
-        tell command Trello.BoardManagement.Card.EditCard(
-          id = prompt("the id carried by EditCard")
-        ) to entity Card
-      }
-      on command Trello.BoardManagement.Card.MoveCard {
-        tell command Trello.BoardManagement.Card.MoveCard(
-          id = prompt("the id carried by MoveCard")
-        ) to entity Card
-      }
-      on command Trello.BoardManagement.Card.AssignMember {
-        tell command Trello.BoardManagement.Card.AssignMember(
-          id = prompt("the id carried by AssignMember")
-        ) to entity Card
-      }
-      on command Trello.BoardManagement.Card.AddComment {
-        tell command Trello.BoardManagement.Card.AddComment(
-          id = prompt("the id carried by AddComment")
-        ) to entity Card
-      }
-      on command Trello.BoardManagement.Card.AddChecklist {
-        tell command Trello.BoardManagement.Card.AddChecklist(
-          id = prompt("the id carried by AddChecklist")
-        ) to entity Card
-      }
-      on command Trello.BoardManagement.Card.SetDueDate {
-        tell command Trello.BoardManagement.Card.SetDueDate(
-          id = prompt("the id carried by SetDueDate")
-        ) to entity Card
-      }
-      on command Trello.BoardManagement.Activity.RecordActivity {
-        tell command Trello.BoardManagement.Activity.RecordActivity(
-          id = prompt("the id carried by RecordActivity"),
-          summary = prompt("the summary carried by RecordActivity"),
-          occurredAt = prompt("the occurredAt carried by RecordActivity")
-        ) to entity Activity
-      }
-    } with {
-      briefly as "Dispatches arriving commands to the entity that owns them"
-      described as {
-        |The witness pass requires a receiving on-clause for every command
-        |an epic step sends here, so each is handled explicitly.
-      }
-    }
-  } with {
-    briefly as "The context's front door"
-    described as {
-      |A sink receiving messages addressed to BoardManagement.
-    }
-  }
 
   repository BoardManagementStore is {
     inlet Recorded is type Trello.BoardManagement.BoardManagementEvent with {
@@ -1496,6 +1631,78 @@ context BoardManagement is {
     briefly as "Persists what this context owns"
     described as {
       |Entities are stateful, so BoardManagement keeps a repository.
+    }
+  }
+
+  connector AddressingBoard is {
+    from outlet Trello.BoardManagement.BoardDispatch to inlet Trello.BoardManagement.Board.BoardCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
+  connector AddressingCardList is {
+    from outlet Trello.BoardManagement.CardListDispatch to inlet Trello.BoardManagement.CardList.CardListCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
+  connector AddressingCard is {
+    from outlet Trello.BoardManagement.CardDispatch to inlet Trello.BoardManagement.Card.CardCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
+  connector AddressingActivity is {
+    from outlet Trello.BoardManagement.ActivityDispatch to inlet Trello.BoardManagement.Activity.ActivityCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
+  connector AnnouncingBoard is {
+    from outlet Trello.BoardManagement.Board.BoardEvents to inlet Trello.BoardManagement.BoardManagementAnnouncer.FromBoard
+  } with {
+    briefly as "Carries this entity's events to the context's announcer"
+    described as {
+      |Publishing goes out the entity's own outlet and merges downstream.
+    }
+  }
+
+  connector AnnouncingCardList is {
+    from outlet Trello.BoardManagement.CardList.CardListEvents to inlet Trello.BoardManagement.BoardManagementAnnouncer.FromCardList
+  } with {
+    briefly as "Carries this entity's events to the context's announcer"
+    described as {
+      |Publishing goes out the entity's own outlet and merges downstream.
+    }
+  }
+
+  connector AnnouncingCard is {
+    from outlet Trello.BoardManagement.Card.CardEvents to inlet Trello.BoardManagement.BoardManagementAnnouncer.FromCard
+  } with {
+    briefly as "Carries this entity's events to the context's announcer"
+    described as {
+      |Publishing goes out the entity's own outlet and merges downstream.
+    }
+  }
+
+  connector AnnouncingActivity is {
+    from outlet Trello.BoardManagement.Activity.ActivityEvents to inlet Trello.BoardManagement.BoardManagementAnnouncer.FromActivity
+  } with {
+    briefly as "Carries this entity's events to the context's announcer"
+    described as {
+      |Publishing goes out the entity's own outlet and merges downstream.
     }
   }
 

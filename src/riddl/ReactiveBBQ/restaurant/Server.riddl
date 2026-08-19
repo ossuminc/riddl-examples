@@ -1,5 +1,31 @@
 context Servers is {
 
+  inlet ServerIn is command Restaurant.Servers.Server.AddServer with {
+    briefly as "Where server commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet ServerDispatch is command Restaurant.Servers.Server.AddServer with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler ServersBoundary is {
+    on request: command Restaurant.Servers.Server.AddServer {
+      send request to outlet Restaurant.Servers.ServerDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type ServerId is Id(Restaurant.Servers.Server) with {
     briefly as "Unique identifier for one server"
     described as {
@@ -8,6 +34,20 @@ context Servers is {
   }
 
   entity Server is {
+
+    inlet ServerCommands is command Restaurant.Servers.Server.AddServer with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet ServerEvents is event Restaurant.Servers.Server.ServerAdded with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command AddServer is {
       id is Id(Server),
@@ -78,7 +118,7 @@ context Servers is {
         )
         send event ServerAdded(
           id = prompt("the id carried by ServerAdded")
-        ) to outlet ServerAnnouncer.Published
+        ) to outlet Restaurant.Servers.Server.ServerEvents
       }
       on query WhichServer {
         reply result TheServer(
@@ -100,62 +140,7 @@ context Servers is {
     }
   }
 
-  processor ServerAnnouncer as source is {
-    outlet Published is event Restaurant.Servers.Server.ServerAdded with {
-      briefly as "Where Servers publishes what happened to its servers"
-      described as {
-        |Server events leave this context through this outlet.
-      }
-    }
-    handler ServerAnnouncerHandler is {
-      on event Restaurant.Servers.Server.ServerAdded {
-        send event Restaurant.Servers.Server.ServerAdded(
-          id = prompt("the id carried by ServerAdded")
-        ) to outlet ServerAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a server event"
-      }
-    } with {
-      briefly as "Publishes server events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The server publication point"
-    described as {
-      |A source streamlet carrying what Servers wants known elsewhere.
-    }
-  }
 
-  processor IntakeServer as sink is {
-    inlet Requests is command Restaurant.Servers.Server.AddServer with {
-      briefly as "Where server commands arrive from outside"
-      described as {
-        |Everything Servers is asked to do about servers enters here.
-      }
-    }
-    handler IntakeServerHandler is {
-      on command Restaurant.Servers.Server.AddServer {
-        tell command Restaurant.Servers.Server.AddServer(
-          id = prompt("the id carried by AddServer"),
-          name = prompt("the name carried by AddServer"),
-          section = prompt("the section carried by AddServer")
-        ) to entity Server
-      }
-    } with {
-      briefly as "Dispatches arriving server commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The server front door"
-    described as {
-      |A sink receiving server messages addressed to Servers.
-    }
-  }
 
   repository ServerStore is {
     inlet Recorded is event Restaurant.Servers.Server.ServerAdded with {
@@ -189,8 +174,17 @@ context Servers is {
     }
   }
 
+  connector AddressingServer is {
+    from outlet Restaurant.Servers.ServerDispatch to inlet Restaurant.Servers.Server.ServerCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingServer is {
-    from outlet ServerAnnouncer.Published to inlet ServerStore.Recorded
+    from outlet Restaurant.Servers.Server.ServerEvents to inlet ServerStore.Recorded
   } with {
     briefly as "Carries server events to storage"
     described as {

@@ -1,5 +1,94 @@
 application context TrelloUI is {
 
+  inlet UserManagementStaged is type Trello.UserManagement.UserManagementCommand with {
+    briefly as "Where the application's UserManagement requests collect"
+    described as {
+      |An inner source cannot reach across the boundary, so it delivers here.
+    }
+  }
+
+  outlet UserManagementSubmissions is type Trello.UserManagement.UserManagementCommand with {
+    briefly as "Where UserManagement requests leave this context"
+    described as {
+      |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+    }
+  }
+
+  connector StagingUserManagement is {
+    from outlet Trello.TrelloUI.UserManagementRequests.Staged
+    to inlet Trello.TrelloUI.UserManagementStaged
+  } with {
+    briefly as "Carries application requests to the context boundary"
+    described as {
+      |Intra-context, so it may address the source's own outlet directly.
+    }
+  }
+
+  inlet WorkspaceManagementStaged is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+    briefly as "Where the application's WorkspaceManagement requests collect"
+    described as {
+      |An inner source cannot reach across the boundary, so it delivers here.
+    }
+  }
+
+  outlet WorkspaceManagementSubmissions is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+    briefly as "Where WorkspaceManagement requests leave this context"
+    described as {
+      |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+    }
+  }
+
+  connector StagingWorkspaceManagement is {
+    from outlet Trello.TrelloUI.WorkspaceManagementRequests.Staged
+    to inlet Trello.TrelloUI.WorkspaceManagementStaged
+  } with {
+    briefly as "Carries application requests to the context boundary"
+    described as {
+      |Intra-context, so it may address the source's own outlet directly.
+    }
+  }
+
+  inlet BoardManagementStaged is type Trello.BoardManagement.BoardManagementCommand with {
+    briefly as "Where the application's BoardManagement requests collect"
+    described as {
+      |An inner source cannot reach across the boundary, so it delivers here.
+    }
+  }
+
+  outlet BoardManagementSubmissions is type Trello.BoardManagement.BoardManagementCommand with {
+    briefly as "Where BoardManagement requests leave this context"
+    described as {
+      |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+    }
+  }
+
+  connector StagingBoardManagement is {
+    from outlet Trello.TrelloUI.BoardManagementRequests.Staged
+    to inlet Trello.TrelloUI.BoardManagementStaged
+  } with {
+    briefly as "Carries application requests to the context boundary"
+    described as {
+      |Intra-context, so it may address the source's own outlet directly.
+    }
+  }
+
+  handler TrelloUIBoundary is {
+    on createAccount: command Trello.UserManagement.Account.CreateAccount {
+      send createAccount to outlet Trello.TrelloUI.UserManagementSubmissions
+    }
+    on createWorkspace: command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
+      send createWorkspace to outlet Trello.TrelloUI.WorkspaceManagementSubmissions
+    }
+    on createBoard: command Trello.BoardManagement.Board.CreateBoard {
+      send createBoard to outlet Trello.TrelloUI.BoardManagementSubmissions
+    }
+  } with {
+    briefly as "Republishes staged requests on the context's own outlets"
+    described as {
+      |The application's internals stay private; peers see only these outlets.
+    }
+  }
+
   record BoardEntry is {
     title is String
   } with {
@@ -58,7 +147,7 @@ application context TrelloUI is {
   }
 
     processor UserManagementRequests as source is {
-      outlet UserManagementSubmissions is type Trello.UserManagement.UserManagementCommand with {
+      outlet Staged is type Trello.UserManagement.UserManagementCommand with {
         briefly as "Where UserManagement requests leave the application"
         described as {
           |Requests reach the UserManagement context over a domain-scoped connector.
@@ -70,7 +159,7 @@ application context TrelloUI is {
             id = prompt("the id carried by CreateAccount"),
             username = prompt("the username carried by CreateAccount"),
             email = prompt("the email carried by CreateAccount")
-          ) to outlet UserManagementSubmissions
+          ) to outlet Trello.TrelloUI.UserManagementRequests.Staged
         }
         on other {
           do "forward whatever else the member asked of UserManagement"
@@ -89,7 +178,7 @@ application context TrelloUI is {
     }
 
     processor WorkspaceManagementRequests as source is {
-      outlet WorkspaceManagementSubmissions is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+      outlet Staged is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
         briefly as "Where WorkspaceManagement requests leave the application"
         described as {
           |Requests reach the WorkspaceManagement context over a domain-scoped connector.
@@ -101,7 +190,7 @@ application context TrelloUI is {
             id = prompt("the id carried by CreateWorkspace"),
             name = prompt("the name carried by CreateWorkspace"),
             visibility = prompt("the visibility carried by CreateWorkspace")
-          ) to outlet WorkspaceManagementSubmissions
+          ) to outlet Trello.TrelloUI.WorkspaceManagementRequests.Staged
         }
         on other {
           do "forward whatever else the member asked of WorkspaceManagement"
@@ -120,7 +209,7 @@ application context TrelloUI is {
     }
 
     processor BoardManagementRequests as source is {
-      outlet BoardManagementSubmissions is type Trello.BoardManagement.BoardManagementCommand with {
+      outlet Staged is type Trello.BoardManagement.BoardManagementCommand with {
         briefly as "Where BoardManagement requests leave the application"
         described as {
           |Requests reach the BoardManagement context over a domain-scoped connector.
@@ -132,7 +221,7 @@ application context TrelloUI is {
             id = prompt("the id carried by CreateBoard"),
             title = prompt("the title carried by CreateBoard"),
             visibility = prompt("the visibility carried by CreateBoard")
-          ) to outlet BoardManagementSubmissions
+          ) to outlet Trello.TrelloUI.BoardManagementRequests.Staged
         }
         on other {
           do "forward whatever else the member asked of BoardManagement"

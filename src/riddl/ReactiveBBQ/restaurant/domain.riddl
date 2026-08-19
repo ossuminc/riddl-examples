@@ -13,8 +13,302 @@ domain Restaurant is {
 
   context RestaurantFrontEnd is {
 
+    inlet CustomerStaged is command Restaurant.Customers.Customer.RegisterCustomer with {
+      briefly as "Where the front end's customer requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet CustomerSubmissions is command Restaurant.Customers.Customer.RegisterCustomer with {
+      briefly as "Where customer requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet TableStaged is command Restaurant.Tables.Table.AddTable with {
+      briefly as "Where the front end's table requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet TableSubmissions is command Restaurant.Tables.Table.AddTable with {
+      briefly as "Where table requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet ServerStaged is command Restaurant.Servers.Server.AddServer with {
+      briefly as "Where the front end's server requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet ServerSubmissions is command Restaurant.Servers.Server.AddServer with {
+      briefly as "Where server requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet LocationStaged is command Restaurant.Locations.Location.OpenLocation with {
+      briefly as "Where the front end's location requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet LocationSubmissions is command Restaurant.Locations.Location.OpenLocation with {
+      briefly as "Where location requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet OrderStaged is command Restaurant.Orders.Order.PlaceOrder with {
+      briefly as "Where the front end's order requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet OrderSubmissions is command Restaurant.Orders.Order.PlaceOrder with {
+      briefly as "Where order requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet PaymentStaged is command Restaurant.Payments.Payment.Pay with {
+      briefly as "Where the front end's payment requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet PaymentSubmissions is command Restaurant.Payments.Payment.Pay with {
+      briefly as "Where payment requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet ReservationStaged is command Restaurant.Reservations.Reservation.BookTable with {
+      briefly as "Where the front end's reservation requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet ReservationSubmissions is command Restaurant.Reservations.Reservation.BookTable with {
+      briefly as "Where reservation requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet OrderViewerStaged is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
+      briefly as "Where the front end's orderviewer requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet OrderViewerSubmissions is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
+      briefly as "Where orderviewer requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet MenuItemStaged is command Restaurant.Menus.MenuItem.AddMenuItem with {
+      briefly as "Where the front end's menuitem requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet MenuItemSubmissions is command Restaurant.Menus.MenuItem.AddMenuItem with {
+      briefly as "Where menuitem requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet MenuStaged is command Restaurant.Menus.Menu.ComposeMenu with {
+      briefly as "Where the front end's menu requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet MenuSubmissions is command Restaurant.Menus.Menu.ComposeMenu with {
+      briefly as "Where menu requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet LoyaltyAccountStaged is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+      briefly as "Where the front end's loyaltyaccount requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet LoyaltyAccountSubmissions is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+      briefly as "Where loyaltyaccount requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingCustomer is {
+      from outlet Restaurant.RestaurantFrontEnd.CustomerRequests.Staged to inlet Restaurant.RestaurantFrontEnd.CustomerStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingTable is {
+      from outlet Restaurant.RestaurantFrontEnd.TableRequests.Staged to inlet Restaurant.RestaurantFrontEnd.TableStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingServer is {
+      from outlet Restaurant.RestaurantFrontEnd.ServerRequests.Staged to inlet Restaurant.RestaurantFrontEnd.ServerStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingLocation is {
+      from outlet Restaurant.RestaurantFrontEnd.LocationRequests.Staged to inlet Restaurant.RestaurantFrontEnd.LocationStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingOrder is {
+      from outlet Restaurant.RestaurantFrontEnd.OrderRequests.Staged to inlet Restaurant.RestaurantFrontEnd.OrderStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingPayment is {
+      from outlet Restaurant.RestaurantFrontEnd.PaymentRequests.Staged to inlet Restaurant.RestaurantFrontEnd.PaymentStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingReservation is {
+      from outlet Restaurant.RestaurantFrontEnd.ReservationRequests.Staged to inlet Restaurant.RestaurantFrontEnd.ReservationStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingOrderViewer is {
+      from outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.Staged to inlet Restaurant.RestaurantFrontEnd.OrderViewerStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingMenuItem is {
+      from outlet Restaurant.RestaurantFrontEnd.MenuItemRequests.Staged to inlet Restaurant.RestaurantFrontEnd.MenuItemStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingMenu is {
+      from outlet Restaurant.RestaurantFrontEnd.MenuRequests.Staged to inlet Restaurant.RestaurantFrontEnd.MenuStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    connector StagingLoyaltyAccount is {
+      from outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountRequests.Staged to inlet Restaurant.RestaurantFrontEnd.LoyaltyAccountStaged
+    } with {
+      briefly as "Carries front-end requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    handler RestaurantFrontEndBoundary is {
+      on registerCustomer: command Restaurant.Customers.Customer.RegisterCustomer {
+        send registerCustomer to outlet Restaurant.RestaurantFrontEnd.CustomerSubmissions
+      }
+      on addTable: command Restaurant.Tables.Table.AddTable {
+        send addTable to outlet Restaurant.RestaurantFrontEnd.TableSubmissions
+      }
+      on addServer: command Restaurant.Servers.Server.AddServer {
+        send addServer to outlet Restaurant.RestaurantFrontEnd.ServerSubmissions
+      }
+      on openLocation: command Restaurant.Locations.Location.OpenLocation {
+        send openLocation to outlet Restaurant.RestaurantFrontEnd.LocationSubmissions
+      }
+      on placeOrder: command Restaurant.Orders.Order.PlaceOrder {
+        send placeOrder to outlet Restaurant.RestaurantFrontEnd.OrderSubmissions
+      }
+      on pay: command Restaurant.Payments.Payment.Pay {
+        send pay to outlet Restaurant.RestaurantFrontEnd.PaymentSubmissions
+      }
+      on bookTable: command Restaurant.Reservations.Reservation.BookTable {
+        send bookTable to outlet Restaurant.RestaurantFrontEnd.ReservationSubmissions
+      }
+      on showOrders: command Restaurant.Kitchen.OrderViewer.ShowOrders {
+        send showOrders to outlet Restaurant.RestaurantFrontEnd.OrderViewerSubmissions
+      }
+      on addMenuItem: command Restaurant.Menus.MenuItem.AddMenuItem {
+        send addMenuItem to outlet Restaurant.RestaurantFrontEnd.MenuItemSubmissions
+      }
+      on composeMenu: command Restaurant.Menus.Menu.ComposeMenu {
+        send composeMenu to outlet Restaurant.RestaurantFrontEnd.MenuSubmissions
+      }
+      on accruePoints: command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
+        send accruePoints to outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountSubmissions
+      }
+    } with {
+      briefly as "Republishes staged requests on the context's own outlets"
+      described as {
+        |The front end's internals stay private; peers see only these outlets.
+      }
+    }
+
     processor CustomerRequests as source is {
-      outlet CustomerSubmissions is command Restaurant.Customers.Customer.RegisterCustomer with {
+      outlet Staged is command Restaurant.Customers.Customer.RegisterCustomer with {
         briefly as "Where customer requests leave the front end"
         described as {
           |Requests reach the Customers context over a domain-scoped connector.
@@ -26,7 +320,7 @@ domain Restaurant is {
             id = prompt("the id carried by RegisterCustomer"),
             name = prompt("the name carried by RegisterCustomer"),
             phone = prompt("the phone carried by RegisterCustomer")
-          ) to outlet CustomerSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.CustomerRequests.Staged
         }
         on other {
           do "ignore requests that are not about customers"
@@ -45,7 +339,7 @@ domain Restaurant is {
     }
 
     processor TableRequests as source is {
-      outlet TableSubmissions is command Restaurant.Tables.Table.AddTable with {
+      outlet Staged is command Restaurant.Tables.Table.AddTable with {
         briefly as "Where table requests leave the front end"
         described as {
           |Requests reach the Tables context over a domain-scoped connector.
@@ -57,7 +351,7 @@ domain Restaurant is {
             id = prompt("the id carried by AddTable"),
             seats = prompt("the seats carried by AddTable"),
             section = prompt("the section carried by AddTable")
-          ) to outlet TableSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.TableRequests.Staged
         }
         on other {
           do "ignore requests that are not about tables"
@@ -76,7 +370,7 @@ domain Restaurant is {
     }
 
     processor ServerRequests as source is {
-      outlet ServerSubmissions is command Restaurant.Servers.Server.AddServer with {
+      outlet Staged is command Restaurant.Servers.Server.AddServer with {
         briefly as "Where server requests leave the front end"
         described as {
           |Requests reach the Servers context over a domain-scoped connector.
@@ -88,7 +382,7 @@ domain Restaurant is {
             id = prompt("the id carried by AddServer"),
             name = prompt("the name carried by AddServer"),
             section = prompt("the section carried by AddServer")
-          ) to outlet ServerSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.ServerRequests.Staged
         }
         on other {
           do "ignore requests that are not about servers"
@@ -107,7 +401,7 @@ domain Restaurant is {
     }
 
     processor LocationRequests as source is {
-      outlet LocationSubmissions is command Restaurant.Locations.Location.OpenLocation with {
+      outlet Staged is command Restaurant.Locations.Location.OpenLocation with {
         briefly as "Where location requests leave the front end"
         described as {
           |Requests reach the Locations context over a domain-scoped connector.
@@ -119,7 +413,7 @@ domain Restaurant is {
             id = prompt("the id carried by OpenLocation"),
             name = prompt("the name carried by OpenLocation"),
             city = prompt("the city carried by OpenLocation")
-          ) to outlet LocationSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.LocationRequests.Staged
         }
         on other {
           do "ignore requests that are not about locations"
@@ -138,7 +432,7 @@ domain Restaurant is {
     }
 
     processor OrderRequests as source is {
-      outlet OrderSubmissions is command Restaurant.Orders.Order.PlaceOrder with {
+      outlet Staged is command Restaurant.Orders.Order.PlaceOrder with {
         briefly as "Where order requests leave the front end"
         described as {
           |Requests reach the Orders context over a domain-scoped connector.
@@ -150,7 +444,7 @@ domain Restaurant is {
             id = prompt("the id carried by PlaceOrder"),
             customerName = prompt("the customerName carried by PlaceOrder"),
             total = prompt("the total carried by PlaceOrder")
-          ) to outlet OrderSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.OrderRequests.Staged
         }
         on other {
           do "ignore requests that are not about orders"
@@ -169,7 +463,7 @@ domain Restaurant is {
     }
 
     processor PaymentRequests as source is {
-      outlet PaymentSubmissions is command Restaurant.Payments.Payment.Pay with {
+      outlet Staged is command Restaurant.Payments.Payment.Pay with {
         briefly as "Where payment requests leave the front end"
         described as {
           |Requests reach the Payments context over a domain-scoped connector.
@@ -182,7 +476,7 @@ domain Restaurant is {
             orderAmount = prompt("the orderAmount carried by Pay"),
             tipAmount = prompt("the tipAmount carried by Pay"),
             cardToken = prompt("the cardToken carried by Pay")
-          ) to outlet PaymentSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.PaymentRequests.Staged
         }
         on other {
           do "ignore requests that are not about payments"
@@ -201,7 +495,7 @@ domain Restaurant is {
     }
 
     processor ReservationRequests as source is {
-      outlet ReservationSubmissions is command Restaurant.Reservations.Reservation.BookTable with {
+      outlet Staged is command Restaurant.Reservations.Reservation.BookTable with {
         briefly as "Where reservation requests leave the front end"
         described as {
           |Requests reach the Reservations context over a domain-scoped connector.
@@ -215,7 +509,7 @@ domain Restaurant is {
             phoneNumber = prompt("the phoneNumber carried by BookTable"),
             time = prompt("the time carried by BookTable"),
             date = prompt("the date carried by BookTable")
-          ) to outlet ReservationSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.ReservationRequests.Staged
         }
         on other {
           do "ignore requests that are not about reservations"
@@ -234,7 +528,7 @@ domain Restaurant is {
     }
 
     processor OrderViewerRequests as source is {
-      outlet OrderViewerSubmissions is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
+      outlet Staged is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
         briefly as "Where orderviewer requests leave the front end"
         described as {
           |Requests reach the Kitchen context over a domain-scoped connector.
@@ -246,7 +540,7 @@ domain Restaurant is {
             id = prompt("the id carried by ShowOrders"),
             viewType = prompt("the viewType carried by ShowOrders"),
             station = prompt("the station carried by ShowOrders")
-          ) to outlet OrderViewerSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.Staged
         }
         on other {
           do "ignore requests that are not about orderviewers"
@@ -265,7 +559,7 @@ domain Restaurant is {
     }
 
     processor MenuItemRequests as source is {
-      outlet MenuItemSubmissions is command Restaurant.Menus.MenuItem.AddMenuItem with {
+      outlet Staged is command Restaurant.Menus.MenuItem.AddMenuItem with {
         briefly as "Where menuitem requests leave the front end"
         described as {
           |Requests reach the Menus context over a domain-scoped connector.
@@ -278,7 +572,7 @@ domain Restaurant is {
             name = prompt("the name carried by AddMenuItem"),
             description = prompt("the description carried by AddMenuItem"),
             price = prompt("the price carried by AddMenuItem")
-          ) to outlet MenuItemSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.MenuItemRequests.Staged
         }
         on other {
           do "ignore requests that are not about menuitems"
@@ -297,7 +591,7 @@ domain Restaurant is {
     }
 
     processor MenuRequests as source is {
-      outlet MenuSubmissions is command Restaurant.Menus.Menu.ComposeMenu with {
+      outlet Staged is command Restaurant.Menus.Menu.ComposeMenu with {
         briefly as "Where menu requests leave the front end"
         described as {
           |Requests reach the Menus context over a domain-scoped connector.
@@ -309,7 +603,7 @@ domain Restaurant is {
             id = prompt("the id carried by ComposeMenu"),
             title = prompt("the title carried by ComposeMenu"),
             season = prompt("the season carried by ComposeMenu")
-          ) to outlet MenuSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.MenuRequests.Staged
         }
         on other {
           do "ignore requests that are not about menus"
@@ -328,7 +622,7 @@ domain Restaurant is {
     }
 
     processor LoyaltyAccountRequests as source is {
-      outlet LoyaltyAccountSubmissions is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+      outlet Staged is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
         briefly as "Where loyaltyaccount requests leave the front end"
         described as {
           |Requests reach the Loyalty context over a domain-scoped connector.
@@ -341,7 +635,7 @@ domain Restaurant is {
             points = prompt("the points carried by AccruePoints"),
             accrualRate = prompt("the accrualRate carried by AccruePoints"),
             redemptionRate = prompt("the redemptionRate carried by AccruePoints")
-          ) to outlet LoyaltyAccountSubmissions
+          ) to outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountRequests.Staged
         }
         on other {
           do "ignore requests that are not about loyaltyaccounts"
@@ -369,8 +663,8 @@ domain Restaurant is {
   }
 
   persistent connector CustomerRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.CustomerRequests.CustomerSubmissions
-    to inlet Restaurant.Customers.IntakeCustomer.Requests
+    from outlet Restaurant.RestaurantFrontEnd.CustomerSubmissions
+    to inlet Restaurant.Customers.CustomerIn
   } with {
     briefly as "Carries customer requests from the front end to Customers"
     described as {
@@ -380,8 +674,8 @@ domain Restaurant is {
   }
 
   persistent connector TableRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.TableRequests.TableSubmissions
-    to inlet Restaurant.Tables.IntakeTable.Requests
+    from outlet Restaurant.RestaurantFrontEnd.TableSubmissions
+    to inlet Restaurant.Tables.TableIn
   } with {
     briefly as "Carries table requests from the front end to Tables"
     described as {
@@ -391,8 +685,8 @@ domain Restaurant is {
   }
 
   persistent connector ServerRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.ServerRequests.ServerSubmissions
-    to inlet Restaurant.Servers.IntakeServer.Requests
+    from outlet Restaurant.RestaurantFrontEnd.ServerSubmissions
+    to inlet Restaurant.Servers.ServerIn
   } with {
     briefly as "Carries server requests from the front end to Servers"
     described as {
@@ -402,8 +696,8 @@ domain Restaurant is {
   }
 
   persistent connector LocationRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.LocationRequests.LocationSubmissions
-    to inlet Restaurant.Locations.IntakeLocation.Requests
+    from outlet Restaurant.RestaurantFrontEnd.LocationSubmissions
+    to inlet Restaurant.Locations.LocationIn
   } with {
     briefly as "Carries location requests from the front end to Locations"
     described as {
@@ -413,8 +707,8 @@ domain Restaurant is {
   }
 
   persistent connector OrderRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.OrderRequests.OrderSubmissions
-    to inlet Restaurant.Orders.IntakeOrder.Requests
+    from outlet Restaurant.RestaurantFrontEnd.OrderSubmissions
+    to inlet Restaurant.Orders.OrderIn
   } with {
     briefly as "Carries order requests from the front end to Orders"
     described as {
@@ -424,8 +718,8 @@ domain Restaurant is {
   }
 
   persistent connector PaymentRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.PaymentRequests.PaymentSubmissions
-    to inlet Restaurant.Payments.IntakePayment.Requests
+    from outlet Restaurant.RestaurantFrontEnd.PaymentSubmissions
+    to inlet Restaurant.Payments.PaymentIn
   } with {
     briefly as "Carries payment requests from the front end to Payments"
     described as {
@@ -435,8 +729,8 @@ domain Restaurant is {
   }
 
   persistent connector ReservationRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.ReservationRequests.ReservationSubmissions
-    to inlet Restaurant.Reservations.IntakeReservation.Requests
+    from outlet Restaurant.RestaurantFrontEnd.ReservationSubmissions
+    to inlet Restaurant.Reservations.ReservationIn
   } with {
     briefly as "Carries reservation requests from the front end to Reservations"
     described as {
@@ -446,8 +740,8 @@ domain Restaurant is {
   }
 
   persistent connector OrderViewerRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.OrderViewerSubmissions
-    to inlet Restaurant.Kitchen.IntakeOrderViewer.Requests
+    from outlet Restaurant.RestaurantFrontEnd.OrderViewerSubmissions
+    to inlet Restaurant.Kitchen.OrderViewerIn
   } with {
     briefly as "Carries orderviewer requests from the front end to Kitchen"
     described as {
@@ -457,8 +751,8 @@ domain Restaurant is {
   }
 
   persistent connector MenuItemRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.MenuItemRequests.MenuItemSubmissions
-    to inlet Restaurant.Menus.IntakeMenuItem.Requests
+    from outlet Restaurant.RestaurantFrontEnd.MenuItemSubmissions
+    to inlet Restaurant.Menus.MenuItemIn
   } with {
     briefly as "Carries menuitem requests from the front end to Menus"
     described as {
@@ -468,8 +762,8 @@ domain Restaurant is {
   }
 
   persistent connector MenuRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.MenuRequests.MenuSubmissions
-    to inlet Restaurant.Menus.IntakeMenu.Requests
+    from outlet Restaurant.RestaurantFrontEnd.MenuSubmissions
+    to inlet Restaurant.Menus.MenuIn
   } with {
     briefly as "Carries menu requests from the front end to Menus"
     described as {
@@ -479,8 +773,8 @@ domain Restaurant is {
   }
 
   persistent connector LoyaltyAccountRequests is {
-    from outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountRequests.LoyaltyAccountSubmissions
-    to inlet Restaurant.Loyalty.IntakeLoyaltyAccount.Requests
+    from outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountSubmissions
+    to inlet Restaurant.Loyalty.LoyaltyAccountIn
   } with {
     briefly as "Carries loyaltyaccount requests from the front end to Loyalty"
     described as {

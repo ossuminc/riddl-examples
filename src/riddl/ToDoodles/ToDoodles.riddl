@@ -21,8 +21,8 @@ domain ToDoodles is {
   include "Epics/epics"
 
   persistent connector ListRequests is {
-    from outlet ToDoodles.ToDoodlesApp.ListRequests.ListSubmissions
-    to inlet ToDoodles.List.Intake.Requests
+    from outlet ToDoodles.ToDoodlesApp.ListSubmissions
+    to inlet ToDoodles.List.DoodleListIn
   } with {
     briefly as "Carries the artist's requests from the application to the List context"
     described as {
@@ -32,8 +32,8 @@ domain ToDoodles is {
   }
 
   persistent connector DrawingRequests is {
-    from outlet ToDoodles.ToDoodlesApp.DrawingRequests.DrawingSubmissions
-    to inlet ToDoodles.Doodle.Intake.Requests
+    from outlet ToDoodles.ToDoodlesApp.DrawingSubmissions
+    to inlet ToDoodles.Doodle.DrawingIn
   } with {
     briefly as "Carries the artist's requests from the application to the Doodle context"
     described as {

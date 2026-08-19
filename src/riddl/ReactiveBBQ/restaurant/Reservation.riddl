@@ -1,5 +1,31 @@
 context Reservations is {
 
+  inlet ReservationIn is command Restaurant.Reservations.Reservation.BookTable with {
+    briefly as "Where reservation commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet ReservationDispatch is command Restaurant.Reservations.Reservation.BookTable with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler ReservationsBoundary is {
+    on request: command Restaurant.Reservations.Reservation.BookTable {
+      send request to outlet Restaurant.Reservations.ReservationDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type ReservationId is Id(Restaurant.Reservations.Reservation) with {
     briefly as "Unique identifier for one reservation"
     described as {
@@ -8,6 +34,20 @@ context Reservations is {
   }
 
   entity Reservation is {
+
+    inlet ReservationCommands is command Restaurant.Reservations.Reservation.BookTable with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet ReservationEvents is event Restaurant.Reservations.Reservation.TableBooked with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command BookTable is {
       id is Id(Reservation),
@@ -84,7 +124,7 @@ context Reservations is {
         )
         send event TableBooked(
           id = prompt("the id carried by TableBooked")
-        ) to outlet ReservationAnnouncer.Published
+        ) to outlet Restaurant.Reservations.Reservation.ReservationEvents
       }
       on query WhichReservation {
         reply result TheReservation(
@@ -106,64 +146,7 @@ context Reservations is {
     }
   }
 
-  processor ReservationAnnouncer as source is {
-    outlet Published is event Restaurant.Reservations.Reservation.TableBooked with {
-      briefly as "Where Reservations publishes what happened to its reservations"
-      described as {
-        |Reservation events leave this context through this outlet.
-      }
-    }
-    handler ReservationAnnouncerHandler is {
-      on event Restaurant.Reservations.Reservation.TableBooked {
-        send event Restaurant.Reservations.Reservation.TableBooked(
-          id = prompt("the id carried by TableBooked")
-        ) to outlet ReservationAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a reservation event"
-      }
-    } with {
-      briefly as "Publishes reservation events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The reservation publication point"
-    described as {
-      |A source streamlet carrying what Reservations wants known elsewhere.
-    }
-  }
 
-  processor IntakeReservation as sink is {
-    inlet Requests is command Restaurant.Reservations.Reservation.BookTable with {
-      briefly as "Where reservation commands arrive from outside"
-      described as {
-        |Everything Reservations is asked to do about reservations enters here.
-      }
-    }
-    handler IntakeReservationHandler is {
-      on command Restaurant.Reservations.Reservation.BookTable {
-        tell command Restaurant.Reservations.Reservation.BookTable(
-          id = prompt("the id carried by BookTable"),
-          partyName = prompt("the partyName carried by BookTable"),
-          phoneNumber = prompt("the phoneNumber carried by BookTable"),
-          time = prompt("the time carried by BookTable"),
-          date = prompt("the date carried by BookTable")
-        ) to entity Reservation
-      }
-    } with {
-      briefly as "Dispatches arriving reservation commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The reservation front door"
-    described as {
-      |A sink receiving reservation messages addressed to Reservations.
-    }
-  }
 
   repository ReservationStore is {
     inlet Recorded is event Restaurant.Reservations.Reservation.TableBooked with {
@@ -197,8 +180,17 @@ context Reservations is {
     }
   }
 
+  connector AddressingReservation is {
+    from outlet Restaurant.Reservations.ReservationDispatch to inlet Restaurant.Reservations.Reservation.ReservationCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingReservation is {
-    from outlet ReservationAnnouncer.Published to inlet ReservationStore.Recorded
+    from outlet Restaurant.Reservations.Reservation.ReservationEvents to inlet ReservationStore.Recorded
   } with {
     briefly as "Carries reservation events to storage"
     described as {

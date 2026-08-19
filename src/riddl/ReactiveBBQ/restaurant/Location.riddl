@@ -1,5 +1,31 @@
 context Locations is {
 
+  inlet LocationIn is command Restaurant.Locations.Location.OpenLocation with {
+    briefly as "Where location commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet LocationDispatch is command Restaurant.Locations.Location.OpenLocation with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler LocationsBoundary is {
+    on request: command Restaurant.Locations.Location.OpenLocation {
+      send request to outlet Restaurant.Locations.LocationDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type LocationId is Id(Restaurant.Locations.Location) with {
     briefly as "Unique identifier for one location"
     described as {
@@ -8,6 +34,20 @@ context Locations is {
   }
 
   entity Location is {
+
+    inlet LocationCommands is command Restaurant.Locations.Location.OpenLocation with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet LocationEvents is event Restaurant.Locations.Location.LocationOpened with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command OpenLocation is {
       id is Id(Location),
@@ -78,7 +118,7 @@ context Locations is {
         )
         send event LocationOpened(
           id = prompt("the id carried by LocationOpened")
-        ) to outlet LocationAnnouncer.Published
+        ) to outlet Restaurant.Locations.Location.LocationEvents
       }
       on query WhichLocation {
         reply result TheLocation(
@@ -100,62 +140,7 @@ context Locations is {
     }
   }
 
-  processor LocationAnnouncer as source is {
-    outlet Published is event Restaurant.Locations.Location.LocationOpened with {
-      briefly as "Where Locations publishes what happened to its locations"
-      described as {
-        |Location events leave this context through this outlet.
-      }
-    }
-    handler LocationAnnouncerHandler is {
-      on event Restaurant.Locations.Location.LocationOpened {
-        send event Restaurant.Locations.Location.LocationOpened(
-          id = prompt("the id carried by LocationOpened")
-        ) to outlet LocationAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a location event"
-      }
-    } with {
-      briefly as "Publishes location events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The location publication point"
-    described as {
-      |A source streamlet carrying what Locations wants known elsewhere.
-    }
-  }
 
-  processor IntakeLocation as sink is {
-    inlet Requests is command Restaurant.Locations.Location.OpenLocation with {
-      briefly as "Where location commands arrive from outside"
-      described as {
-        |Everything Locations is asked to do about locations enters here.
-      }
-    }
-    handler IntakeLocationHandler is {
-      on command Restaurant.Locations.Location.OpenLocation {
-        tell command Restaurant.Locations.Location.OpenLocation(
-          id = prompt("the id carried by OpenLocation"),
-          name = prompt("the name carried by OpenLocation"),
-          city = prompt("the city carried by OpenLocation")
-        ) to entity Location
-      }
-    } with {
-      briefly as "Dispatches arriving location commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The location front door"
-    described as {
-      |A sink receiving location messages addressed to Locations.
-    }
-  }
 
   repository LocationStore is {
     inlet Recorded is event Restaurant.Locations.Location.LocationOpened with {
@@ -189,8 +174,17 @@ context Locations is {
     }
   }
 
+  connector AddressingLocation is {
+    from outlet Restaurant.Locations.LocationDispatch to inlet Restaurant.Locations.Location.LocationCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingLocation is {
-    from outlet LocationAnnouncer.Published to inlet LocationStore.Recorded
+    from outlet Restaurant.Locations.Location.LocationEvents to inlet LocationStore.Recorded
   } with {
     briefly as "Carries location events to storage"
     described as {

@@ -1,5 +1,42 @@
 context Customers is {
 
+  inlet Failures is record Riddl.GeneratorError with {
+    option error-sink
+    briefly as "Where hard errors go"
+    described as {
+      |RIDDL 2.0 wants every domain to name a destination for failures no
+      |handler can recover from. An error-sink inlet is infrastructure
+      |rather than dataflow, so it does not count toward this processor's
+      |arity.
+    }
+  }
+
+  inlet CustomerIn is command Restaurant.Customers.Customer.RegisterCustomer with {
+    briefly as "Where customer commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet CustomerDispatch is command Restaurant.Customers.Customer.RegisterCustomer with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler CustomersBoundary is {
+    on request: command Restaurant.Customers.Customer.RegisterCustomer {
+      send request to outlet Restaurant.Customers.CustomerDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type CustomerId is Id(Restaurant.Customers.Customer) with {
     briefly as "Unique identifier for one customer"
     described as {
@@ -8,6 +45,20 @@ context Customers is {
   }
 
   entity Customer is {
+
+    inlet CustomerCommands is command Restaurant.Customers.Customer.RegisterCustomer with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet CustomerEvents is event Restaurant.Customers.Customer.CustomerRegistered with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command RegisterCustomer is {
       id is Id(Customer),
@@ -78,7 +129,7 @@ context Customers is {
         )
         send event CustomerRegistered(
           id = prompt("the id carried by CustomerRegistered")
-        ) to outlet CustomerAnnouncer.Published
+        ) to outlet Restaurant.Customers.Customer.CustomerEvents
       }
       on query WhichCustomer {
         reply result TheCustomer(
@@ -100,72 +151,7 @@ context Customers is {
     }
   }
 
-  processor CustomerAnnouncer as source is {
-    outlet Published is event Restaurant.Customers.Customer.CustomerRegistered with {
-      briefly as "Where Customers publishes what happened to its customers"
-      described as {
-        |Customer events leave this context through this outlet.
-      }
-    }
-    handler CustomerAnnouncerHandler is {
-      on event Restaurant.Customers.Customer.CustomerRegistered {
-        send event Restaurant.Customers.Customer.CustomerRegistered(
-          id = prompt("the id carried by CustomerRegistered")
-        ) to outlet CustomerAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a customer event"
-      }
-    } with {
-      briefly as "Publishes customer events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The customer publication point"
-    described as {
-      |A source streamlet carrying what Customers wants known elsewhere.
-    }
-  }
 
-  processor IntakeCustomer as sink is {
-  inlet Failures is record Riddl.GeneratorError with {
-    option error-sink
-    briefly as "Where hard errors go"
-    described as {
-      |RIDDL 2.0 wants every domain to name a destination for failures no
-      |handler can recover from. An error-sink inlet is infrastructure
-      |rather than dataflow, so it does not count toward this processor's
-      |arity.
-    }
-  }
-    inlet Requests is command Restaurant.Customers.Customer.RegisterCustomer with {
-      briefly as "Where customer commands arrive from outside"
-      described as {
-        |Everything Customers is asked to do about customers enters here.
-      }
-    }
-    handler IntakeCustomerHandler is {
-      on command Restaurant.Customers.Customer.RegisterCustomer {
-        tell command Restaurant.Customers.Customer.RegisterCustomer(
-          id = prompt("the id carried by RegisterCustomer"),
-          name = prompt("the name carried by RegisterCustomer"),
-          phone = prompt("the phone carried by RegisterCustomer")
-        ) to entity Customer
-      }
-    } with {
-      briefly as "Dispatches arriving customer commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The customer front door"
-    described as {
-      |A sink receiving customer messages addressed to Customers.
-    }
-  }
 
   repository CustomerStore is {
     inlet Recorded is event Restaurant.Customers.Customer.CustomerRegistered with {
@@ -200,7 +186,7 @@ context Customers is {
   }
 
   connector ErrorReportingRestaurant is {
-    from outlet Riddl.ForeverEmpty.void to inlet Restaurant.Customers.IntakeCustomer.Failures
+    from outlet Riddl.ForeverEmpty.void to inlet Restaurant.Customers.Failures
   } with {
     briefly as "Terminates the error-sink inlet"
     described as {
@@ -211,8 +197,17 @@ context Customers is {
     }
   }
 
+  connector AddressingCustomer is {
+    from outlet Restaurant.Customers.CustomerDispatch to inlet Restaurant.Customers.Customer.CustomerCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingCustomer is {
-    from outlet CustomerAnnouncer.Published to inlet CustomerStore.Recorded
+    from outlet Restaurant.Customers.Customer.CustomerEvents to inlet CustomerStore.Recorded
   } with {
     briefly as "Carries customer events to storage"
     described as {

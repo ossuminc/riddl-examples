@@ -1,5 +1,41 @@
 context Doodle is {
 
+  inlet DrawingIn is command ToDoodles.Doodle.Drawing.CreateDrawing with {
+    briefly as "Where drawing commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet DrawingDispatch is command ToDoodles.Doodle.Drawing.CreateDrawing with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  inlet Failures is record Riddl.GeneratorError with {
+    option error-sink
+    briefly as "Where hard errors go"
+    described as {
+      |RIDDL 2.0 wants every domain to name a destination for failures it
+      |cannot handle. An error-sink inlet is infrastructure rather than
+      |dataflow, so it does not count toward this processor's arity and
+      |needs no connector.
+    }
+  }
+
+  handler DoodleBoundary is {
+    on request: command ToDoodles.Doodle.Drawing.CreateDrawing {
+      send request to outlet ToDoodles.Doodle.DrawingDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
   type DoodleId is Id(ToDoodles.Doodle.Drawing) with {
     briefly as "Unique identifier for a single doodle"
     described as {
@@ -25,6 +61,20 @@ context Doodle is {
 
 
   entity Drawing is {
+
+    inlet DrawingCommands is command ToDoodles.Doodle.Drawing.CreateDrawing with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet DrawingEvents is event DrawingCreated with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command CreateDrawing is {
       id is Id(Drawing),
@@ -85,7 +135,7 @@ context Doodle is {
         send event DrawingCreated(
           id = prompt("the id carried by DrawingCreated"),
           title = prompt("the title carried by DrawingCreated")
-        ) to outlet DrawingAnnouncer.Published
+        ) to outlet ToDoodles.Doodle.Drawing.DrawingEvents
       }
       on query WhichDrawing {
         reply result TheDrawing(
@@ -109,75 +159,7 @@ context Doodle is {
     }
   }
 
-  processor DrawingAnnouncer as source is {
-    outlet Published is event DrawingCreated with {
-      briefly as "Where the context publishes what happened to its drawings"
-      described as {
-        |Drawing events leave the Doodle context through this outlet so that
-        |other processors may connect to them.
-      }
-    }
-    handler DrawingAnnouncerHandler is {
-      on event DrawingCreated {
-        send event DrawingCreated(
-          id = prompt("the id carried by DrawingCreated"),
-          title = prompt("the title carried by DrawingCreated")
-        ) to outlet DrawingAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a drawing event"
-      }
-    } with {
-      briefly as "Publishes drawing events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The context's publication point for drawing events"
-    described as {
-      |A source streamlet carrying everything the Doodle context wants the
-      |rest of the system to know.
-    }
-  }
 
-  processor Intake as sink is {
-    inlet Failures is record Riddl.GeneratorError with {
-      option error-sink
-      briefly as "Where hard errors go"
-      described as {
-        |RIDDL 2.0 wants every domain to name a destination for failures it
-        |cannot handle. An error-sink inlet is infrastructure rather than
-        |dataflow, so it does not count toward this processor's arity and
-        |needs no connector.
-      }
-    }
-    inlet Requests is command CreateDrawing with {
-      briefly as "Where drawing commands arrive from outside the context"
-      described as {
-        |Everything the Doodle context is asked to do enters here.
-      }
-    }
-    handler IntakeHandler is {
-      on command CreateDrawing {
-        tell command CreateDrawing(
-          id = prompt("the id carried by CreateDrawing"),
-          title = prompt("the title carried by CreateDrawing")
-        ) to entity Drawing
-      }
-    } with {
-      briefly as "Dispatches arriving commands to the right drawing"
-      described as {
-        |Receives commands at the context boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The context's front door for incoming messages"
-    described as {
-      |A sink that receives messages addressed to the Doodle context and
-      |dispatches them to the entity concerned.
-    }
-  }
 
   repository Drawings is {
     inlet Recorded is event DrawingCreated with {
@@ -213,7 +195,7 @@ context Doodle is {
   }
 
   connector ErrorReporting is {
-    from outlet Riddl.ForeverEmpty.void to inlet ToDoodles.Doodle.Intake.Failures
+    from outlet Riddl.ForeverEmpty.void to inlet ToDoodles.Doodle.Failures
   } with {
     briefly as "Terminates the error-sink inlet"
     described as {
@@ -224,8 +206,17 @@ context Doodle is {
     }
   }
 
+  connector AddressingDrawing is {
+    from outlet ToDoodles.Doodle.DrawingDispatch to inlet ToDoodles.Doodle.Drawing.DrawingCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector Recording is {
-    from outlet DrawingAnnouncer.Published to inlet Drawings.Recorded
+    from outlet ToDoodles.Doodle.Drawing.DrawingEvents to inlet Drawings.Recorded
   } with {
     briefly as "Carries drawing events to storage"
     described as {

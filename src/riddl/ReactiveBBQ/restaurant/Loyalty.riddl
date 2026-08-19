@@ -1,5 +1,31 @@
 context Loyalty is {
 
+  inlet LoyaltyAccountIn is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+    briefly as "Where loyaltyaccount commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet LoyaltyAccountDispatch is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler LoyaltyBoundary is {
+    on request: command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
+      send request to outlet Restaurant.Loyalty.LoyaltyAccountDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type LoyaltyId is Id(Restaurant.Loyalty.LoyaltyAccount) with {
     briefly as "Unique identifier for one loyaltyaccount"
     described as {
@@ -8,6 +34,20 @@ context Loyalty is {
   }
 
   entity LoyaltyAccount is {
+
+    inlet LoyaltyAccountCommands is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet LoyaltyAccountEvents is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command AccruePoints is {
       id is Id(LoyaltyAccount),
@@ -81,7 +121,7 @@ context Loyalty is {
         )
         send event PointsAccrued(
           id = prompt("the id carried by PointsAccrued")
-        ) to outlet LoyaltyAccountAnnouncer.Published
+        ) to outlet Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountEvents
       }
       on query WhichLoyaltyAccount {
         reply result TheLoyaltyAccount(
@@ -103,63 +143,7 @@ context Loyalty is {
     }
   }
 
-  processor LoyaltyAccountAnnouncer as source is {
-    outlet Published is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
-      briefly as "Where Loyalty publishes what happened to its loyaltyaccounts"
-      described as {
-        |LoyaltyAccount events leave this context through this outlet.
-      }
-    }
-    handler LoyaltyAccountAnnouncerHandler is {
-      on event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued {
-        send event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued(
-          id = prompt("the id carried by PointsAccrued")
-        ) to outlet LoyaltyAccountAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a loyaltyaccount event"
-      }
-    } with {
-      briefly as "Publishes loyaltyaccount events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The loyaltyaccount publication point"
-    described as {
-      |A source streamlet carrying what Loyalty wants known elsewhere.
-    }
-  }
 
-  processor IntakeLoyaltyAccount as sink is {
-    inlet Requests is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
-      briefly as "Where loyaltyaccount commands arrive from outside"
-      described as {
-        |Everything Loyalty is asked to do about loyaltyaccounts enters here.
-      }
-    }
-    handler IntakeLoyaltyAccountHandler is {
-      on command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
-        tell command Restaurant.Loyalty.LoyaltyAccount.AccruePoints(
-          id = prompt("the id carried by AccruePoints"),
-          points = prompt("the points carried by AccruePoints"),
-          accrualRate = prompt("the accrualRate carried by AccruePoints"),
-          redemptionRate = prompt("the redemptionRate carried by AccruePoints")
-        ) to entity LoyaltyAccount
-      }
-    } with {
-      briefly as "Dispatches arriving loyaltyaccount commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The loyaltyaccount front door"
-    described as {
-      |A sink receiving loyaltyaccount messages addressed to Loyalty.
-    }
-  }
 
   repository LoyaltyAccountStore is {
     inlet Recorded is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
@@ -193,8 +177,17 @@ context Loyalty is {
     }
   }
 
+  connector AddressingLoyaltyAccount is {
+    from outlet Restaurant.Loyalty.LoyaltyAccountDispatch to inlet Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingLoyaltyAccount is {
-    from outlet LoyaltyAccountAnnouncer.Published to inlet LoyaltyAccountStore.Recorded
+    from outlet Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountEvents to inlet LoyaltyAccountStore.Recorded
   } with {
     briefly as "Carries loyaltyaccount events to storage"
     described as {

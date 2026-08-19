@@ -1,5 +1,42 @@
 context SupplyOrder is {
 
+  inlet Failures is record Riddl.GeneratorError with {
+    option error-sink
+    briefly as "Where hard errors go"
+    described as {
+      |RIDDL 2.0 wants every domain to name a destination for failures no
+      |handler can recover from. An error-sink inlet is infrastructure
+      |rather than dataflow, so it does not count toward this processor's
+      |arity.
+    }
+  }
+
+  inlet SupplyIn is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+    briefly as "Where supply commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet SupplyDispatch is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler SupplyOrderBoundary is {
+    on request: command BackOffice.SupplyOrder.Supply.OrderSupply {
+      send request to outlet BackOffice.SupplyOrder.SupplyDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type SupplyId is Id(BackOffice.SupplyOrder.Supply) with {
     briefly as "Unique identifier for one supply"
     described as {
@@ -8,6 +45,20 @@ context SupplyOrder is {
   }
 
   entity Supply is {
+
+    inlet SupplyCommands is command BackOffice.SupplyOrder.Supply.OrderSupply with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet SupplyEvents is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command OrderSupply is {
       id is Id(Supply),
@@ -78,7 +129,7 @@ context SupplyOrder is {
         )
         send event SupplyOrdered(
           id = prompt("the id carried by SupplyOrdered")
-        ) to outlet SupplyAnnouncer.Published
+        ) to outlet BackOffice.SupplyOrder.Supply.SupplyEvents
       }
       on query WhichSupply {
         reply result TheSupply(
@@ -100,72 +151,7 @@ context SupplyOrder is {
     }
   }
 
-  processor SupplyAnnouncer as source is {
-    outlet Published is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
-      briefly as "Where SupplyOrder publishes what happened to its supplys"
-      described as {
-        |Supply events leave this context through this outlet.
-      }
-    }
-    handler SupplyAnnouncerHandler is {
-      on event BackOffice.SupplyOrder.Supply.SupplyOrdered {
-        send event BackOffice.SupplyOrder.Supply.SupplyOrdered(
-          id = prompt("the id carried by SupplyOrdered")
-        ) to outlet SupplyAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a supply event"
-      }
-    } with {
-      briefly as "Publishes supply events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The supply publication point"
-    described as {
-      |A source streamlet carrying what SupplyOrder wants known elsewhere.
-    }
-  }
 
-  processor IntakeSupply as sink is {
-  inlet Failures is record Riddl.GeneratorError with {
-    option error-sink
-    briefly as "Where hard errors go"
-    described as {
-      |RIDDL 2.0 wants every domain to name a destination for failures no
-      |handler can recover from. An error-sink inlet is infrastructure
-      |rather than dataflow, so it does not count toward this processor's
-      |arity.
-    }
-  }
-    inlet Requests is command BackOffice.SupplyOrder.Supply.OrderSupply with {
-      briefly as "Where supply commands arrive from outside"
-      described as {
-        |Everything SupplyOrder is asked to do about supplys enters here.
-      }
-    }
-    handler IntakeSupplyHandler is {
-      on command BackOffice.SupplyOrder.Supply.OrderSupply {
-        tell command BackOffice.SupplyOrder.Supply.OrderSupply(
-          id = prompt("the id carried by OrderSupply"),
-          item = prompt("the item carried by OrderSupply"),
-          quantity = prompt("the quantity carried by OrderSupply")
-        ) to entity Supply
-      }
-    } with {
-      briefly as "Dispatches arriving supply commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The supply front door"
-    described as {
-      |A sink receiving supply messages addressed to SupplyOrder.
-    }
-  }
 
   repository SupplyStore is {
     inlet Recorded is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
@@ -200,7 +186,7 @@ context SupplyOrder is {
   }
 
   connector ErrorReportingBackOffice is {
-    from outlet Riddl.ForeverEmpty.void to inlet BackOffice.SupplyOrder.IntakeSupply.Failures
+    from outlet Riddl.ForeverEmpty.void to inlet BackOffice.SupplyOrder.Failures
   } with {
     briefly as "Terminates the error-sink inlet"
     described as {
@@ -211,8 +197,17 @@ context SupplyOrder is {
     }
   }
 
+  connector AddressingSupply is {
+    from outlet BackOffice.SupplyOrder.SupplyDispatch to inlet BackOffice.SupplyOrder.Supply.SupplyCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingSupply is {
-    from outlet SupplyAnnouncer.Published to inlet SupplyStore.Recorded
+    from outlet BackOffice.SupplyOrder.Supply.SupplyEvents to inlet SupplyStore.Recorded
   } with {
     briefly as "Carries supply events to storage"
     described as {

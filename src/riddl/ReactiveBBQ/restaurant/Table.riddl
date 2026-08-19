@@ -1,5 +1,31 @@
 context Tables is {
 
+  inlet TableIn is command Restaurant.Tables.Table.AddTable with {
+    briefly as "Where table commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet TableDispatch is command Restaurant.Tables.Table.AddTable with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler TablesBoundary is {
+    on request: command Restaurant.Tables.Table.AddTable {
+      send request to outlet Restaurant.Tables.TableDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type TableId is Id(Restaurant.Tables.Table) with {
     briefly as "Unique identifier for one table"
     described as {
@@ -8,6 +34,20 @@ context Tables is {
   }
 
   entity Table is {
+
+    inlet TableCommands is command Restaurant.Tables.Table.AddTable with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet TableEvents is event Restaurant.Tables.Table.TableAdded with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command AddTable is {
       id is Id(Table),
@@ -78,7 +118,7 @@ context Tables is {
         )
         send event TableAdded(
           id = prompt("the id carried by TableAdded")
-        ) to outlet TableAnnouncer.Published
+        ) to outlet Restaurant.Tables.Table.TableEvents
       }
       on query WhichTable {
         reply result TheTable(
@@ -100,62 +140,7 @@ context Tables is {
     }
   }
 
-  processor TableAnnouncer as source is {
-    outlet Published is event Restaurant.Tables.Table.TableAdded with {
-      briefly as "Where Tables publishes what happened to its tables"
-      described as {
-        |Table events leave this context through this outlet.
-      }
-    }
-    handler TableAnnouncerHandler is {
-      on event Restaurant.Tables.Table.TableAdded {
-        send event Restaurant.Tables.Table.TableAdded(
-          id = prompt("the id carried by TableAdded")
-        ) to outlet TableAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a table event"
-      }
-    } with {
-      briefly as "Publishes table events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The table publication point"
-    described as {
-      |A source streamlet carrying what Tables wants known elsewhere.
-    }
-  }
 
-  processor IntakeTable as sink is {
-    inlet Requests is command Restaurant.Tables.Table.AddTable with {
-      briefly as "Where table commands arrive from outside"
-      described as {
-        |Everything Tables is asked to do about tables enters here.
-      }
-    }
-    handler IntakeTableHandler is {
-      on command Restaurant.Tables.Table.AddTable {
-        tell command Restaurant.Tables.Table.AddTable(
-          id = prompt("the id carried by AddTable"),
-          seats = prompt("the seats carried by AddTable"),
-          section = prompt("the section carried by AddTable")
-        ) to entity Table
-      }
-    } with {
-      briefly as "Dispatches arriving table commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The table front door"
-    described as {
-      |A sink receiving table messages addressed to Tables.
-    }
-  }
 
   repository TableStore is {
     inlet Recorded is event Restaurant.Tables.Table.TableAdded with {
@@ -189,8 +174,17 @@ context Tables is {
     }
   }
 
+  connector AddressingTable is {
+    from outlet Restaurant.Tables.TableDispatch to inlet Restaurant.Tables.Table.TableCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingTable is {
-    from outlet TableAnnouncer.Published to inlet TableStore.Recorded
+    from outlet Restaurant.Tables.Table.TableEvents to inlet TableStore.Recorded
   } with {
     briefly as "Carries table events to storage"
     described as {

@@ -1,5 +1,67 @@
 application context ToDoodlesApp is {
 
+  inlet DrawingStaged is command ToDoodles.Doodle.Drawing.CreateDrawing with {
+    briefly as "Where the application's drawing requests collect"
+    described as {
+      |An inner source cannot reach across the boundary, so it delivers here.
+    }
+  }
+
+  outlet DrawingSubmissions is command ToDoodles.Doodle.Drawing.CreateDrawing with {
+    briefly as "Where drawing requests leave this context"
+    described as {
+      |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+    }
+  }
+
+  connector StagingDrawing is {
+    from outlet ToDoodles.ToDoodlesApp.DrawingRequests.Staged
+    to inlet ToDoodles.ToDoodlesApp.DrawingStaged
+  } with {
+    briefly as "Carries application requests to the context boundary"
+    described as {
+      |Intra-context, so it may address the source's own outlet directly.
+    }
+  }
+
+  inlet ListStaged is command ToDoodles.List.DoodleList.CreateList with {
+    briefly as "Where the application's list requests collect"
+    described as {
+      |An inner source cannot reach across the boundary, so it delivers here.
+    }
+  }
+
+  outlet ListSubmissions is command ToDoodles.List.DoodleList.CreateList with {
+    briefly as "Where list requests leave this context"
+    described as {
+      |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+    }
+  }
+
+  connector StagingList is {
+    from outlet ToDoodles.ToDoodlesApp.ListRequests.Staged
+    to inlet ToDoodles.ToDoodlesApp.ListStaged
+  } with {
+    briefly as "Carries application requests to the context boundary"
+    described as {
+      |Intra-context, so it may address the source's own outlet directly.
+    }
+  }
+
+  handler ToDoodlesAppBoundary is {
+    on drawingRequest: command ToDoodles.Doodle.Drawing.CreateDrawing {
+      send drawingRequest to outlet ToDoodles.ToDoodlesApp.DrawingSubmissions
+    }
+    on listRequest: command ToDoodles.List.DoodleList.CreateList {
+      send listRequest to outlet ToDoodles.ToDoodlesApp.ListSubmissions
+    }
+  } with {
+    briefly as "Republishes staged requests on the context's own outlets"
+    described as {
+      |The application's internals stay private; peers see only these outlets.
+    }
+  }
+
   record NewDoodleEntry is {
     title is String
   } with {
@@ -63,7 +125,7 @@ application context ToDoodlesApp is {
   }
 
   processor DrawingRequests as source is {
-    outlet DrawingSubmissions is command ToDoodles.Doodle.Drawing.CreateDrawing with {
+    outlet Staged is command ToDoodles.Doodle.Drawing.CreateDrawing with {
       briefly as "Where the application asks for a drawing to be made"
       described as {
         |Requests leave the application here and reach the Doodle context
@@ -75,7 +137,7 @@ application context ToDoodlesApp is {
         send command ToDoodles.Doodle.Drawing.CreateDrawing(
           id = prompt("the id carried by CreateDrawing"),
           title = prompt("the title carried by CreateDrawing")
-        ) to outlet DrawingSubmissions
+        ) to outlet ToDoodles.ToDoodlesApp.DrawingRequests.Staged
       }
       on other {
         do "ignore interactions that do not start a drawing"
@@ -95,7 +157,7 @@ application context ToDoodlesApp is {
   }
 
   processor ListRequests as source is {
-    outlet ListSubmissions is command ToDoodles.List.DoodleList.CreateList with {
+    outlet Staged is command ToDoodles.List.DoodleList.CreateList with {
       briefly as "Where the application asks for a list to be made"
       described as {
         |Requests leave the application here and reach the List context over
@@ -107,7 +169,7 @@ application context ToDoodlesApp is {
         send command ToDoodles.List.DoodleList.CreateList(
           id = prompt("the id carried by CreateList"),
           name = prompt("the name carried by CreateList")
-        ) to outlet ListSubmissions
+        ) to outlet ToDoodles.ToDoodlesApp.ListRequests.Staged
       }
       on other {
         do "ignore interactions that do not start a list"

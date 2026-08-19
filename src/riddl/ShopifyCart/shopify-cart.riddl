@@ -223,6 +223,81 @@ domain ShopifyCart is {
   }
 
   context ShoppingContext is {
+
+    inlet Failures is record Riddl.GeneratorError with {
+      option error-sink
+      briefly as "Where hard errors go"
+      described as {
+        |RIDDL 2.0 wants every domain to name a destination for failures no
+        |handler can recover from. An error-sink inlet is infrastructure
+        |rather than dataflow, so it does not count toward this processor's
+        |arity.
+      }
+    }
+
+    inlet ShoppingIn is type ShopifyCart.ShopperCommand with {
+      briefly as "Where shopping commands enter this context"
+      described as {
+        |RIDDL 2.0 makes the context the SINK for everything entering it.
+      }
+    }
+
+    outlet CartDispatch is type ShopifyCart.ShopperCommand with {
+      briefly as "Where entering commands bound for Cart are handed inward"
+      described as {
+        |One outlet per entity: an outlet may carry exactly one connector, so
+        |fan-out inside the boundary is modelled with separate outlets.
+      }
+    }
+
+    outlet ProductDispatch is type ShopifyCart.ShopperCommand with {
+      briefly as "Where entering commands bound for Product are handed inward"
+      described as {
+        |One outlet per entity: an outlet may carry exactly one connector, so
+        |fan-out inside the boundary is modelled with separate outlets.
+      }
+    }
+
+    outlet CheckoutDispatch is type ShopifyCart.ShopperCommand with {
+      briefly as "Where entering commands bound for Checkout are handed inward"
+      described as {
+        |One outlet per entity: an outlet may carry exactly one connector, so
+        |fan-out inside the boundary is modelled with separate outlets.
+      }
+    }
+
+    handler ShoppingContextBoundary is {
+      on addToCart: command ShopifyCart.AddToCart {
+        send addToCart to outlet ShopifyCart.ShoppingContext.CartDispatch
+      }
+      on removeFromCart: command ShopifyCart.RemoveFromCart {
+        send removeFromCart to outlet ShopifyCart.ShoppingContext.CartDispatch
+      }
+      on updateQuantity: command ShopifyCart.UpdateQuantity {
+        send updateQuantity to outlet ShopifyCart.ShoppingContext.CartDispatch
+      }
+      on initiateCheckout: command ShopifyCart.InitiateCheckout {
+        send initiateCheckout to outlet ShopifyCart.ShoppingContext.CheckoutDispatch
+      }
+      on selectPaymentMethod: command ShopifyCart.SelectPaymentMethod {
+        send selectPaymentMethod to outlet ShopifyCart.ShoppingContext.CheckoutDispatch
+      }
+      on completeCheckout: command ShopifyCart.CompleteCheckout {
+        send completeCheckout to outlet ShopifyCart.ShoppingContext.CheckoutDispatch
+      }
+      on updateInventory: command ShopifyCart.UpdateInventory {
+        send updateInventory to outlet ShopifyCart.ShoppingContext.ProductDispatch
+      }
+      on updateProductPrice: command ShopifyCart.UpdateProductPrice {
+        send updateProductPrice to outlet ShopifyCart.ShoppingContext.ProductDispatch
+      }
+    } with {
+      briefly as "Routes what arrives at the boundary to the entity that owns it"
+      described as {
+        |Peers address the context; the context decides what inside it responds.
+      }
+    }
+
     // Product Record Type for State
     record ProductRecord is {
       productId is ProductId
@@ -255,6 +330,20 @@ domain ShopifyCart is {
 
     // Product Entity
     entity Product is {
+
+      inlet ProductCommands is type ShopifyCart.ShopperCommand with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet.
+        }
+      }
+
+      outlet ProductEvents is type ShoppingEvent with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
 
 
       query WhichProduct is {
@@ -478,6 +567,20 @@ domain ShopifyCart is {
 
     // Cart Entity
     entity Cart is {
+
+      inlet CartCommands is type ShopifyCart.ShopperCommand with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet.
+        }
+      }
+
+      outlet CartEvents is type ShoppingEvent with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
 
 
       query WhichCart is {
@@ -1178,6 +1281,20 @@ domain ShopifyCart is {
     // Checkout Process
     entity Checkout is {
 
+      inlet CheckoutCommands is type ShopifyCart.ShopperCommand with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet.
+        }
+      }
+
+      outlet CheckoutEvents is type ShoppingEvent with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
+
 
       query WhichCheckout is {
         id is CheckoutIdentity
@@ -1681,7 +1798,28 @@ domain ShopifyCart is {
       }
     }
 
-    processor ShoppingAnnouncer as source is {
+    processor ShoppingAnnouncer as merge is {
+      inlet FromProduct is type ShoppingEvent with {
+        briefly as "Events arriving from Product"
+        described as {
+          |Each entity publishes on its own outlet; this merges the three.
+        }
+      }
+
+      inlet FromCart is type ShoppingEvent with {
+        briefly as "Events arriving from Cart"
+        described as {
+          |Each entity publishes on its own outlet; this merges the three.
+        }
+      }
+
+      inlet FromCheckout is type ShoppingEvent with {
+        briefly as "Events arriving from Checkout"
+        described as {
+          |Each entity publishes on its own outlet; this merges the three.
+        }
+      }
+
       outlet Published is type ShoppingEvent with {
         briefly as "Where ShoppingContext publishes what happened"
         described as {
@@ -1712,7 +1850,7 @@ domain ShopifyCart is {
     }
 
     connector ErrorReporting is {
-      from outlet Riddl.ForeverEmpty.void to inlet ShopifyCart.ShoppingContext.ShoppingIntake.Failures
+      from outlet Riddl.ForeverEmpty.void to inlet ShopifyCart.ShoppingContext.Failures
     } with {
       briefly as "Terminates the error-sink inlet"
       described as {
@@ -1720,6 +1858,60 @@ domain ShopifyCart is {
         |generators at runtime, not from anything the model declares. The
         |predefined ForeverEmpty source exists for exactly this: a port that
         |must be connected but has no modelled producer.
+      }
+    }
+
+    connector AddressingProduct is {
+      from outlet ShopifyCart.ShoppingContext.ProductDispatch to inlet ShopifyCart.ShoppingContext.Product.ProductCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port; the channel must be modelled.
+      }
+    }
+
+    connector AnnouncingProduct is {
+      from outlet ShopifyCart.ShoppingContext.Product.ProductEvents to inlet ShopifyCart.ShoppingContext.ShoppingAnnouncer.FromProduct
+    } with {
+      briefly as "Carries this entity's events to the context's announcer"
+      described as {
+        |Publishing goes out the entity's own outlet and merges downstream.
+      }
+    }
+
+    connector AddressingCart is {
+      from outlet ShopifyCart.ShoppingContext.CartDispatch to inlet ShopifyCart.ShoppingContext.Cart.CartCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port; the channel must be modelled.
+      }
+    }
+
+    connector AnnouncingCart is {
+      from outlet ShopifyCart.ShoppingContext.Cart.CartEvents to inlet ShopifyCart.ShoppingContext.ShoppingAnnouncer.FromCart
+    } with {
+      briefly as "Carries this entity's events to the context's announcer"
+      described as {
+        |Publishing goes out the entity's own outlet and merges downstream.
+      }
+    }
+
+    connector AddressingCheckout is {
+      from outlet ShopifyCart.ShoppingContext.CheckoutDispatch to inlet ShopifyCart.ShoppingContext.Checkout.CheckoutCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port; the channel must be modelled.
+      }
+    }
+
+    connector AnnouncingCheckout is {
+      from outlet ShopifyCart.ShoppingContext.Checkout.CheckoutEvents to inlet ShopifyCart.ShoppingContext.ShoppingAnnouncer.FromCheckout
+    } with {
+      briefly as "Carries this entity's events to the context's announcer"
+      described as {
+        |Publishing goes out the entity's own outlet and merges downstream.
       }
     }
 
@@ -1732,97 +1924,6 @@ domain ShopifyCart is {
       }
     }
 
-    processor ShoppingIntake as sink is {
-    inlet Failures is record Riddl.GeneratorError with {
-      option error-sink
-      briefly as "Where hard errors go"
-      described as {
-        |RIDDL 2.0 wants every domain to name a destination for failures no
-        |handler can recover from. An error-sink inlet is infrastructure
-        |rather than dataflow, so it does not count toward this processor's
-        |arity.
-      }
-    }
-      inlet Requests is type ShopifyCart.ShopperCommand with {
-        briefly as "Where shopping commands arrive from the application"
-        described as {
-          |Everything the application asks the domain to do enters here.
-        }
-      }
-      handler ShoppingIntakeHandler is {
-        on command ShopifyCart.AddToCart {
-          tell command ShopifyCart.AddToCart(
-            id = prompt("the id carried by AddToCart"),
-            cartId = prompt("the cartId carried by AddToCart"),
-            productId = prompt("the productId carried by AddToCart"),
-            quantity = prompt("the quantity carried by AddToCart")
-          ) to entity Cart
-        }
-        on command ShopifyCart.RemoveFromCart {
-          tell command ShopifyCart.RemoveFromCart(
-            id = prompt("the id carried by RemoveFromCart"),
-            cartId = prompt("the cartId carried by RemoveFromCart"),
-            productId = prompt("the productId carried by RemoveFromCart")
-          ) to entity Cart
-        }
-        on command ShopifyCart.UpdateQuantity {
-          tell command ShopifyCart.UpdateQuantity(
-            id = prompt("the id carried by UpdateQuantity"),
-            cartId = prompt("the cartId carried by UpdateQuantity"),
-            productId = prompt("the productId carried by UpdateQuantity"),
-            quantity = prompt("the quantity carried by UpdateQuantity")
-          ) to entity Cart
-        }
-        on command ShopifyCart.InitiateCheckout {
-          tell command ShopifyCart.InitiateCheckout(
-            id = prompt("the id carried by InitiateCheckout"),
-            cartId = prompt("the cartId carried by InitiateCheckout"),
-            customerEmail = prompt("the customerEmail carried by InitiateCheckout"),
-            customerName = prompt("the customerName carried by InitiateCheckout"),
-            shippingAddress = prompt("the shippingAddress carried by InitiateCheckout"),
-            billingAddress = prompt("the billingAddress carried by InitiateCheckout")
-          ) to entity ShopifyCart.ShoppingContext.Checkout
-        }
-        on command ShopifyCart.SelectPaymentMethod {
-          tell command ShopifyCart.SelectPaymentMethod(
-            id = prompt("the id carried by SelectPaymentMethod"),
-            cartId = prompt("the cartId carried by SelectPaymentMethod"),
-            paymentType = prompt("the paymentType carried by SelectPaymentMethod"),
-            paymentDetails = prompt("the paymentDetails carried by SelectPaymentMethod")
-          ) to entity ShopifyCart.ShoppingContext.Checkout
-        }
-        on command ShopifyCart.CompleteCheckout {
-          tell command ShopifyCart.CompleteCheckout(
-            id = prompt("the id carried by CompleteCheckout"),
-            cartId = prompt("the cartId carried by CompleteCheckout")
-          ) to entity ShopifyCart.ShoppingContext.Checkout
-        }
-        on command ShopifyCart.UpdateProductPrice {
-          tell command ShopifyCart.UpdateProductPrice(
-            id = prompt("the id carried by UpdateProductPrice"),
-            productId = prompt("the productId carried by UpdateProductPrice"),
-            newPrice = prompt("the newPrice carried by UpdateProductPrice")
-          ) to entity Product
-        }
-        on command ShopifyCart.UpdateInventory {
-          tell command ShopifyCart.UpdateInventory(
-            id = prompt("the id carried by UpdateInventory"),
-            productId = prompt("the productId carried by UpdateInventory"),
-            newQuantity = prompt("the newQuantity carried by UpdateInventory")
-          ) to entity Product
-        }
-      } with {
-        briefly as "Dispatches arriving commands"
-        described as {
-          |Receives commands at the boundary and forwards them.
-        }
-      }
-    } with {
-      briefly as "The context's front door"
-      described as {
-        |A sink receiving messages addressed to ShoppingContext.
-      }
-    }
 
 
   }
@@ -1854,8 +1955,8 @@ domain ShopifyCart is {
   }
 
   persistent connector ShopperRequests is {
-    from outlet ShopifyCart.UserInterface.ShopperRequests.Submissions
-    to inlet ShopifyCart.ShoppingContext.ShoppingIntake.Requests
+    from outlet ShopifyCart.UserInterface.ShopperSubmissions
+    to inlet ShopifyCart.ShoppingContext.ShoppingIn
   } with {
     briefly as "Carries shopper requests from the application to the domain"
     described as {
@@ -1894,8 +1995,43 @@ domain ShopifyCart is {
 
   application context UserInterface is {
 
+    inlet ShopperStaged is type ShopifyCart.ShopperCommand with {
+      briefly as "Where the application's requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet ShopperSubmissions is type ShopifyCart.ShopperCommand with {
+      briefly as "Where shopper requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingShopper is {
+      from outlet ShopifyCart.UserInterface.ShopperRequests.Staged
+      to inlet ShopifyCart.UserInterface.ShopperStaged
+    } with {
+      briefly as "Carries application requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    handler UserInterfaceBoundary is {
+      on request: command ShopifyCart.AddToCart {
+        send request to outlet ShopifyCart.UserInterface.ShopperSubmissions
+      }
+    } with {
+      briefly as "Republishes staged requests on the context's own outlet"
+      described as {
+        |The application's internals stay private; peers see only this outlet.
+      }
+    }
+
     processor ShopperRequests as source is {
-      outlet Submissions is type ShopifyCart.ShopperCommand with {
+      outlet Staged is type ShopifyCart.ShopperCommand with {
         briefly as "Where the application sends work into the domain"
         described as {
           |Requests leave the application here and reach ShoppingContext over
@@ -1909,7 +2045,7 @@ domain ShopifyCart is {
             cartId = prompt("the cartId carried by AddToCart"),
             productId = prompt("the productId carried by AddToCart"),
             quantity = prompt("the quantity carried by AddToCart")
-          ) to outlet Submissions
+          ) to outlet ShopifyCart.UserInterface.ShopperRequests.Staged
         }
         on other {
           do "ignore interactions that do not reach the domain"
@@ -2102,7 +2238,7 @@ domain ShopifyCart is {
       user Customer wants to "add products to cart" so that "they can purchase them later"
 
       step from user Customer "views" page UserInterface.ProductDetails
-      step send command AddToCart from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
+      step send command AddToCart from source ShopifyCart.UserInterface.ShopperRequests to context ShopifyCart.ShoppingContext
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -2123,7 +2259,7 @@ domain ShopifyCart is {
 
       step from user Customer "views" page UserInterface.ShoppingCart
       // FIXED: Ambiguous reference by using fully qualified path
-      step send command ShopifyCart.UpdateQuantity from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
+      step send command ShopifyCart.UpdateQuantity from source ShopifyCart.UserInterface.ShopperRequests to context ShopifyCart.ShoppingContext
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -2140,7 +2276,7 @@ domain ShopifyCart is {
        so that "they can change their mind about purchases"
 
       step from user Customer "views" page UserInterface.ShoppingCart
-      step send command RemoveFromCart from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
+      step send command RemoveFromCart from source ShopifyCart.UserInterface.ShopperRequests to context ShopifyCart.ShoppingContext
       step from entity Cart "updates" to page UserInterface.ShoppingCart
       step focus user Customer on page UserInterface.ShoppingCart
     } with {
@@ -2174,7 +2310,7 @@ domain ShopifyCart is {
       // FIXED: Ambiguous reference by using renamed UI component
       step from user Customer "clicks" button UserInterface.ShoppingCart.CheckoutBtn
       // FIXED: Ambiguous references by using fully qualified paths
-      step send command ShopifyCart.InitiateCheckout from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
+      step send command ShopifyCart.InitiateCheckout from source ShopifyCart.UserInterface.ShopperRequests to context ShopifyCart.ShoppingContext
       // FIXED: Ambiguous references by using fully qualified paths and renamed UI component
       step from entity ShopifyCart.ShoppingContext.Checkout "processes" to page UserInterface.CheckoutPage
       // FIXED: Ambiguous reference by using renamed UI component
@@ -2195,10 +2331,10 @@ domain ShopifyCart is {
       step from user Customer "enters" form UserInterface.Payment.PaymentDetailsEntry
       step send command SelectPaymentMethod
         from source ShopifyCart.UserInterface.ShopperRequests
-        to sink ShopifyCart.ShoppingContext.ShoppingIntake
+        to context ShopifyCart.ShoppingContext
       step from entity ShopifyCart.ShoppingContext.Checkout "validates" to entity ShopifyCart.ShoppingContext.Checkout
       step from user Customer "confirms" page UserInterface.Payment
-      step send command CompleteCheckout from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
+      step send command CompleteCheckout from source ShopifyCart.UserInterface.ShopperRequests to context ShopifyCart.ShoppingContext
       step from entity ShopifyCart.ShoppingContext.Checkout "processes" to saga CheckoutProcess
       step focus user Customer on page UserInterface.CheckoutCompletedPage
     }
@@ -2231,7 +2367,7 @@ domain ShopifyCart is {
 
       step from user StoreAdmin "views" page UserInterface.ProductManagement
       step from user StoreAdmin "updates" form InventoryQuantity
-      step send command ShopifyCart.UpdateInventory from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
+      step send command ShopifyCart.UpdateInventory from source ShopifyCart.UserInterface.ShopperRequests to context ShopifyCart.ShoppingContext
       step from entity Product "processes" to entity Product
       step focus user StoreAdmin on page UserInterface.ProductManagement
     }
@@ -2250,7 +2386,7 @@ domain ShopifyCart is {
 
       step from user StoreAdmin "views" page UserInterface.ProductManagement
       step from user StoreAdmin "updates" item ProductPrice
-      step send command ShopifyCart.UpdateProductPrice from source ShopifyCart.UserInterface.ShopperRequests to sink ShopifyCart.ShoppingContext.ShoppingIntake
+      step send command ShopifyCart.UpdateProductPrice from source ShopifyCart.UserInterface.ShopperRequests to context ShopifyCart.ShoppingContext
       step from entity Product "processes" to entity Product
       step focus user StoreAdmin on page UserInterface.ProductManagement
     }

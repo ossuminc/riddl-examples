@@ -1,5 +1,58 @@
 context Menus is {
 
+  inlet MenuIn is command Restaurant.Menus.Menu.ComposeMenu with {
+    briefly as "Where menu commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet MenuDispatch is command Restaurant.Menus.Menu.ComposeMenu with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler MenusMenuBoundary is {
+    on request: command Restaurant.Menus.Menu.ComposeMenu {
+      send request to outlet Restaurant.Menus.MenuDispatch
+    }
+  } with {
+    briefly as "Routes composing requests to the Menu entity"
+    described as {
+      |A second boundary pair: this context owns two entities, and an outlet
+      |carries exactly one connector.
+    }
+  }
+
+
+  inlet MenuItemIn is command Restaurant.Menus.MenuItem.AddMenuItem with {
+    briefly as "Where menuitem commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet MenuItemDispatch is command Restaurant.Menus.MenuItem.AddMenuItem with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler MenusBoundary is {
+    on request: command Restaurant.Menus.MenuItem.AddMenuItem {
+      send request to outlet Restaurant.Menus.MenuItemDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type MenuItemId is Id(Restaurant.Menus.MenuItem) with {
     briefly as "Unique identifier for one menuitem"
     described as {
@@ -8,6 +61,20 @@ context Menus is {
   }
 
   entity MenuItem is {
+
+    inlet MenuItemCommands is command Restaurant.Menus.MenuItem.AddMenuItem with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet MenuItemEvents is event Restaurant.Menus.MenuItem.MenuItemAdded with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command AddMenuItem is {
       id is Id(MenuItem),
@@ -81,7 +148,7 @@ context Menus is {
         )
         send event MenuItemAdded(
           id = prompt("the id carried by MenuItemAdded")
-        ) to outlet MenuItemAnnouncer.Published
+        ) to outlet Restaurant.Menus.MenuItem.MenuItemEvents
       }
       on query WhichMenuItem {
         reply result TheMenuItem(
@@ -103,63 +170,7 @@ context Menus is {
     }
   }
 
-  processor MenuItemAnnouncer as source is {
-    outlet Published is event Restaurant.Menus.MenuItem.MenuItemAdded with {
-      briefly as "Where Menus publishes what happened to its menuitems"
-      described as {
-        |MenuItem events leave this context through this outlet.
-      }
-    }
-    handler MenuItemAnnouncerHandler is {
-      on event Restaurant.Menus.MenuItem.MenuItemAdded {
-        send event Restaurant.Menus.MenuItem.MenuItemAdded(
-          id = prompt("the id carried by MenuItemAdded")
-        ) to outlet MenuItemAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a menuitem event"
-      }
-    } with {
-      briefly as "Publishes menuitem events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The menuitem publication point"
-    described as {
-      |A source streamlet carrying what Menus wants known elsewhere.
-    }
-  }
 
-  processor IntakeMenuItem as sink is {
-    inlet Requests is command Restaurant.Menus.MenuItem.AddMenuItem with {
-      briefly as "Where menuitem commands arrive from outside"
-      described as {
-        |Everything Menus is asked to do about menuitems enters here.
-      }
-    }
-    handler IntakeMenuItemHandler is {
-      on command Restaurant.Menus.MenuItem.AddMenuItem {
-        tell command Restaurant.Menus.MenuItem.AddMenuItem(
-          id = prompt("the id carried by AddMenuItem"),
-          name = prompt("the name carried by AddMenuItem"),
-          description = prompt("the description carried by AddMenuItem"),
-          price = prompt("the price carried by AddMenuItem")
-        ) to entity MenuItem
-      }
-    } with {
-      briefly as "Dispatches arriving menuitem commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The menuitem front door"
-    described as {
-      |A sink receiving menuitem messages addressed to Menus.
-    }
-  }
 
   repository MenuItemStore is {
     inlet Recorded is event Restaurant.Menus.MenuItem.MenuItemAdded with {
@@ -193,8 +204,17 @@ context Menus is {
     }
   }
 
+  connector AddressingMenuItem is {
+    from outlet Restaurant.Menus.MenuItemDispatch to inlet Restaurant.Menus.MenuItem.MenuItemCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingMenuItem is {
-    from outlet MenuItemAnnouncer.Published to inlet MenuItemStore.Recorded
+    from outlet Restaurant.Menus.MenuItem.MenuItemEvents to inlet MenuItemStore.Recorded
   } with {
     briefly as "Carries menuitem events to storage"
     described as {
@@ -210,6 +230,20 @@ context Menus is {
   }
 
   entity Menu is {
+
+    inlet MenuCommands is command Restaurant.Menus.Menu.ComposeMenu with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet MenuEvents is event Restaurant.Menus.Menu.MenuComposed with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command ComposeMenu is {
       id is Id(Menu),
@@ -280,7 +314,7 @@ context Menus is {
         )
         send event MenuComposed(
           id = prompt("the id carried by MenuComposed")
-        ) to outlet MenuAnnouncer.Published
+        ) to outlet Restaurant.Menus.Menu.MenuEvents
       }
       on query WhichMenu {
         reply result TheMenu(
@@ -302,62 +336,7 @@ context Menus is {
     }
   }
 
-  processor MenuAnnouncer as source is {
-    outlet Published is event Restaurant.Menus.Menu.MenuComposed with {
-      briefly as "Where Menus publishes what happened to its menus"
-      described as {
-        |Menu events leave this context through this outlet.
-      }
-    }
-    handler MenuAnnouncerHandler is {
-      on event Restaurant.Menus.Menu.MenuComposed {
-        send event Restaurant.Menus.Menu.MenuComposed(
-          id = prompt("the id carried by MenuComposed")
-        ) to outlet MenuAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a menu event"
-      }
-    } with {
-      briefly as "Publishes menu events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The menu publication point"
-    described as {
-      |A source streamlet carrying what Menus wants known elsewhere.
-    }
-  }
 
-  processor IntakeMenu as sink is {
-    inlet Requests is command Restaurant.Menus.Menu.ComposeMenu with {
-      briefly as "Where menu commands arrive from outside"
-      described as {
-        |Everything Menus is asked to do about menus enters here.
-      }
-    }
-    handler IntakeMenuHandler is {
-      on command Restaurant.Menus.Menu.ComposeMenu {
-        tell command Restaurant.Menus.Menu.ComposeMenu(
-          id = prompt("the id carried by ComposeMenu"),
-          title = prompt("the title carried by ComposeMenu"),
-          season = prompt("the season carried by ComposeMenu")
-        ) to entity Menu
-      }
-    } with {
-      briefly as "Dispatches arriving menu commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The menu front door"
-    described as {
-      |A sink receiving menu messages addressed to Menus.
-    }
-  }
 
   repository MenuStore is {
     inlet Recorded is event Restaurant.Menus.Menu.MenuComposed with {
@@ -391,8 +370,17 @@ context Menus is {
     }
   }
 
+  connector AddressingMenu is {
+    from outlet Restaurant.Menus.MenuDispatch to inlet Restaurant.Menus.Menu.MenuCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingMenu is {
-    from outlet MenuAnnouncer.Published to inlet MenuStore.Recorded
+    from outlet Restaurant.Menus.Menu.MenuEvents to inlet MenuStore.Recorded
   } with {
     briefly as "Carries menu events to storage"
     described as {

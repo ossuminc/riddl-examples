@@ -18,7 +18,7 @@ epic Stories is {
     step take form EnterToDoItem from user Attendee
     step send command ReactiveSummit.ToDoList.ToDoItem.AddItem
       from source ReactiveSummit.ToDoListUI.ItemRequests
-      to sink ReactiveSummit.ToDoList.Intake
+      to context ReactiveSummit.ToDoList
   } with {
     briefly as "Adding a task from the main screen"
     described as {

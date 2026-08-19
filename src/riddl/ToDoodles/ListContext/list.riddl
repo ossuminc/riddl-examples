@@ -1,5 +1,30 @@
 context List is {
 
+  inlet DoodleListIn is command ToDoodles.List.DoodleList.CreateList with {
+    briefly as "Where doodlelist commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet DoodleListDispatch is command ToDoodles.List.DoodleList.CreateList with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler ListBoundary is {
+    on request: command ToDoodles.List.DoodleList.CreateList {
+      send request to outlet ToDoodles.List.DoodleListDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
   type ListId is Id(ToDoodles.List.DoodleList) with {
     briefly as "Unique identifier for a doodle list"
     described as {
@@ -36,6 +61,20 @@ context List is {
 
 
   entity DoodleList is {
+
+    inlet DoodleListCommands is command ToDoodles.List.DoodleList.CreateList with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet DoodleListEvents is type ListEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command CreateList is {
       id is Id(DoodleList),
@@ -116,14 +155,14 @@ context List is {
         send event ListCreated(
           id = prompt("the id carried by ListCreated"),
           name = prompt("the name carried by ListCreated")
-        ) to outlet ListAnnouncer.Published
+        ) to outlet ToDoodles.List.DoodleList.DoodleListEvents
       }
       on command AddDoodleToList {
         set field DoodleListData.entries to "the list's members plus this doodle"
         send event DoodleAddedToList(
           list = prompt("the list carried by DoodleAddedToList"),
           doodle = prompt("the doodle carried by DoodleAddedToList")
-        ) to outlet ListAnnouncer.Published
+        ) to outlet ToDoodles.List.DoodleList.DoodleListEvents
       }
       on query WhichList {
         reply result TheList(
@@ -155,71 +194,7 @@ context List is {
     }
   }
 
-  processor ListAnnouncer as source is {
-    outlet Published is type ListEvent with {
-      briefly as "Where the context publishes what happened to its lists"
-      described as {
-        |List events leave the List context through this outlet so that
-        |other processors may connect to them.
-      }
-    }
-    handler ListAnnouncerHandler is {
-      on event ListCreated {
-        send event ListCreated(
-          id = prompt("the id carried by ListCreated"),
-          name = prompt("the name carried by ListCreated")
-        ) to outlet ListAnnouncer.Published
-      }
-      on event DoodleAddedToList {
-        send event DoodleAddedToList(
-          list = prompt("the list carried by DoodleAddedToList"),
-          doodle = prompt("the doodle carried by DoodleAddedToList")
-        ) to outlet ListAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a list event"
-      }
-    } with {
-      briefly as "Publishes list events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The context's publication point for list events"
-    described as {
-      |A source streamlet carrying everything the List context wants the
-      |rest of the system to know.
-    }
-  }
 
-  processor Intake as sink is {
-    inlet Requests is command CreateList with {
-      briefly as "Where list commands arrive from outside the context"
-      described as {
-        |Everything the List context is asked to do enters here.
-      }
-    }
-    handler IntakeHandler is {
-      on command CreateList {
-        tell command CreateList(
-          id = prompt("the id carried by CreateList"),
-          name = prompt("the name carried by CreateList")
-        ) to entity DoodleList
-      }
-    } with {
-      briefly as "Dispatches arriving commands to the right list"
-      described as {
-        |Receives commands at the context boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The context's front door for incoming messages"
-    described as {
-      |A sink that receives messages addressed to the List context and
-      |dispatches them to the entity concerned.
-    }
-  }
 
   repository Lists is {
     inlet Recorded is type ListEvent with {
@@ -254,8 +229,17 @@ context List is {
     }
   }
 
+  connector AddressingDoodleList is {
+    from outlet ToDoodles.List.DoodleListDispatch to inlet ToDoodles.List.DoodleList.DoodleListCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector Recording is {
-    from outlet ListAnnouncer.Published to inlet Lists.Recorded
+    from outlet ToDoodles.List.DoodleList.DoodleListEvents to inlet Lists.Recorded
   } with {
     briefly as "Carries list events to storage"
     described as {

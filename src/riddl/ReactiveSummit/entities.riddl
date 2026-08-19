@@ -1,5 +1,41 @@
 context ToDoList is {
 
+  inlet ItemIn is command ToDoItem.AddItem with {
+    briefly as "Where item commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet ItemDispatch is command ToDoItem.AddItem with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  inlet Failures is record Riddl.GeneratorError with {
+    option error-sink
+    briefly as "Where hard errors go"
+    described as {
+      |RIDDL 2.0 wants every domain to name a destination for failures no
+      |handler can recover from. An error-sink inlet is infrastructure
+      |rather than dataflow, so it does not count toward this processor's
+      |arity.
+    }
+  }
+
+  handler ToDoListBoundary is {
+    on request: command ToDoItem.AddItem {
+      send request to outlet ReactiveSummit.ToDoList.ItemDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
   type ItemId is Id(ReactiveSummit.ToDoList.ToDoItem) with {
     briefly as "Unique identifier for one to-do item"
     described as {
@@ -21,6 +57,20 @@ context ToDoList is {
   }
 
   entity ToDoItem is {
+
+    inlet ItemCommands is command ToDoItem.AddItem with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet ItemEvents is type ItemEvent with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command AddItem is {
       id is Id(ToDoItem),
@@ -124,7 +174,7 @@ context ToDoList is {
         )
         send event ItemAdded(
           content = prompt("the content carried by ItemAdded")
-        ) to outlet ItemAnnouncer.Published
+        ) to outlet ReactiveSummit.ToDoList.ToDoItem.ItemEvents
       }
       on command CompleteItem {
         morph entity ToDoItem to state Completed with record CompletedState(
@@ -134,7 +184,7 @@ context ToDoList is {
         )
         send event ItemCompleted(
           id = prompt("the id carried by ItemCompleted")
-        ) to outlet ItemAnnouncer.Published
+        ) to outlet ReactiveSummit.ToDoList.ToDoItem.ItemEvents
       }
       on query WhichItem {
         reply result TheItem(
@@ -167,73 +217,7 @@ context ToDoList is {
     }
   }
 
-  processor ItemAnnouncer as source is {
-    outlet Published is type ItemEvent with {
-      briefly as "Where the context publishes what happened to its items"
-      described as {
-        |Item events leave the ToDoList context through this outlet.
-      }
-    }
-    handler ItemAnnouncerHandler is {
-      on event ToDoItem.ItemAdded {
-        send event ToDoItem.ItemAdded(
-          content = prompt("the content carried by ItemAdded")
-        ) to outlet ItemAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not an item event"
-      }
-    } with {
-      briefly as "Publishes item events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The context's publication point for item events"
-    described as {
-      |A source streamlet carrying everything this context wants the rest of
-      |the system to know.
-    }
-  }
 
-  processor Intake as sink is {
-  inlet Failures is record Riddl.GeneratorError with {
-    option error-sink
-    briefly as "Where hard errors go"
-    described as {
-      |RIDDL 2.0 wants every domain to name a destination for failures no
-      |handler can recover from. An error-sink inlet is infrastructure
-      |rather than dataflow, so it does not count toward this processor's
-      |arity.
-    }
-  }
-    inlet Requests is command ToDoItem.AddItem with {
-      briefly as "Where item commands arrive from outside the context"
-      described as {
-        |Everything the ToDoList context is asked to do enters here.
-      }
-    }
-    handler IntakeHandler is {
-      on command ToDoItem.AddItem {
-        tell command ToDoItem.AddItem(
-          id = prompt("the id carried by AddItem"),
-          content = prompt("the content carried by AddItem")
-        ) to entity ToDoItem
-      }
-    } with {
-      briefly as "Dispatches arriving commands to the right item"
-      described as {
-        |Receives commands at the context boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The context's front door for incoming messages"
-    described as {
-      |A sink that receives messages addressed to ToDoList and dispatches
-      |them to the entity concerned.
-    }
-  }
 
   repository Items is {
     inlet Recorded is type ItemEvent with {
@@ -314,7 +298,7 @@ context ToDoList is {
   }
 
   connector ErrorReporting is {
-    from outlet Riddl.ForeverEmpty.void to inlet ReactiveSummit.ToDoList.Intake.Failures
+    from outlet Riddl.ForeverEmpty.void to inlet ReactiveSummit.ToDoList.Failures
   } with {
     briefly as "Terminates the error-sink inlet"
     described as {
@@ -325,8 +309,18 @@ context ToDoList is {
     }
   }
 
+  connector AddressingItem is {
+    from outlet ReactiveSummit.ToDoList.ItemDispatch
+    to inlet ReactiveSummit.ToDoList.ToDoItem.ItemCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector Recording is {
-    from outlet ItemAnnouncer.Published to inlet Items.Recorded
+    from outlet ReactiveSummit.ToDoList.ToDoItem.ItemEvents to inlet Items.Recorded
   } with {
     briefly as "Carries item events to storage"
     described as {

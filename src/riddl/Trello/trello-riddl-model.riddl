@@ -18,8 +18,8 @@ domain Trello is {
   include "epics"
 
   persistent connector UserManagementRequests is {
-    from outlet Trello.TrelloUI.UserManagementRequests.UserManagementSubmissions
-    to inlet Trello.UserManagement.UserManagementIntake.Requests
+    from outlet Trello.TrelloUI.UserManagementSubmissions
+    to inlet Trello.UserManagement.UserManagementIn
   } with {
     briefly as "Carries requests from the application to UserManagement"
     described as {
@@ -29,8 +29,8 @@ domain Trello is {
   }
 
   persistent connector WorkspaceManagementRequests is {
-    from outlet Trello.TrelloUI.WorkspaceManagementRequests.WorkspaceManagementSubmissions
-    to inlet Trello.WorkspaceManagement.WorkspaceManagementIntake.Requests
+    from outlet Trello.TrelloUI.WorkspaceManagementSubmissions
+    to inlet Trello.WorkspaceManagement.WorkspaceManagementIn
   } with {
     briefly as "Carries requests from the application to WorkspaceManagement"
     described as {
@@ -40,8 +40,8 @@ domain Trello is {
   }
 
   persistent connector BoardManagementRequests is {
-    from outlet Trello.TrelloUI.BoardManagementRequests.BoardManagementSubmissions
-    to inlet Trello.BoardManagement.BoardManagementIntake.Requests
+    from outlet Trello.TrelloUI.BoardManagementSubmissions
+    to inlet Trello.BoardManagement.BoardManagementIn
   } with {
     briefly as "Carries requests from the application to BoardManagement"
     described as {

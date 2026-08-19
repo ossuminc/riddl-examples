@@ -1,5 +1,41 @@
 application context ToDoListUI is {
 
+  inlet ItemStaged is command ReactiveSummit.ToDoList.ToDoItem.AddItem with {
+    briefly as "Where the application's requests collect"
+    described as {
+      |An inner source cannot reach across the boundary, so it delivers here
+      |and the context republishes on its own outlet.
+    }
+  }
+
+  outlet ItemSubmissions is command ReactiveSummit.ToDoList.ToDoItem.AddItem with {
+    briefly as "Where requests leave this context"
+    described as {
+      |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+    }
+  }
+
+  handler ToDoListUIBoundary is {
+    on request: command ReactiveSummit.ToDoList.ToDoItem.AddItem {
+      send request to outlet ReactiveSummit.ToDoListUI.ItemSubmissions
+    }
+  } with {
+    briefly as "Republishes staged requests on the context's own outlet"
+    described as {
+      |The application's internals stay private; peers see only this outlet.
+    }
+  }
+
+  connector StagingItems is {
+    from outlet ReactiveSummit.ToDoListUI.ItemRequests.Staged
+    to inlet ReactiveSummit.ToDoListUI.ItemStaged
+  } with {
+    briefly as "Carries application requests to the context boundary"
+    described as {
+      |Intra-context, so it may address the source's own outlet directly.
+    }
+  }
+
   record ToDoContent is {
     itemDescription is String,
     expectedCompletion is TimeStamp?
@@ -66,7 +102,7 @@ application context ToDoListUI is {
   }
 
   processor ItemRequests as source is {
-    outlet Submissions is command ReactiveSummit.ToDoList.ToDoItem.AddItem with {
+    outlet Staged is command ReactiveSummit.ToDoList.ToDoItem.AddItem with {
       briefly as "Where the application sends work into the domain"
       described as {
         |Requests leave the application here and reach the ToDoList context
@@ -78,7 +114,7 @@ application context ToDoListUI is {
         send command ReactiveSummit.ToDoList.ToDoItem.AddItem(
           id = prompt("the id carried by AddItem"),
           content = prompt("the content carried by AddItem")
-        ) to outlet Submissions
+        ) to outlet ReactiveSummit.ToDoListUI.ItemRequests.Staged
       }
       on other {
         do "ignore interactions that do not add an item"

@@ -1,5 +1,31 @@
 context Payments is {
 
+  inlet PaymentIn is command Restaurant.Payments.Payment.Pay with {
+    briefly as "Where payment commands enter this context"
+    described as {
+      |RIDDL 2.0 makes the context the SINK for everything entering it.
+    }
+  }
+
+  outlet PaymentDispatch is command Restaurant.Payments.Payment.Pay with {
+    briefly as "Where entering commands are handed inward"
+    described as {
+      |Inside the boundary nothing is restricted.
+    }
+  }
+
+  handler PaymentsBoundary is {
+    on request: command Restaurant.Payments.Payment.Pay {
+      send request to outlet Restaurant.Payments.PaymentDispatch
+    }
+  } with {
+    briefly as "Routes what arrives at the boundary inward"
+    described as {
+      |Peers address the context; the context decides what responds.
+    }
+  }
+
+
   type PaymentId is Id(Restaurant.Payments.Payment) with {
     briefly as "Unique identifier for one payment"
     described as {
@@ -8,6 +34,20 @@ context Payments is {
   }
 
   entity Payment is {
+
+    inlet PaymentCommands is command Restaurant.Payments.Payment.Pay with {
+      briefly as "Where this entity receives its commands"
+      described as {
+        |A processor receives only through its OWN inlet.
+      }
+    }
+
+    outlet PaymentEvents is event Restaurant.Payments.Payment.Paid with {
+      briefly as "Where this entity publishes what happened"
+      described as {
+        |Publishing goes out the entity's own outlet.
+      }
+    }
 
     command Pay is {
       id is Id(Payment),
@@ -79,7 +119,7 @@ context Payments is {
           tipAmount = prompt("the tipAmount of the resulting Payment state"),
           cardToken = prompt("the cardToken of the resulting Payment state")
         )
-        send event Paid(id = prompt("the id carried by Paid")) to outlet PaymentAnnouncer.Published
+        send event Paid(id = prompt("the id carried by Paid")) to outlet Restaurant.Payments.Payment.PaymentEvents
       }
       on query WhichPayment {
         reply result ThePayment(
@@ -101,63 +141,7 @@ context Payments is {
     }
   }
 
-  processor PaymentAnnouncer as source is {
-    outlet Published is event Restaurant.Payments.Payment.Paid with {
-      briefly as "Where Payments publishes what happened to its payments"
-      described as {
-        |Payment events leave this context through this outlet.
-      }
-    }
-    handler PaymentAnnouncerHandler is {
-      on event Restaurant.Payments.Payment.Paid {
-        send event Restaurant.Payments.Payment.Paid(
-          id = prompt("the id carried by Paid")
-        ) to outlet PaymentAnnouncer.Published
-      }
-      on other {
-        do "ignore anything that is not a payment event"
-      }
-    } with {
-      briefly as "Publishes payment events"
-      described as {
-        |Puts each event the entity announced onto the outlet.
-      }
-    }
-  } with {
-    briefly as "The payment publication point"
-    described as {
-      |A source streamlet carrying what Payments wants known elsewhere.
-    }
-  }
 
-  processor IntakePayment as sink is {
-    inlet Requests is command Restaurant.Payments.Payment.Pay with {
-      briefly as "Where payment commands arrive from outside"
-      described as {
-        |Everything Payments is asked to do about payments enters here.
-      }
-    }
-    handler IntakePaymentHandler is {
-      on command Restaurant.Payments.Payment.Pay {
-        tell command Restaurant.Payments.Payment.Pay(
-          id = prompt("the id carried by Pay"),
-          orderAmount = prompt("the orderAmount carried by Pay"),
-          tipAmount = prompt("the tipAmount carried by Pay"),
-          cardToken = prompt("the cardToken carried by Pay")
-        ) to entity Payment
-      }
-    } with {
-      briefly as "Dispatches arriving payment commands"
-      described as {
-        |Receives commands at the boundary and forwards them.
-      }
-    }
-  } with {
-    briefly as "The payment front door"
-    described as {
-      |A sink receiving payment messages addressed to Payments.
-    }
-  }
 
   repository PaymentStore is {
     inlet Recorded is event Restaurant.Payments.Payment.Paid with {
@@ -191,8 +175,17 @@ context Payments is {
     }
   }
 
+  connector AddressingPayment is {
+    from outlet Restaurant.Payments.PaymentDispatch to inlet Restaurant.Payments.Payment.PaymentCommands
+  } with {
+    briefly as "Delivers entering commands to the entity itself"
+    described as {
+      |A 'tell' does not connect a port; the channel must be modelled.
+    }
+  }
+
   connector RecordingPayment is {
-    from outlet PaymentAnnouncer.Published to inlet PaymentStore.Recorded
+    from outlet Restaurant.Payments.Payment.PaymentEvents to inlet PaymentStore.Recorded
   } with {
     briefly as "Carries payment events to storage"
     described as {

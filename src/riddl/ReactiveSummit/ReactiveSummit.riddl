@@ -18,8 +18,8 @@ domain ReactiveSummit is {
   include "entities"
 
   persistent connector ItemRequests is {
-    from outlet ReactiveSummit.ToDoListUI.ItemRequests.Submissions
-    to inlet ReactiveSummit.ToDoList.Intake.Requests
+    from outlet ReactiveSummit.ToDoListUI.ItemSubmissions
+    to inlet ReactiveSummit.ToDoList.ItemIn
   } with {
     briefly as "Carries the attendee's requests from the application to the domain"
     described as {

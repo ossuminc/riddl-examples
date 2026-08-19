@@ -46,7 +46,7 @@ domain dokn is {
 
     handler CompaniesBoundary is {
       on request: command dokn.Companies.Company.AddCompany {
-        send request to outlet dokn.Companies.CompanyDispatch
+        forward request to outlet dokn.Companies.CompanyDispatch
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -299,7 +299,7 @@ domain dokn is {
 
     handler DriversBoundary is {
       on request: command dokn.Drivers.Driver.AddDriverToCompany {
-        send request to outlet dokn.Drivers.DriverDispatch
+        forward request to outlet dokn.Drivers.DriverDispatch
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -512,7 +512,7 @@ domain dokn is {
 
     handler NotesBoundary is {
       on request: command dokn.Notes.Note.CaptureNote {
-        send request to outlet dokn.Notes.NoteDispatch
+        forward request to outlet dokn.Notes.NoteDispatch
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -721,7 +721,7 @@ domain dokn is {
 
     handler MediaBoundary is {
       on request: command dokn.Media.Medium.StoreMedium {
-        send request to outlet dokn.Media.MediumDispatch
+        forward request to outlet dokn.Media.MediumDispatch
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -921,7 +921,7 @@ domain dokn is {
 
     handler LocationsBoundary is {
       on request: command dokn.Locations.Location.AddDeliveryLocation {
-        send request to outlet dokn.Locations.LocationDispatch
+        forward request to outlet dokn.Locations.LocationDispatch
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -1243,19 +1243,19 @@ domain dokn is {
 
     handler IntakeBoundary is {
       on request: command dokn.Companies.Company.AddCompany {
-        send request to outlet dokn.Intake.CompanySubmissions
+        forward request to outlet dokn.Intake.CompanySubmissions
       }
       on locationRequest: command dokn.Locations.Location.AddDeliveryLocation {
-        send locationRequest to outlet dokn.Intake.LocationSubmissions
+        forward locationRequest to outlet dokn.Intake.LocationSubmissions
       }
       on mediumRequest: command dokn.Media.Medium.StoreMedium {
-        send mediumRequest to outlet dokn.Intake.MediumSubmissions
+        forward mediumRequest to outlet dokn.Intake.MediumSubmissions
       }
       on noteRequest: command dokn.Notes.Note.CaptureNote {
-        send noteRequest to outlet dokn.Intake.NoteSubmissions
+        forward noteRequest to outlet dokn.Intake.NoteSubmissions
       }
       on driverRequest: command dokn.Drivers.Driver.AddDriverToCompany {
-        send driverRequest to outlet dokn.Intake.DriverSubmissions
+        forward driverRequest to outlet dokn.Intake.DriverSubmissions
       }
     } with {
       briefly as "Republishes staged requests on the context's own outlet"

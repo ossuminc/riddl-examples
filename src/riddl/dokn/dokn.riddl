@@ -15,6 +15,47 @@ domain dokn is {
 
   context Companies is {
 
+    inlet CompanyIn is command dokn.Companies.Company.AddCompany with {
+      briefly as "Where company commands enter this context"
+      described as {
+        |RIDDL 2.0 makes the context the SINK for everything entering it: a
+        |cross-context connector lands here, never on a portlet of something
+        |this context contains.
+      }
+    }
+
+    outlet CompanyDispatch is command dokn.Companies.Company.AddCompany with {
+      briefly as "Where entering commands are handed inward"
+      described as {
+        |The boundary handler re-sends arrivals here, and an intra-context
+        |connector carries them to the entity. Inside the boundary nothing is
+        |restricted.
+      }
+    }
+
+    inlet Failures is record Riddl.GeneratorError with {
+      option error-sink
+      briefly as "Where hard errors go"
+      described as {
+        |RIDDL 2.0 wants every domain to name a destination for failures no
+        |handler can recover from. An error-sink inlet is infrastructure
+        |rather than dataflow, so it does not count toward this processor's
+        |arity.
+      }
+    }
+
+    handler CompaniesBoundary is {
+      on request: command dokn.Companies.Company.AddCompany {
+        send request to outlet dokn.Companies.CompanyDispatch
+      }
+    } with {
+      briefly as "Routes what arrives at the boundary inward"
+      described as {
+        |Keeps the context's contents private: peers address the context, and
+        |the context decides what inside it responds.
+      }
+    }
+
     type CompanyId is Id(dokn.Companies.Company) with {
       briefly as "Unique identifier for one company"
       described as {
@@ -51,6 +92,21 @@ domain dokn is {
     }
 
     event-sourced available entity Company is {
+
+      inlet CompanyCommands is command dokn.Companies.Company.AddCompany with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet; a port on its
+          |context or on a sibling does not deliver to it.
+        }
+      }
+
+      outlet CompanyEvents is event dokn.Companies.Company.CompanyAdded with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
 
       command AddCompany yields event CompanyAdded is {
         id is Id(Company),
@@ -118,7 +174,7 @@ domain dokn is {
           yield event CompanyAdded(id = prompt("the id carried by CompanyAdded"))
           send event CompanyAdded(
             id = prompt("the id carried by CompanyAdded")
-          ) to outlet CompanyAnnouncer.Published
+          ) to outlet dokn.Companies.Company.CompanyEvents
         }
         on event CompanyAdded {
           morph entity Company to state CompanyBase with record dokn.Companies.Company.fields(
@@ -150,74 +206,7 @@ domain dokn is {
       }
     }
 
-    processor CompanyAnnouncer as source is {
-      outlet Published is event dokn.Companies.Company.CompanyAdded with {
-        briefly as "Where Companies publishes what happened"
-        described as {
-          |Company events leave this context through this outlet.
-        }
-      }
-      handler CompanyAnnouncerHandler is {
-        on event dokn.Companies.Company.CompanyAdded {
-          send event dokn.Companies.Company.CompanyAdded(
-            id = prompt("the id carried by CompanyAdded")
-          ) to outlet CompanyAnnouncer.Published
-        }
-        on other {
-          do "ignore anything that is not a company event"
-        }
-      } with {
-        briefly as "Publishes company events"
-        described as {
-          |Puts each event the entity announced onto the outlet.
-        }
-      }
-    } with {
-      briefly as "The context's publication point"
-      described as {
-        |A source streamlet carrying what Companies wants known elsewhere.
-      }
-    }
 
-    processor IntakeCompany as sink is {
-    inlet Failures is record Riddl.GeneratorError with {
-      option error-sink
-      briefly as "Where hard errors go"
-      described as {
-        |RIDDL 2.0 wants every domain to name a destination for failures no
-        |handler can recover from. An error-sink inlet is infrastructure
-        |rather than dataflow, so it does not count toward this processor's
-        |arity.
-      }
-    }
-      inlet Requests is command dokn.Companies.Company.AddCompany with {
-        briefly as "Where company commands arrive from outside"
-        described as {
-          |Everything Companies is asked to do enters here.
-        }
-      }
-      handler IntakeCompanyHandler is {
-        on command dokn.Companies.Company.AddCompany {
-          tell command dokn.Companies.Company.AddCompany(
-            id = prompt("the id carried by AddCompany"),
-            mailingAddress = prompt("the mailingAddress carried by AddCompany"),
-            primaryContactName = prompt("the primaryContactName carried by AddCompany"),
-            primaryContactPhone = prompt("the primaryContactPhone carried by AddCompany"),
-            primaryContactEmail = prompt("the primaryContactEmail carried by AddCompany")
-          ) to entity Company
-        }
-      } with {
-        briefly as "Dispatches arriving commands"
-        described as {
-          |Receives commands at the boundary and forwards them.
-        }
-      }
-    } with {
-      briefly as "The context's front door"
-      described as {
-        |A sink receiving messages addressed to Companies.
-      }
-    }
 
     repository CompanyStore is {
       inlet Recorded is event dokn.Companies.Company.CompanyAdded with {
@@ -252,7 +241,7 @@ domain dokn is {
     }
 
     connector ErrorReporting is {
-      from outlet Riddl.ForeverEmpty.void to inlet dokn.Companies.IntakeCompany.Failures
+      from outlet Riddl.ForeverEmpty.void to inlet dokn.Companies.Failures
     } with {
       briefly as "Terminates the error-sink inlet"
       described as {
@@ -263,8 +252,19 @@ domain dokn is {
       }
     }
 
+
+    connector AddressingCompany is {
+      from outlet dokn.Companies.CompanyDispatch to inlet dokn.Companies.Company.CompanyCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port -- it is sugar for a send on the
+        |outlet connected to the target's inlet, so the channel is modelled.
+      }
+    }
+
     connector RecordingCompany is {
-      from outlet CompanyAnnouncer.Published to inlet CompanyStore.Recorded
+      from outlet dokn.Companies.Company.CompanyEvents to inlet CompanyStore.Recorded
     } with {
       briefly as "Carries company events to storage"
       described as {
@@ -282,6 +282,32 @@ domain dokn is {
 
   context Drivers is {
 
+    inlet DriverIn is command dokn.Drivers.Driver.AddDriverToCompany with {
+      briefly as "Where driver commands enter this context"
+      described as {
+        |RIDDL 2.0 makes the context the SINK for everything entering it.
+      }
+    }
+
+    outlet DriverDispatch is command dokn.Drivers.Driver.AddDriverToCompany with {
+      briefly as "Where entering commands are handed inward"
+      described as {
+        |Inside the boundary nothing is restricted, so this addresses the
+        |entity's own inlet directly.
+      }
+    }
+
+    handler DriversBoundary is {
+      on request: command dokn.Drivers.Driver.AddDriverToCompany {
+        send request to outlet dokn.Drivers.DriverDispatch
+      }
+    } with {
+      briefly as "Routes what arrives at the boundary inward"
+      described as {
+        |Peers address the context; the context decides what inside it responds.
+      }
+    }
+
     type DriverId is Id(dokn.Drivers.Driver) with {
       briefly as "Unique identifier for one driver"
       described as {
@@ -297,6 +323,20 @@ domain dokn is {
     }
 
     event-sourced available entity Driver is {
+
+      inlet DriverCommands is command dokn.Drivers.Driver.AddDriverToCompany with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet.
+        }
+      }
+
+      outlet DriverEvents is event dokn.Drivers.Driver.DriverAddedToCompany with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
 
       command AddDriverToCompany yields event DriverAddedToCompany is {
         id is Id(Driver),
@@ -362,7 +402,7 @@ domain dokn is {
           yield event DriverAddedToCompany(id = prompt("the id carried by DriverAddedToCompany"))
           send event DriverAddedToCompany(
             id = prompt("the id carried by DriverAddedToCompany")
-          ) to outlet DriverAnnouncer.Published
+          ) to outlet dokn.Drivers.Driver.DriverEvents
         }
         on event DriverAddedToCompany {
           morph entity Driver to state DriverBase with record dokn.Drivers.Driver.fields(
@@ -393,63 +433,7 @@ domain dokn is {
       }
     }
 
-    processor DriverAnnouncer as source is {
-      outlet Published is event dokn.Drivers.Driver.DriverAddedToCompany with {
-        briefly as "Where Drivers publishes what happened"
-        described as {
-          |Driver events leave this context through this outlet.
-        }
-      }
-      handler DriverAnnouncerHandler is {
-        on event dokn.Drivers.Driver.DriverAddedToCompany {
-          send event dokn.Drivers.Driver.DriverAddedToCompany(
-            id = prompt("the id carried by DriverAddedToCompany")
-          ) to outlet DriverAnnouncer.Published
-        }
-        on other {
-          do "ignore anything that is not a driver event"
-        }
-      } with {
-        briefly as "Publishes driver events"
-        described as {
-          |Puts each event the entity announced onto the outlet.
-        }
-      }
-    } with {
-      briefly as "The context's publication point"
-      described as {
-        |A source streamlet carrying what Drivers wants known elsewhere.
-      }
-    }
 
-    processor IntakeDriver as sink is {
-      inlet Requests is command dokn.Drivers.Driver.AddDriverToCompany with {
-        briefly as "Where driver commands arrive from outside"
-        described as {
-          |Everything Drivers is asked to do enters here.
-        }
-      }
-      handler IntakeDriverHandler is {
-        on command dokn.Drivers.Driver.AddDriverToCompany {
-          tell command dokn.Drivers.Driver.AddDriverToCompany(
-            id = prompt("the id carried by AddDriverToCompany"),
-            name = prompt("the name carried by AddDriverToCompany"),
-            mobile = prompt("the mobile carried by AddDriverToCompany"),
-            onDutyTime = prompt("the onDutyTime carried by AddDriverToCompany")
-          ) to entity Driver
-        }
-      } with {
-        briefly as "Dispatches arriving commands"
-        described as {
-          |Receives commands at the boundary and forwards them.
-        }
-      }
-    } with {
-      briefly as "The context's front door"
-      described as {
-        |A sink receiving messages addressed to Drivers.
-      }
-    }
 
     repository DriverStore is {
       inlet Recorded is event dokn.Drivers.Driver.DriverAddedToCompany with {
@@ -483,8 +467,17 @@ domain dokn is {
       }
     }
 
+    connector AddressingDriver is {
+      from outlet dokn.Drivers.DriverDispatch to inlet dokn.Drivers.Driver.DriverCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port; the channel must be modelled.
+      }
+    }
+
     connector RecordingDriver is {
-      from outlet DriverAnnouncer.Published to inlet DriverStore.Recorded
+      from outlet dokn.Drivers.Driver.DriverEvents to inlet DriverStore.Recorded
     } with {
       briefly as "Carries driver events to storage"
       described as {
@@ -502,6 +495,32 @@ domain dokn is {
 
   context Notes is {
 
+    inlet NoteIn is command dokn.Notes.Note.CaptureNote with {
+      briefly as "Where note commands enter this context"
+      described as {
+        |RIDDL 2.0 makes the context the SINK for everything entering it.
+      }
+    }
+
+    outlet NoteDispatch is command dokn.Notes.Note.CaptureNote with {
+      briefly as "Where entering commands are handed inward"
+      described as {
+        |Inside the boundary nothing is restricted, so this addresses the
+        |entity's own inlet directly.
+      }
+    }
+
+    handler NotesBoundary is {
+      on request: command dokn.Notes.Note.CaptureNote {
+        send request to outlet dokn.Notes.NoteDispatch
+      }
+    } with {
+      briefly as "Routes what arrives at the boundary inward"
+      described as {
+        |Peers address the context; the context decides what inside it responds.
+      }
+    }
+
     type NoteId is Id(dokn.Notes.Note) with {
       briefly as "Unique identifier for one note"
       described as {
@@ -510,6 +529,20 @@ domain dokn is {
     }
 
     event-sourced available entity Note is {
+
+      inlet NoteCommands is command dokn.Notes.Note.CaptureNote with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet.
+        }
+      }
+
+      outlet NoteEvents is event dokn.Notes.Note.NoteCaptured with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
 
       command CaptureNote yields event NoteCaptured is {
         id is Id(Note),
@@ -577,7 +610,7 @@ domain dokn is {
           yield event NoteCaptured(id = prompt("the id carried by NoteCaptured"))
           send event NoteCaptured(
             id = prompt("the id carried by NoteCaptured")
-          ) to outlet NoteAnnouncer.Published
+          ) to outlet dokn.Notes.Note.NoteEvents
         }
         on event NoteCaptured {
           morph entity Note to state NoteBase with record dokn.Notes.Note.fields(
@@ -609,64 +642,7 @@ domain dokn is {
       }
     }
 
-    processor NoteAnnouncer as source is {
-      outlet Published is event dokn.Notes.Note.NoteCaptured with {
-        briefly as "Where Notes publishes what happened"
-        described as {
-          |Note events leave this context through this outlet.
-        }
-      }
-      handler NoteAnnouncerHandler is {
-        on event dokn.Notes.Note.NoteCaptured {
-          send event dokn.Notes.Note.NoteCaptured(
-            id = prompt("the id carried by NoteCaptured")
-          ) to outlet NoteAnnouncer.Published
-        }
-        on other {
-          do "ignore anything that is not a note event"
-        }
-      } with {
-        briefly as "Publishes note events"
-        described as {
-          |Puts each event the entity announced onto the outlet.
-        }
-      }
-    } with {
-      briefly as "The context's publication point"
-      described as {
-        |A source streamlet carrying what Notes wants known elsewhere.
-      }
-    }
 
-    processor IntakeNote as sink is {
-      inlet Requests is command dokn.Notes.Note.CaptureNote with {
-        briefly as "Where note commands arrive from outside"
-        described as {
-          |Everything Notes is asked to do enters here.
-        }
-      }
-      handler IntakeNoteHandler is {
-        on command dokn.Notes.Note.CaptureNote {
-          tell command dokn.Notes.Note.CaptureNote(
-            id = prompt("the id carried by CaptureNote"),
-            text = prompt("the text carried by CaptureNote"),
-            upvoteCount = prompt("the upvoteCount carried by CaptureNote"),
-            downvoteCount = prompt("the downvoteCount carried by CaptureNote"),
-            approved = prompt("the approved carried by CaptureNote")
-          ) to entity Note
-        }
-      } with {
-        briefly as "Dispatches arriving commands"
-        described as {
-          |Receives commands at the boundary and forwards them.
-        }
-      }
-    } with {
-      briefly as "The context's front door"
-      described as {
-        |A sink receiving messages addressed to Notes.
-      }
-    }
 
     repository NoteStore is {
       inlet Recorded is event dokn.Notes.Note.NoteCaptured with {
@@ -700,8 +676,17 @@ domain dokn is {
       }
     }
 
+    connector AddressingNote is {
+      from outlet dokn.Notes.NoteDispatch to inlet dokn.Notes.Note.NoteCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port; the channel must be modelled.
+      }
+    }
+
     connector RecordingNote is {
-      from outlet NoteAnnouncer.Published to inlet NoteStore.Recorded
+      from outlet dokn.Notes.Note.NoteEvents to inlet NoteStore.Recorded
     } with {
       briefly as "Carries note events to storage"
       described as {
@@ -719,6 +704,32 @@ domain dokn is {
 
   context Media is {
 
+    inlet MediumIn is command dokn.Media.Medium.StoreMedium with {
+      briefly as "Where medium commands enter this context"
+      described as {
+        |RIDDL 2.0 makes the context the SINK for everything entering it.
+      }
+    }
+
+    outlet MediumDispatch is command dokn.Media.Medium.StoreMedium with {
+      briefly as "Where entering commands are handed inward"
+      described as {
+        |Inside the boundary nothing is restricted, so this addresses the
+        |entity's own inlet directly.
+      }
+    }
+
+    handler MediaBoundary is {
+      on request: command dokn.Media.Medium.StoreMedium {
+        send request to outlet dokn.Media.MediumDispatch
+      }
+    } with {
+      briefly as "Routes what arrives at the boundary inward"
+      described as {
+        |Peers address the context; the context decides what inside it responds.
+      }
+    }
+
     type MediaId is Id(dokn.Media.Medium) with {
       briefly as "Unique identifier for one medium"
       described as {
@@ -727,6 +738,20 @@ domain dokn is {
     }
 
     event-sourced available entity Medium is {
+
+      inlet MediumCommands is command dokn.Media.Medium.StoreMedium with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet.
+        }
+      }
+
+      outlet MediumEvents is event dokn.Media.Medium.MediumStored with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
 
       command StoreMedium yields event MediumStored is {
         id is Id(Medium),
@@ -788,7 +813,7 @@ domain dokn is {
           yield event MediumStored(id = prompt("the id carried by MediumStored"))
           send event MediumStored(
             id = prompt("the id carried by MediumStored")
-          ) to outlet MediumAnnouncer.Published
+          ) to outlet dokn.Media.Medium.MediumEvents
         }
         on event MediumStored {
           morph entity Medium to state MediumBase with record dokn.Media.Medium.fields(
@@ -817,61 +842,7 @@ domain dokn is {
       }
     }
 
-    processor MediumAnnouncer as source is {
-      outlet Published is event dokn.Media.Medium.MediumStored with {
-        briefly as "Where Media publishes what happened"
-        described as {
-          |Medium events leave this context through this outlet.
-        }
-      }
-      handler MediumAnnouncerHandler is {
-        on event dokn.Media.Medium.MediumStored {
-          send event dokn.Media.Medium.MediumStored(
-            id = prompt("the id carried by MediumStored")
-          ) to outlet MediumAnnouncer.Published
-        }
-        on other {
-          do "ignore anything that is not a medium event"
-        }
-      } with {
-        briefly as "Publishes medium events"
-        described as {
-          |Puts each event the entity announced onto the outlet.
-        }
-      }
-    } with {
-      briefly as "The context's publication point"
-      described as {
-        |A source streamlet carrying what Media wants known elsewhere.
-      }
-    }
 
-    processor IntakeMedium as sink is {
-      inlet Requests is command dokn.Media.Medium.StoreMedium with {
-        briefly as "Where medium commands arrive from outside"
-        described as {
-          |Everything Media is asked to do enters here.
-        }
-      }
-      handler IntakeMediumHandler is {
-        on command dokn.Media.Medium.StoreMedium {
-          tell command dokn.Media.Medium.StoreMedium(
-            id = prompt("the id carried by StoreMedium"),
-            path = prompt("the path carried by StoreMedium")
-          ) to entity Medium
-        }
-      } with {
-        briefly as "Dispatches arriving commands"
-        described as {
-          |Receives commands at the boundary and forwards them.
-        }
-      }
-    } with {
-      briefly as "The context's front door"
-      described as {
-        |A sink receiving messages addressed to Media.
-      }
-    }
 
     repository MediumStore is {
       inlet Recorded is event dokn.Media.Medium.MediumStored with {
@@ -905,8 +876,17 @@ domain dokn is {
       }
     }
 
+    connector AddressingMedium is {
+      from outlet dokn.Media.MediumDispatch to inlet dokn.Media.Medium.MediumCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port; the channel must be modelled.
+      }
+    }
+
     connector RecordingMedium is {
-      from outlet MediumAnnouncer.Published to inlet MediumStore.Recorded
+      from outlet dokn.Media.Medium.MediumEvents to inlet MediumStore.Recorded
     } with {
       briefly as "Carries medium events to storage"
       described as {
@@ -923,6 +903,32 @@ domain dokn is {
   }
 
   context Locations is {
+
+    inlet LocationIn is command dokn.Locations.Location.AddDeliveryLocation with {
+      briefly as "Where location commands enter this context"
+      described as {
+        |RIDDL 2.0 makes the context the SINK for everything entering it.
+      }
+    }
+
+    outlet LocationDispatch is command dokn.Locations.Location.AddDeliveryLocation with {
+      briefly as "Where entering commands are handed inward"
+      described as {
+        |Inside the boundary nothing is restricted, so this addresses the
+        |entity's own inlet directly.
+      }
+    }
+
+    handler LocationsBoundary is {
+      on request: command dokn.Locations.Location.AddDeliveryLocation {
+        send request to outlet dokn.Locations.LocationDispatch
+      }
+    } with {
+      briefly as "Routes what arrives at the boundary inward"
+      described as {
+        |Peers address the context; the context decides what inside it responds.
+      }
+    }
 
     type LocationId is Id(dokn.Locations.Location) with {
       briefly as "Unique identifier for one location"
@@ -953,6 +959,20 @@ domain dokn is {
     }
 
     event-sourced available entity Location is {
+
+      inlet LocationCommands is command dokn.Locations.Location.AddDeliveryLocation with {
+        briefly as "Where this entity receives its commands"
+        described as {
+          |A processor receives only through its OWN inlet.
+        }
+      }
+
+      outlet LocationEvents is event dokn.Locations.Location.DeliveryLocationAdded with {
+        briefly as "Where this entity publishes what happened"
+        described as {
+          |Publishing goes out the entity's own outlet.
+        }
+      }
 
       command AddDeliveryLocation yields event DeliveryLocationAdded is {
         id is Id(Location),
@@ -1020,7 +1040,7 @@ domain dokn is {
           yield event DeliveryLocationAdded(id = prompt("the id carried by DeliveryLocationAdded"))
           send event DeliveryLocationAdded(
             id = prompt("the id carried by DeliveryLocationAdded")
-          ) to outlet LocationAnnouncer.Published
+          ) to outlet dokn.Locations.Location.LocationEvents
         }
         on event DeliveryLocationAdded {
           morph entity Location to state LocationBase with record dokn.Locations.Location.fields(
@@ -1052,64 +1072,7 @@ domain dokn is {
       }
     }
 
-    processor LocationAnnouncer as source is {
-      outlet Published is event dokn.Locations.Location.DeliveryLocationAdded with {
-        briefly as "Where Locations publishes what happened"
-        described as {
-          |Location events leave this context through this outlet.
-        }
-      }
-      handler LocationAnnouncerHandler is {
-        on event dokn.Locations.Location.DeliveryLocationAdded {
-          send event dokn.Locations.Location.DeliveryLocationAdded(
-            id = prompt("the id carried by DeliveryLocationAdded")
-          ) to outlet LocationAnnouncer.Published
-        }
-        on other {
-          do "ignore anything that is not a location event"
-        }
-      } with {
-        briefly as "Publishes location events"
-        described as {
-          |Puts each event the entity announced onto the outlet.
-        }
-      }
-    } with {
-      briefly as "The context's publication point"
-      described as {
-        |A source streamlet carrying what Locations wants known elsewhere.
-      }
-    }
 
-    processor IntakeLocation as sink is {
-      inlet Requests is command dokn.Locations.Location.AddDeliveryLocation with {
-        briefly as "Where location commands arrive from outside"
-        described as {
-          |Everything Locations is asked to do enters here.
-        }
-      }
-      handler IntakeLocationHandler is {
-        on command dokn.Locations.Location.AddDeliveryLocation {
-          tell command dokn.Locations.Location.AddDeliveryLocation(
-            id = prompt("the id carried by AddDeliveryLocation"),
-            label = prompt("the label carried by AddDeliveryLocation"),
-            address = prompt("the address carried by AddDeliveryLocation"),
-            ticketCount = prompt("the ticketCount carried by AddDeliveryLocation"),
-            loadingMethod = prompt("the loadingMethod carried by AddDeliveryLocation")
-          ) to entity Location
-        }
-      } with {
-        briefly as "Dispatches arriving commands"
-        described as {
-          |Receives commands at the boundary and forwards them.
-        }
-      }
-    } with {
-      briefly as "The context's front door"
-      described as {
-        |A sink receiving messages addressed to Locations.
-      }
-    }
 
     repository LocationStore is {
       inlet Recorded is event dokn.Locations.Location.DeliveryLocationAdded with {
@@ -1143,8 +1106,17 @@ domain dokn is {
       }
     }
 
+    connector AddressingLocation is {
+      from outlet dokn.Locations.LocationDispatch to inlet dokn.Locations.Location.LocationCommands
+    } with {
+      briefly as "Delivers entering commands to the entity itself"
+      described as {
+        |A 'tell' does not connect a port; the channel must be modelled.
+      }
+    }
+
     connector RecordingLocation is {
-      from outlet LocationAnnouncer.Published to inlet LocationStore.Recorded
+      from outlet dokn.Locations.Location.LocationEvents to inlet LocationStore.Recorded
     } with {
       briefly as "Carries location events to storage"
       described as {
@@ -1162,8 +1134,138 @@ domain dokn is {
 
   context Intake is {
 
+    inlet CompanyStaged is command dokn.Companies.Company.AddCompany with {
+      briefly as "Where the gateway's company requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here
+        |and the context republishes on its own outlet.
+      }
+    }
+
+    outlet CompanySubmissions is command dokn.Companies.Company.AddCompany with {
+      briefly as "Where company requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    inlet DriverStaged is command dokn.Drivers.Driver.AddDriverToCompany with {
+      briefly as "Where the gateway's driver requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet DriverSubmissions is command dokn.Drivers.Driver.AddDriverToCompany with {
+      briefly as "Where driver requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingDriver is {
+      from outlet dokn.Intake.DriverRequests.Staged to inlet dokn.Intake.DriverStaged
+    } with {
+      briefly as "Carries gateway requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    inlet NoteStaged is command dokn.Notes.Note.CaptureNote with {
+      briefly as "Where the gateway's note requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet NoteSubmissions is command dokn.Notes.Note.CaptureNote with {
+      briefly as "Where note requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingNote is {
+      from outlet dokn.Intake.NoteRequests.Staged to inlet dokn.Intake.NoteStaged
+    } with {
+      briefly as "Carries gateway requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    inlet MediumStaged is command dokn.Media.Medium.StoreMedium with {
+      briefly as "Where the gateway's medium requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet MediumSubmissions is command dokn.Media.Medium.StoreMedium with {
+      briefly as "Where medium requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingMedium is {
+      from outlet dokn.Intake.MediumRequests.Staged to inlet dokn.Intake.MediumStaged
+    } with {
+      briefly as "Carries gateway requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    inlet LocationStaged is command dokn.Locations.Location.AddDeliveryLocation with {
+      briefly as "Where the gateway's location requests collect"
+      described as {
+        |An inner source cannot reach across the boundary, so it delivers here.
+      }
+    }
+
+    outlet LocationSubmissions is command dokn.Locations.Location.AddDeliveryLocation with {
+      briefly as "Where location requests leave this context"
+      described as {
+        |RIDDL 2.0 makes the context the SOURCE for everything leaving it.
+      }
+    }
+
+    connector StagingLocation is {
+      from outlet dokn.Intake.LocationRequests.Staged to inlet dokn.Intake.LocationStaged
+    } with {
+      briefly as "Carries gateway requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
+    handler IntakeBoundary is {
+      on request: command dokn.Companies.Company.AddCompany {
+        send request to outlet dokn.Intake.CompanySubmissions
+      }
+      on locationRequest: command dokn.Locations.Location.AddDeliveryLocation {
+        send locationRequest to outlet dokn.Intake.LocationSubmissions
+      }
+      on mediumRequest: command dokn.Media.Medium.StoreMedium {
+        send mediumRequest to outlet dokn.Intake.MediumSubmissions
+      }
+      on noteRequest: command dokn.Notes.Note.CaptureNote {
+        send noteRequest to outlet dokn.Intake.NoteSubmissions
+      }
+      on driverRequest: command dokn.Drivers.Driver.AddDriverToCompany {
+        send driverRequest to outlet dokn.Intake.DriverSubmissions
+      }
+    } with {
+      briefly as "Republishes staged requests on the context's own outlet"
+      described as {
+        |The gateway's internals stay private; peers see only this outlet.
+      }
+    }
+
     processor CompanyRequests as source is {
-      outlet CompanySubmissions is command dokn.Companies.Company.AddCompany with {
+      outlet Staged is command dokn.Companies.Company.AddCompany with {
         briefly as "Where company requests leave the gateway"
         described as {
           |Requests reach the Companies context over a domain-scoped connector.
@@ -1177,7 +1279,7 @@ domain dokn is {
             primaryContactName = prompt("the primaryContactName carried by AddCompany"),
             primaryContactPhone = prompt("the primaryContactPhone carried by AddCompany"),
             primaryContactEmail = prompt("the primaryContactEmail carried by AddCompany")
-          ) to outlet CompanySubmissions
+          ) to outlet dokn.Intake.CompanyRequests.Staged
         }
         on other {
           do "ignore requests that are not about companys"
@@ -1195,8 +1297,17 @@ domain dokn is {
       }
     }
 
+    connector StagingCompany is {
+      from outlet dokn.Intake.CompanyRequests.Staged to inlet dokn.Intake.CompanyStaged
+    } with {
+      briefly as "Carries gateway requests to the context boundary"
+      described as {
+        |Intra-context, so it may address the source's own outlet directly.
+      }
+    }
+
     processor DriverRequests as source is {
-      outlet DriverSubmissions is command dokn.Drivers.Driver.AddDriverToCompany with {
+      outlet Staged is command dokn.Drivers.Driver.AddDriverToCompany with {
         briefly as "Where driver requests leave the gateway"
         described as {
           |Requests reach the Drivers context over a domain-scoped connector.
@@ -1209,7 +1320,7 @@ domain dokn is {
             name = prompt("the name carried by AddDriverToCompany"),
             mobile = prompt("the mobile carried by AddDriverToCompany"),
             onDutyTime = prompt("the onDutyTime carried by AddDriverToCompany")
-          ) to outlet DriverSubmissions
+          ) to outlet dokn.Intake.DriverRequests.Staged
         }
         on other {
           do "ignore requests that are not about drivers"
@@ -1228,7 +1339,7 @@ domain dokn is {
     }
 
     processor NoteRequests as source is {
-      outlet NoteSubmissions is command dokn.Notes.Note.CaptureNote with {
+      outlet Staged is command dokn.Notes.Note.CaptureNote with {
         briefly as "Where note requests leave the gateway"
         described as {
           |Requests reach the Notes context over a domain-scoped connector.
@@ -1242,7 +1353,7 @@ domain dokn is {
             upvoteCount = prompt("the upvoteCount carried by CaptureNote"),
             downvoteCount = prompt("the downvoteCount carried by CaptureNote"),
             approved = prompt("the approved carried by CaptureNote")
-          ) to outlet NoteSubmissions
+          ) to outlet dokn.Intake.NoteRequests.Staged
         }
         on other {
           do "ignore requests that are not about notes"
@@ -1261,7 +1372,7 @@ domain dokn is {
     }
 
     processor MediumRequests as source is {
-      outlet MediumSubmissions is command dokn.Media.Medium.StoreMedium with {
+      outlet Staged is command dokn.Media.Medium.StoreMedium with {
         briefly as "Where medium requests leave the gateway"
         described as {
           |Requests reach the Media context over a domain-scoped connector.
@@ -1272,7 +1383,7 @@ domain dokn is {
           send command dokn.Media.Medium.StoreMedium(
             id = prompt("the id carried by StoreMedium"),
             path = prompt("the path carried by StoreMedium")
-          ) to outlet MediumSubmissions
+          ) to outlet dokn.Intake.MediumRequests.Staged
         }
         on other {
           do "ignore requests that are not about mediums"
@@ -1291,7 +1402,7 @@ domain dokn is {
     }
 
     processor LocationRequests as source is {
-      outlet LocationSubmissions is command dokn.Locations.Location.AddDeliveryLocation with {
+      outlet Staged is command dokn.Locations.Location.AddDeliveryLocation with {
         briefly as "Where location requests leave the gateway"
         described as {
           |Requests reach the Locations context over a domain-scoped connector.
@@ -1305,7 +1416,7 @@ domain dokn is {
             address = prompt("the address carried by AddDeliveryLocation"),
             ticketCount = prompt("the ticketCount carried by AddDeliveryLocation"),
             loadingMethod = prompt("the loadingMethod carried by AddDeliveryLocation")
-          ) to outlet LocationSubmissions
+          ) to outlet dokn.Intake.LocationRequests.Staged
         }
         on other {
           do "ignore requests that are not about locations"
@@ -1354,7 +1465,7 @@ domain dokn is {
         so that "drivers have an employer to be attached to"
       step send command dokn.Companies.Company.AddCompany
         from source dokn.Intake.CompanyRequests
-        to sink dokn.Companies.IntakeCompany
+        to context dokn.Companies
     } with {
       briefly as "A company request crossing the gateway into Companies"
       described as {
@@ -1372,7 +1483,7 @@ domain dokn is {
         so that "the driver's notes are recorded against the right employer"
       step send command dokn.Drivers.Driver.AddDriverToCompany
         from source dokn.Intake.DriverRequests
-        to sink dokn.Drivers.IntakeDriver
+        to context dokn.Drivers
     } with {
       briefly as "A driver request crossing the gateway into Drivers"
       described as {
@@ -1393,8 +1504,8 @@ domain dokn is {
   }
 
   persistent connector CompanyRequests is {
-    from outlet dokn.Intake.CompanyRequests.CompanySubmissions
-    to inlet dokn.Companies.IntakeCompany.Requests
+    from outlet dokn.Intake.CompanySubmissions
+    to inlet dokn.Companies.CompanyIn
   } with {
     briefly as "Carries company requests from the gateway to Companies"
     described as {
@@ -1404,8 +1515,8 @@ domain dokn is {
   }
 
   persistent connector DriverRequests is {
-    from outlet dokn.Intake.DriverRequests.DriverSubmissions
-    to inlet dokn.Drivers.IntakeDriver.Requests
+    from outlet dokn.Intake.DriverSubmissions
+    to inlet dokn.Drivers.DriverIn
   } with {
     briefly as "Carries driver requests from the gateway to Drivers"
     described as {
@@ -1415,8 +1526,8 @@ domain dokn is {
   }
 
   persistent connector NoteRequests is {
-    from outlet dokn.Intake.NoteRequests.NoteSubmissions
-    to inlet dokn.Notes.IntakeNote.Requests
+    from outlet dokn.Intake.NoteSubmissions
+    to inlet dokn.Notes.NoteIn
   } with {
     briefly as "Carries note requests from the gateway to Notes"
     described as {
@@ -1426,8 +1537,8 @@ domain dokn is {
   }
 
   persistent connector MediumRequests is {
-    from outlet dokn.Intake.MediumRequests.MediumSubmissions
-    to inlet dokn.Media.IntakeMedium.Requests
+    from outlet dokn.Intake.MediumSubmissions
+    to inlet dokn.Media.MediumIn
   } with {
     briefly as "Carries medium requests from the gateway to Media"
     described as {
@@ -1437,8 +1548,8 @@ domain dokn is {
   }
 
   persistent connector LocationRequests is {
-    from outlet dokn.Intake.LocationRequests.LocationSubmissions
-    to inlet dokn.Locations.IntakeLocation.Requests
+    from outlet dokn.Intake.LocationSubmissions
+    to inlet dokn.Locations.LocationIn
   } with {
     briefly as "Carries location requests from the gateway to Locations"
     described as {

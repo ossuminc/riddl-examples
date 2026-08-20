@@ -121,6 +121,17 @@ handle it, as `Cart`/`CreateCart` and `Product`/`CreateProduct` do in
 ShopifyCart.
 
 
+**A query should declare what it replies with (rc.19-5+)**. A `reply` answering
+a query that declares no `replies` clause draws a **style** warning — the
+counterpart of `command X yields event E`:
+
+```riddl
+query WhichCompany replies result TheCompany is { companyId is CompanyId }
+```
+
+Declaring it creates a response obligation, exactly as `yields` does, so the
+handler must then discharge on every path.
+
 **Discharging a response obligation (rc.19+)**. `yields`/`replies` is declared
 on the MESSAGE, so every handler of a command declaring `yields event E` owes an
 `E`. Only four things discharge it:

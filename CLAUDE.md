@@ -266,7 +266,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 
 - **sbt**: 2.0.6
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.19` — the pin and the staged `../bin/riddlc` must
+- **RIDDL**: `2.0.0-rc.20` — the pin and the staged `../bin/riddlc` must
   always be the **same build**. When they drift, the library and the
   binary doing the validating disagree, and the corpus result no longer
   says anything about the pin. This has been a released tag since rc.13;
@@ -277,7 +277,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.19",
+.configure(With.Riddl.library(version = "2.0.0-rc.20",
   nonJVMDependency = false))
 ```
 

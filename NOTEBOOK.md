@@ -2,10 +2,10 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-19**, by running the commands, not from memory.
+**Last verified: 2026-08-20**, by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.19`**, a released tag that resolves from GitHub Packages. Check
+**`2.0.0-rc.20`**, a released tag that resolves from GitHub Packages. Check
 they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
 projects and has changed under this repo twice now, mid-session both times.
 
@@ -84,16 +84,36 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: August 19, 2026
+**Last Updated**: August 20, 2026
 
 **Status: COMPLETE.** The corpus validates with **zero messages of every
-kind** under `2.0.0-rc.19` on `main`. FooBarSameDomain remains non-zero by
+kind** under `2.0.0-rc.20` on `main`. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
 - None outstanding. `task/` is empty.
 - The `show … to …` riddlc bug is filed against riddl; once fixed, restore
   the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-20: rc.20 needed nothing
+
+Upgraded the pin `2.0.0-rc.19` -> **`2.0.0-rc.20`** (released; the staged
+binary was already there) and the corpus was clean on arrival — zero on all
+six message kinds, no edits at all.
+
+That is the expected outcome, not a lucky one: the `replies`-clause rule
+that would have moved this corpus arrived in the rc.19-3..rc.19-5 snapshots
+and was migrated against then, so rc.20 carries those commits and finds
+nothing left to complain about. Two RC bumps have now landed with no corpus
+change (rc.19-3 and rc.20), which is what a settling release looks like.
+
+Verified rather than assumed, since a release can break the writer without
+touching the parser: all four artifacts resolve at rc.20; prettify
+round-trips to zero messages of ANY kind on all eight and a second pass is
+byte-identical; every `.conf` exits 0 but FooBarSameDomain's deliberate 7;
+riddl's EBNF validator 9/9.
 
 ---
 

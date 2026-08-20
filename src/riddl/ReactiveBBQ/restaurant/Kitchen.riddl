@@ -60,7 +60,7 @@ context Kitchen as flow is {
       }
     }
 
-    query WhichOrderViewer is {
+    query WhichOrderViewer replies result TheOrderViewer is {
       orderViewerId is Restaurant.Kitchen.OrderViewerId
     } with {
       briefly as "Ask for the current state of one orderviewer"

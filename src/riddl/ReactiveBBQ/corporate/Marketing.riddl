@@ -71,7 +71,7 @@ context Marketing as flow is {
       }
     }
 
-    query WhichCampaign is {
+    query WhichCampaign replies result TheCampaign is {
       campaignId is Corporate.Marketing.CampaignId
     } with {
       briefly as "Ask for the current state of one campaign"

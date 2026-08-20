@@ -62,7 +62,7 @@ context Reservations as flow is {
       }
     }
 
-    query WhichReservation is {
+    query WhichReservation replies result TheReservation is {
       reservationId is Restaurant.Reservations.ReservationId
     } with {
       briefly as "Ask for the current state of one reservation"

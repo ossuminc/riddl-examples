@@ -88,7 +88,7 @@ context Menus as router is {
       }
     }
 
-    query WhichMenuItem is {
+    query WhichMenuItem replies result TheMenuItem is {
       menuItemId is Restaurant.Menus.MenuItemId
     } with {
       briefly as "Ask for the current state of one menuitem"
@@ -256,7 +256,7 @@ context Menus as router is {
       }
     }
 
-    query WhichMenu is {
+    query WhichMenu replies result TheMenu is {
       menuId is Restaurant.Menus.MenuId
     } with {
       briefly as "Ask for the current state of one menu"

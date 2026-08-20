@@ -71,7 +71,7 @@ context Customers as flow is {
       }
     }
 
-    query WhichCustomer is {
+    query WhichCustomer replies result TheCustomer is {
       customerId is Restaurant.Customers.CustomerId
     } with {
       briefly as "Ask for the current state of one customer"

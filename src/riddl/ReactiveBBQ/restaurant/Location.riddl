@@ -60,7 +60,7 @@ context Locations as flow is {
       }
     }
 
-    query WhichLocation is {
+    query WhichLocation replies result TheLocation is {
       locationId is Restaurant.Locations.LocationId
     } with {
       briefly as "Ask for the current state of one location"

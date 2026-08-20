@@ -111,7 +111,7 @@ context UserManagement as split is {
       }
     }
 
-    query WhichAccount is {
+    query WhichAccount replies result TheAccount is {
       accountId is Trello.UserManagement.AccountId
     } with {
       briefly as "Ask for the current state of one user"
@@ -263,7 +263,7 @@ context UserManagement as split is {
       }
     }
 
-    query WhichNotification is {
+    query WhichNotification replies result TheNotification is {
       notificationId is Trello.UserManagement.NotificationId
     } with {
       briefly as "Ask for the current state of one notification"
@@ -616,7 +616,7 @@ context WorkspaceManagement as flow is {
       }
     }
 
-    query WhichWorkspace is {
+    query WhichWorkspace replies result TheWorkspace is {
       workspaceId is Trello.WorkspaceManagement.WorkspaceId
     } with {
       briefly as "Ask for the current state of one workspace"
@@ -936,7 +936,7 @@ context BoardManagement as split is {
       }
     }
 
-    query WhichBoard is {
+    query WhichBoard replies result TheBoard is {
       boardId is Trello.BoardManagement.BoardId
     } with {
       briefly as "Ask for the current state of one board"
@@ -1069,7 +1069,7 @@ context BoardManagement as split is {
       }
     }
 
-    query WhichCardList is {
+    query WhichCardList replies result TheCardList is {
       cardListId is Trello.BoardManagement.CardListId
     } with {
       briefly as "Ask for the current state of one cardlist"
@@ -1248,7 +1248,7 @@ context BoardManagement as split is {
       }
     }
 
-    query WhichCard is {
+    query WhichCard replies result TheCard is {
       cardId is Trello.BoardManagement.CardId
     } with {
       briefly as "Ask for the current state of one card"
@@ -1430,7 +1430,7 @@ context BoardManagement as split is {
       }
     }
 
-    query WhichActivity is {
+    query WhichActivity replies result TheActivity is {
       activityId is Trello.BoardManagement.ActivityId
     } with {
       briefly as "Ask for the current state of one activity"

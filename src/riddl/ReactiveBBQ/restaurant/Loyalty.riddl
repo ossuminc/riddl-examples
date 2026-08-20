@@ -61,7 +61,7 @@ context Loyalty as flow is {
       }
     }
 
-    query WhichLoyaltyAccount is {
+    query WhichLoyaltyAccount replies result TheLoyaltyAccount is {
       loyaltyId is Restaurant.Loyalty.LoyaltyId
     } with {
       briefly as "Ask for the current state of one loyaltyaccount"

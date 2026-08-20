@@ -60,7 +60,7 @@ context Servers as flow is {
       }
     }
 
-    query WhichServer is {
+    query WhichServer replies result TheServer is {
       serverId is Restaurant.Servers.ServerId
     } with {
       briefly as "Ask for the current state of one server"

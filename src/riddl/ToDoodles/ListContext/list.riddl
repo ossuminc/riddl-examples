@@ -96,7 +96,7 @@ context List as flow is {
       }
     }
 
-    query WhichList is {
+    query WhichList replies result TheList is {
       listId is ListId
     } with {
       briefly as "Ask for the current contents of one list"

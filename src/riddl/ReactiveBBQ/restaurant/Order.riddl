@@ -60,7 +60,7 @@ context Orders as flow is {
       }
     }
 
-    query WhichOrder is {
+    query WhichOrder replies result TheOrder is {
       orderId is Restaurant.Orders.OrderId
     } with {
       briefly as "Ask for the current state of one order"

@@ -121,7 +121,7 @@ domain dokn is {
         }
       }
 
-      query WhichCompany is {
+      query WhichCompany replies result TheCompany is {
         companyId is dokn.Companies.CompanyId
       } with {
         briefly as "Ask for the current state of one company"
@@ -350,7 +350,7 @@ domain dokn is {
         }
       }
 
-      query WhichDriver is {
+      query WhichDriver replies result TheDriver is {
         driverId is dokn.Drivers.DriverId
       } with {
         briefly as "Ask for the current state of one driver"
@@ -557,7 +557,7 @@ domain dokn is {
         }
       }
 
-      query WhichNote is {
+      query WhichNote replies result TheNote is {
         noteId is dokn.Notes.NoteId
       } with {
         briefly as "Ask for the current state of one note"
@@ -763,7 +763,7 @@ domain dokn is {
         }
       }
 
-      query WhichMedium is {
+      query WhichMedium replies result TheMedium is {
         mediaId is dokn.Media.MediaId
       } with {
         briefly as "Ask for the current state of one medium"
@@ -987,7 +987,7 @@ domain dokn is {
         }
       }
 
-      query WhichLocation is {
+      query WhichLocation replies result TheLocation is {
         locationId is dokn.Locations.LocationId
       } with {
         briefly as "Ask for the current state of one location"

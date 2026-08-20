@@ -72,7 +72,7 @@ context SupplyOrder as flow is {
       }
     }
 
-    query WhichSupply is {
+    query WhichSupply replies result TheSupply is {
       supplyId is BackOffice.SupplyOrder.SupplyId
     } with {
       briefly as "Ask for the current state of one supply"

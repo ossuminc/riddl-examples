@@ -61,7 +61,7 @@ context Payments as flow is {
       }
     }
 
-    query WhichPayment is {
+    query WhichPayment replies result ThePayment is {
       paymentId is Restaurant.Payments.PaymentId
     } with {
       briefly as "Ask for the current state of one payment"

@@ -341,7 +341,7 @@ domain ShopifyCart is {
       }
 
 
-      query WhichProduct is {
+      query WhichProduct replies result TheProduct is {
         productId is ProductIdentity
       } with {
         briefly as "Ask for the current state of one product"
@@ -566,7 +566,7 @@ domain ShopifyCart is {
       }
 
 
-      query WhichCart is {
+      query WhichCart replies result TheCart is {
         cartId is CartIdentity
       } with {
         briefly as "Ask for the current state of one cart"
@@ -1304,7 +1304,7 @@ domain ShopifyCart is {
       }
 
 
-      query WhichCheckout is {
+      query WhichCheckout replies result TheCheckout is {
         checkoutId is CheckoutIdentity
       } with {
         briefly as "Ask for the current state of one checkout"

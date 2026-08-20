@@ -91,7 +91,7 @@ context ToDoList as flow is {
       }
     }
 
-    query WhichItem is {
+    query WhichItem replies result TheItem is {
       itemId is ItemId
     } with {
       briefly as "Ask for the current state of one item"

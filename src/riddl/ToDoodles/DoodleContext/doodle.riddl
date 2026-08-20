@@ -86,7 +86,7 @@ context Doodle as flow is {
       }
     }
 
-    query WhichDrawing is {
+    query WhichDrawing replies result TheDrawing is {
       doodleId is DoodleId
     } with {
       briefly as "Ask for the current state of one doodle"

@@ -60,7 +60,7 @@ context Tables as flow is {
       }
     }
 
-    query WhichTable is {
+    query WhichTable replies result TheTable is {
       tableId is Restaurant.Tables.TableId
     } with {
       briefly as "Ask for the current state of one table"

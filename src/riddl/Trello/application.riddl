@@ -1,6 +1,6 @@
 application context TrelloUI as router is {
 
-  inlet UserManagementStaged is type Trello.UserManagement.UserManagementCommand with {
+  inlet UserManagementStaged is command Trello.UserManagement.Account.CreateAccount with {
     briefly as "Where the application's UserManagement requests collect"
     described as {
       |An inner source cannot reach across the boundary, so it delivers here.
@@ -24,7 +24,7 @@ application context TrelloUI as router is {
     }
   }
 
-  inlet WorkspaceManagementStaged is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+  inlet WorkspaceManagementStaged is command Trello.WorkspaceManagement.Workspace.CreateWorkspace with {
     briefly as "Where the application's WorkspaceManagement requests collect"
     described as {
       |An inner source cannot reach across the boundary, so it delivers here.
@@ -48,7 +48,7 @@ application context TrelloUI as router is {
     }
   }
 
-  inlet BoardManagementStaged is type Trello.BoardManagement.BoardManagementCommand with {
+  inlet BoardManagementStaged is command Trello.BoardManagement.Board.CreateBoard with {
     briefly as "Where the application's BoardManagement requests collect"
     described as {
       |An inner source cannot reach across the boundary, so it delivers here.
@@ -147,7 +147,7 @@ application context TrelloUI as router is {
   }
 
     processor UserManagementRequests as source is {
-      outlet Staged is type Trello.UserManagement.UserManagementCommand with {
+      outlet Staged is command Trello.UserManagement.Account.CreateAccount with {
         briefly as "Where UserManagement requests leave the application"
         described as {
           |Requests reach the UserManagement context over a domain-scoped connector.
@@ -178,7 +178,7 @@ application context TrelloUI as router is {
     }
 
     processor WorkspaceManagementRequests as source is {
-      outlet Staged is type Trello.WorkspaceManagement.WorkspaceManagementCommand with {
+      outlet Staged is command Trello.WorkspaceManagement.Workspace.CreateWorkspace with {
         briefly as "Where WorkspaceManagement requests leave the application"
         described as {
           |Requests reach the WorkspaceManagement context over a domain-scoped connector.
@@ -209,7 +209,7 @@ application context TrelloUI as router is {
     }
 
     processor BoardManagementRequests as source is {
-      outlet Staged is type Trello.BoardManagement.BoardManagementCommand with {
+      outlet Staged is command Trello.BoardManagement.Board.CreateBoard with {
         briefly as "Where BoardManagement requests leave the application"
         described as {
           |Requests reach the BoardManagement context over a domain-scoped connector.

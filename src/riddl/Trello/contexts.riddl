@@ -18,14 +18,14 @@ context UserManagement as split is {
     }
   }
 
-  outlet AccountDispatch is type Trello.UserManagement.UserManagementCommand with {
+  outlet AccountDispatch is type Trello.UserManagement.AccountCommand with {
     briefly as "Where entering commands bound for Account are handed inward"
     described as {
       |One outlet per entity: an outlet carries exactly one connector.
     }
   }
 
-  outlet NotificationDispatch is type Trello.UserManagement.UserManagementCommand with {
+  outlet NotificationDispatch is type Trello.UserManagement.NotificationCommand with {
     briefly as "Where entering commands bound for Notification are handed inward"
     described as {
       |One outlet per entity: an outlet carries exactly one connector.
@@ -71,7 +71,7 @@ context UserManagement as split is {
 
   entity Account as flow is {
 
-    inlet AccountCommands is type Trello.UserManagement.UserManagementCommand with {
+    inlet AccountCommands is type Trello.UserManagement.AccountCommand with {
       briefly as "Where this entity receives its commands"
       described as {
         |A processor receives only through its OWN inlet.
@@ -223,7 +223,7 @@ context UserManagement as split is {
 
   entity Notification as flow is {
 
-    inlet NotificationCommands is type Trello.UserManagement.UserManagementCommand with {
+    inlet NotificationCommands is type Trello.UserManagement.NotificationCommand with {
       briefly as "Where this entity receives its commands"
       described as {
         |A processor receives only through its OWN inlet.
@@ -374,6 +374,28 @@ context UserManagement as split is {
     described as {
       |The alternation of every event this context publishes, so one outlet
       |can carry them all.
+    }
+  }
+
+  type AccountCommand is one of {
+    command Trello.UserManagement.Account.CreateAccount or
+    command Trello.UserManagement.Account.UpdateProfile or
+    command Trello.UserManagement.Account.UpdateSettings
+  } with {
+    briefly as "What Account can be asked to do"
+    described as {
+      |A port carries only what its owner handles.
+    }
+  }
+
+  type NotificationCommand is one of {
+    command Trello.UserManagement.Notification.CreateNotification or
+    command Trello.UserManagement.Notification.MarkAsRead or
+    command Trello.UserManagement.Notification.MarkAllAsRead
+  } with {
+    briefly as "What Notification can be asked to do"
+    described as {
+      |A port carries only what its owner handles.
     }
   }
 
@@ -1001,28 +1023,28 @@ context BoardManagement as split is {
     }
   }
 
-  outlet BoardDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+  outlet BoardDispatch is type Trello.BoardManagement.BoardCommand with {
     briefly as "Where entering commands bound for Board are handed inward"
     described as {
       |One outlet per entity: an outlet carries exactly one connector.
     }
   }
 
-  outlet CardListDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+  outlet CardListDispatch is type Trello.BoardManagement.CardListCommand with {
     briefly as "Where entering commands bound for CardList are handed inward"
     described as {
       |One outlet per entity: an outlet carries exactly one connector.
     }
   }
 
-  outlet CardDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+  outlet CardDispatch is type Trello.BoardManagement.CardCommand with {
     briefly as "Where entering commands bound for Card are handed inward"
     described as {
       |One outlet per entity: an outlet carries exactly one connector.
     }
   }
 
-  outlet ActivityDispatch is type Trello.BoardManagement.BoardManagementCommand with {
+  outlet ActivityDispatch is command Trello.BoardManagement.Activity.RecordActivity with {
     briefly as "Where entering commands bound for Activity are handed inward"
     described as {
       |One outlet per entity: an outlet carries exactly one connector.
@@ -1083,7 +1105,7 @@ context BoardManagement as split is {
 
   entity Board as flow is {
 
-    inlet BoardCommands is type Trello.BoardManagement.BoardManagementCommand with {
+    inlet BoardCommands is type Trello.BoardManagement.BoardCommand with {
       briefly as "Where this entity receives its commands"
       described as {
         |A processor receives only through its OWN inlet.
@@ -1216,7 +1238,7 @@ context BoardManagement as split is {
 
   entity CardList as flow is {
 
-    inlet CardListCommands is type Trello.BoardManagement.BoardManagementCommand with {
+    inlet CardListCommands is type Trello.BoardManagement.CardListCommand with {
       briefly as "Where this entity receives its commands"
       described as {
         |A processor receives only through its OWN inlet.
@@ -1349,7 +1371,7 @@ context BoardManagement as split is {
 
   entity Card as flow is {
 
-    inlet CardCommands is type Trello.BoardManagement.BoardManagementCommand with {
+    inlet CardCommands is type Trello.BoardManagement.CardCommand with {
       briefly as "Where this entity receives its commands"
       described as {
         |A processor receives only through its OWN inlet.
@@ -1586,7 +1608,7 @@ context BoardManagement as split is {
 
   entity Activity as flow is {
 
-    inlet ActivityCommands is type Trello.BoardManagement.BoardManagementCommand with {
+    inlet ActivityCommands is command Trello.BoardManagement.Activity.RecordActivity with {
       briefly as "Where this entity receives its commands"
       described as {
         |A processor receives only through its OWN inlet.
@@ -1701,6 +1723,41 @@ context BoardManagement as split is {
     described as {
       |The alternation of every event this context publishes, so one outlet
       |can carry them all.
+    }
+  }
+
+  type BoardCommand is one of {
+    command Trello.BoardManagement.Board.CreateBoard or
+    command Trello.BoardManagement.Board.AddBoardMember
+  } with {
+    briefly as "What Board can be asked to do"
+    described as {
+      |A port carries only what its owner handles.
+    }
+  }
+
+  type CardListCommand is one of {
+    command Trello.BoardManagement.CardList.AddList or
+    command Trello.BoardManagement.CardList.MoveList
+  } with {
+    briefly as "What CardList can be asked to do"
+    described as {
+      |A port carries only what its owner handles.
+    }
+  }
+
+  type CardCommand is one of {
+    command Trello.BoardManagement.Card.AddCard or
+    command Trello.BoardManagement.Card.EditCard or
+    command Trello.BoardManagement.Card.MoveCard or
+    command Trello.BoardManagement.Card.AssignMember or
+    command Trello.BoardManagement.Card.AddComment or
+    command Trello.BoardManagement.Card.AddChecklist or
+    command Trello.BoardManagement.Card.SetDueDate
+  } with {
+    briefly as "What Card can be asked to do"
+    described as {
+      |A port carries only what its owner handles.
     }
   }
 

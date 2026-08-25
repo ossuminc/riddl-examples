@@ -268,6 +268,9 @@ context ToDoList as flow is {
       on command ReactiveSummit.ToDoList.Items.PersistItemAdded {
         do "apply what PersistItemAdded carries to the stored row"
       }
+      on command RecordView {
+        do "apply the refreshed row the command carries to the store"
+      }
       on command ReactiveSummit.ToDoList.Items.PersistItemCompleted {
         do "apply what PersistItemCompleted carries to the stored row"
       }

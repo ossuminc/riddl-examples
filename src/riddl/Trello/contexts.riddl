@@ -434,10 +434,37 @@ context UserManagement as split is {
 
 
   repository UserManagementStore as sink is {
-    inlet Recorded is type Trello.UserManagement.UserManagementEvent with {
-      briefly as "Where events arrive to be persisted"
+    command PersistAccountCreated is {
+      accountId is Trello.UserManagement.AccountId
+    } with {
+      briefly as "Apply AccountCreated to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    command PersistNotificationCreated is {
+      notificationId is Trello.UserManagement.NotificationId
+    } with {
+      briefly as "Apply NotificationCreated to the stored row"
+      described as {
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    type UserManagementStoreCommand is one of { command PersistAccountCreated or command PersistNotificationCreated } with {
+      briefly as "Anything this store can be told to do"
+      described as {
+        |One alternation so a single inlet and connector carry them all.
+      }
+    }
+
+    inlet Recorded is type Trello.UserManagement.UserManagementStore.UserManagementStoreCommand with {
+      briefly as "Where user management persistence commands arrive"
+      described as {
+        |A projector turns each user management event into one of these.
       }
     }
     schema UserManagementSchema is flat
@@ -449,8 +476,11 @@ context UserManagement as split is {
       }
     }
     handler UserManagementStoreHandler is {
-      on event Trello.UserManagement.Account.AccountCreated {
-        do "store the identifier carried by the event"
+      on command Trello.UserManagement.UserManagementStore.PersistAccountCreated {
+        do "apply what PersistAccountCreated carries to the stored row"
+      }
+      on command Trello.UserManagement.UserManagementStore.PersistNotificationCreated {
+        do "apply what PersistNotificationCreated carries to the stored row"
       }
     } with {
       briefly as "Keeps storage in step with what happened"
@@ -513,8 +543,67 @@ context UserManagement as split is {
     }
   }
 
+  projector UserManagementProjection as flow is {
+    inlet Observed is type Trello.UserManagement.UserManagementEvent with {
+      briefly as "Where user management events are observed"
+      described as {
+        |The projector sees what was announced.
+      }
+    }
+
+    outlet Persisting is type Trello.UserManagement.UserManagementStore.UserManagementStoreCommand with {
+      briefly as "Where persistence commands leave for the store"
+      described as {
+        |Turning each event into a command is the projector's whole job.
+      }
+    }
+
+    updates repository Trello.UserManagement.UserManagementStore
+
+    record Projected is {
+      accountId is Trello.UserManagement.AccountId
+    } with {
+      briefly as "The shape this projection maintains"
+      described as {
+        |One projected row per user management. The store holds exactly this.
+      }
+    }
+
+    handler UserManagementProjectionHandler is {
+      on accountCreated: event Trello.UserManagement.Account.AccountCreated {
+        tell command Trello.UserManagement.UserManagementStore.PersistAccountCreated(
+          accountId = accountCreated.accountId
+        ) to repository Trello.UserManagement.UserManagementStore
+      }
+      on notificationCreated: event Trello.UserManagement.Notification.NotificationCreated {
+        tell command Trello.UserManagement.UserManagementStore.PersistNotificationCreated(
+          notificationId = notificationCreated.notificationId
+        ) to repository Trello.UserManagement.UserManagementStore
+      }
+    } with {
+      briefly as "Turns user management events into persistence commands"
+      described as {
+        |A repository is changed by commands, so something must translate.
+      }
+    }
+  } with {
+    briefly as "Projects user management events into the store"
+    described as {
+      |Stands between what was announced and what the store is told.
+    }
+  }
+
+  connector ObservingUserManagementProjection is {
+    from outlet UserManagementAnnouncer.Published to inlet Trello.UserManagement.UserManagementProjection.Observed
+  } with {
+    briefly as "Carries user management events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector UserManagementRecording is {
-    from outlet UserManagementAnnouncer.Published to inlet UserManagementStore.Recorded
+    from outlet Trello.UserManagement.UserManagementProjection.Persisting to inlet UserManagementStore.Recorded
   } with {
     briefly as "Carries UserManagement events to storage"
     described as {
@@ -754,10 +843,37 @@ context WorkspaceManagement as flow is {
 
 
   repository WorkspaceManagementStore as sink is {
-    inlet Recorded is type Trello.WorkspaceManagement.WorkspaceManagementEvent with {
-      briefly as "Where events arrive to be persisted"
+    command PersistWorkspaceCreated is {
+      workspaceId is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "Apply WorkspaceCreated to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    command PersistWorkspaceMemberAdded is {
+      workspaceId is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "Apply WorkspaceMemberAdded to the stored row"
+      described as {
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    type WorkspaceManagementStoreCommand is one of { command PersistWorkspaceCreated or command PersistWorkspaceMemberAdded } with {
+      briefly as "Anything this store can be told to do"
+      described as {
+        |One alternation so a single inlet and connector carry them all.
+      }
+    }
+
+    inlet Recorded is type Trello.WorkspaceManagement.WorkspaceManagementStore.WorkspaceManagementStoreCommand with {
+      briefly as "Where workspace persistence commands arrive"
+      described as {
+        |A projector turns each workspace event into one of these.
       }
     }
     schema WorkspaceManagementSchema is flat
@@ -769,8 +885,11 @@ context WorkspaceManagement as flow is {
       }
     }
     handler WorkspaceManagementStoreHandler is {
-      on event Trello.WorkspaceManagement.Workspace.WorkspaceCreated {
-        do "store the identifier carried by the event"
+      on command Trello.WorkspaceManagement.WorkspaceManagementStore.PersistWorkspaceCreated {
+        do "apply what PersistWorkspaceCreated carries to the stored row"
+      }
+      on command Trello.WorkspaceManagement.WorkspaceManagementStore.PersistWorkspaceMemberAdded {
+        do "apply what PersistWorkspaceMemberAdded carries to the stored row"
       }
     } with {
       briefly as "Keeps storage in step with what happened"
@@ -794,8 +913,67 @@ context WorkspaceManagement as flow is {
     }
   }
 
+  projector WorkspaceManagementProjection as flow is {
+    inlet Observed is type Trello.WorkspaceManagement.WorkspaceManagementEvent with {
+      briefly as "Where workspace events are observed"
+      described as {
+        |The projector sees what was announced.
+      }
+    }
+
+    outlet Persisting is type Trello.WorkspaceManagement.WorkspaceManagementStore.WorkspaceManagementStoreCommand with {
+      briefly as "Where persistence commands leave for the store"
+      described as {
+        |Turning each event into a command is the projector's whole job.
+      }
+    }
+
+    updates repository Trello.WorkspaceManagement.WorkspaceManagementStore
+
+    record Projected is {
+      workspaceId is Trello.WorkspaceManagement.WorkspaceId
+    } with {
+      briefly as "The shape this projection maintains"
+      described as {
+        |One projected row per workspace. The store holds exactly this.
+      }
+    }
+
+    handler WorkspaceManagementProjectionHandler is {
+      on workspaceCreated: event Trello.WorkspaceManagement.Workspace.WorkspaceCreated {
+        tell command Trello.WorkspaceManagement.WorkspaceManagementStore.PersistWorkspaceCreated(
+          workspaceId = workspaceCreated.workspaceId
+        ) to repository Trello.WorkspaceManagement.WorkspaceManagementStore
+      }
+      on workspaceMemberAdded: event Trello.WorkspaceManagement.Workspace.WorkspaceMemberAdded {
+        tell command Trello.WorkspaceManagement.WorkspaceManagementStore.PersistWorkspaceMemberAdded(
+          workspaceId = workspaceMemberAdded.workspaceId
+        ) to repository Trello.WorkspaceManagement.WorkspaceManagementStore
+      }
+    } with {
+      briefly as "Turns workspace events into persistence commands"
+      described as {
+        |A repository is changed by commands, so something must translate.
+      }
+    }
+  } with {
+    briefly as "Projects workspace events into the store"
+    described as {
+      |Stands between what was announced and what the store is told.
+    }
+  }
+
+  connector ObservingWorkspaceManagementProjection is {
+    from outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents to inlet Trello.WorkspaceManagement.WorkspaceManagementProjection.Observed
+  } with {
+    briefly as "Carries workspace events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector WorkspaceManagementRecording is {
-    from outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents to inlet WorkspaceManagementStore.Recorded
+    from outlet Trello.WorkspaceManagement.WorkspaceManagementProjection.Persisting to inlet WorkspaceManagementStore.Recorded
   } with {
     briefly as "Carries WorkspaceManagement events to storage"
     described as {
@@ -1603,10 +1781,57 @@ context BoardManagement as split is {
 
 
   repository BoardManagementStore as sink is {
-    inlet Recorded is type Trello.BoardManagement.BoardManagementEvent with {
-      briefly as "Where events arrive to be persisted"
+    command PersistBoardCreated is {
+      boardId is Trello.BoardManagement.BoardId
+    } with {
+      briefly as "Apply BoardCreated to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    command PersistListAdded is {
+      cardListId is Trello.BoardManagement.CardListId
+    } with {
+      briefly as "Apply ListAdded to the stored row"
+      described as {
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    command PersistCardAdded is {
+      cardId is Trello.BoardManagement.CardId
+    } with {
+      briefly as "Apply CardAdded to the stored row"
+      described as {
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    command PersistActivityRecorded is {
+      activityId is Trello.BoardManagement.ActivityId
+    } with {
+      briefly as "Apply ActivityRecorded to the stored row"
+      described as {
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    type BoardManagementStoreCommand is one of { command PersistBoardCreated or command PersistListAdded or command PersistCardAdded or command PersistActivityRecorded } with {
+      briefly as "Anything this store can be told to do"
+      described as {
+        |One alternation so a single inlet and connector carry them all.
+      }
+    }
+
+    inlet Recorded is type Trello.BoardManagement.BoardManagementStore.BoardManagementStoreCommand with {
+      briefly as "Where board persistence commands arrive"
+      described as {
+        |A projector turns each board event into one of these.
       }
     }
     schema BoardManagementSchema is flat
@@ -1618,8 +1843,17 @@ context BoardManagement as split is {
       }
     }
     handler BoardManagementStoreHandler is {
-      on event Trello.BoardManagement.Board.BoardCreated {
-        do "store the identifier carried by the event"
+      on command Trello.BoardManagement.BoardManagementStore.PersistBoardCreated {
+        do "apply what PersistBoardCreated carries to the stored row"
+      }
+      on command Trello.BoardManagement.BoardManagementStore.PersistListAdded {
+        do "apply what PersistListAdded carries to the stored row"
+      }
+      on command Trello.BoardManagement.BoardManagementStore.PersistCardAdded {
+        do "apply what PersistCardAdded carries to the stored row"
+      }
+      on command Trello.BoardManagement.BoardManagementStore.PersistActivityRecorded {
+        do "apply what PersistActivityRecorded carries to the stored row"
       }
     } with {
       briefly as "Keeps storage in step with what happened"
@@ -1706,8 +1940,77 @@ context BoardManagement as split is {
     }
   }
 
+  projector BoardManagementProjection as flow is {
+    inlet Observed is type Trello.BoardManagement.BoardManagementEvent with {
+      briefly as "Where board events are observed"
+      described as {
+        |The projector sees what was announced.
+      }
+    }
+
+    outlet Persisting is type Trello.BoardManagement.BoardManagementStore.BoardManagementStoreCommand with {
+      briefly as "Where persistence commands leave for the store"
+      described as {
+        |Turning each event into a command is the projector's whole job.
+      }
+    }
+
+    updates repository Trello.BoardManagement.BoardManagementStore
+
+    record Projected is {
+      boardId is Trello.BoardManagement.BoardId
+    } with {
+      briefly as "The shape this projection maintains"
+      described as {
+        |One projected row per board. The store holds exactly this.
+      }
+    }
+
+    handler BoardManagementProjectionHandler is {
+      on boardCreated: event Trello.BoardManagement.Board.BoardCreated {
+        tell command Trello.BoardManagement.BoardManagementStore.PersistBoardCreated(
+          boardId = boardCreated.boardId
+        ) to repository Trello.BoardManagement.BoardManagementStore
+      }
+      on listAdded: event Trello.BoardManagement.CardList.ListAdded {
+        tell command Trello.BoardManagement.BoardManagementStore.PersistListAdded(
+          cardListId = listAdded.cardListId
+        ) to repository Trello.BoardManagement.BoardManagementStore
+      }
+      on cardAdded: event Trello.BoardManagement.Card.CardAdded {
+        tell command Trello.BoardManagement.BoardManagementStore.PersistCardAdded(
+          cardId = cardAdded.cardId
+        ) to repository Trello.BoardManagement.BoardManagementStore
+      }
+      on activityRecorded: event Trello.BoardManagement.Activity.ActivityRecorded {
+        tell command Trello.BoardManagement.BoardManagementStore.PersistActivityRecorded(
+          activityId = activityRecorded.activityId
+        ) to repository Trello.BoardManagement.BoardManagementStore
+      }
+    } with {
+      briefly as "Turns board events into persistence commands"
+      described as {
+        |A repository is changed by commands, so something must translate.
+      }
+    }
+  } with {
+    briefly as "Projects board events into the store"
+    described as {
+      |Stands between what was announced and what the store is told.
+    }
+  }
+
+  connector ObservingBoardManagementProjection is {
+    from outlet BoardManagementAnnouncer.Published to inlet Trello.BoardManagement.BoardManagementProjection.Observed
+  } with {
+    briefly as "Carries board events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector BoardManagementRecording is {
-    from outlet BoardManagementAnnouncer.Published to inlet BoardManagementStore.Recorded
+    from outlet Trello.BoardManagement.BoardManagementProjection.Persisting to inlet BoardManagementStore.Recorded
   } with {
     briefly as "Carries BoardManagement events to storage"
     described as {

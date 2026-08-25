@@ -162,10 +162,20 @@ context Doodle as flow is {
 
 
   repository Drawings as sink is {
-    inlet Recorded is event DrawingCreated with {
-      briefly as "Where drawing events arrive to be persisted"
+    command PersistDrawingCreated is {
+      doodleId is DoodleId
+    } with {
+      briefly as "Apply DrawingCreated to the stored row"
       described as {
-        |The repository learns of new drawings through this inlet.
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    inlet Recorded is command ToDoodles.Doodle.Drawings.PersistDrawingCreated with {
+      briefly as "Where drawing persistence commands arrive"
+      described as {
+        |A projector turns each drawing event into one of these.
       }
     }
     schema Store is flat
@@ -177,8 +187,8 @@ context Doodle as flow is {
       }
     }
     handler StoreHandler is {
-      on event DrawingCreated {
-        do "store the title carried by the event"
+      on command ToDoodles.Doodle.Drawings.PersistDrawingCreated {
+        do "apply what PersistDrawingCreated carries to the stored row"
       }
     } with {
       briefly as "Keeps storage in step with what happened"
@@ -215,8 +225,62 @@ context Doodle as flow is {
     }
   }
 
+  projector DrawingProjection as flow is {
+    inlet Observed is event ToDoodles.Doodle.Drawing.DrawingCreated with {
+      briefly as "Where drawing events are observed"
+      described as {
+        |The projector sees what was announced.
+      }
+    }
+
+    outlet Persisting is command ToDoodles.Doodle.Drawings.PersistDrawingCreated with {
+      briefly as "Where persistence commands leave for the store"
+      described as {
+        |Turning each event into a command is the projector's whole job.
+      }
+    }
+
+    updates repository ToDoodles.Doodle.Drawings
+
+    record Projected is {
+      doodleId is DoodleId
+    } with {
+      briefly as "The shape this projection maintains"
+      described as {
+        |One projected row per drawing. The store holds exactly this.
+      }
+    }
+
+    handler DrawingProjectionHandler is {
+      on drawingCreated: event ToDoodles.Doodle.Drawing.DrawingCreated {
+        tell command ToDoodles.Doodle.Drawings.PersistDrawingCreated(
+          doodleId = drawingCreated.doodleId
+        ) to repository ToDoodles.Doodle.Drawings
+      }
+    } with {
+      briefly as "Turns drawing events into persistence commands"
+      described as {
+        |A repository is changed by commands, so something must translate.
+      }
+    }
+  } with {
+    briefly as "Projects drawing events into the store"
+    described as {
+      |Stands between what was announced and what the store is told.
+    }
+  }
+
+  connector ObservingDrawingProjection is {
+    from outlet ToDoodles.Doodle.Drawing.DrawingEvents to inlet ToDoodles.Doodle.DrawingProjection.Observed
+  } with {
+    briefly as "Carries drawing events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector Recording is {
-    from outlet ToDoodles.Doodle.Drawing.DrawingEvents to inlet Drawings.Recorded
+    from outlet ToDoodles.Doodle.DrawingProjection.Persisting to inlet Drawings.Recorded
   } with {
     briefly as "Carries drawing events to storage"
     described as {

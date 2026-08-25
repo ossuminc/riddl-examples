@@ -220,10 +220,37 @@ context ToDoList as flow is {
 
 
   repository Items as sink is {
-    inlet Recorded is type ItemEvent with {
-      briefly as "Where item events arrive to be persisted"
+    command PersistItemAdded is {
+      content is ItemContent
+    } with {
+      briefly as "Apply ItemAdded to the stored row"
       described as {
-        |The repository learns of item changes through this inlet.
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    command PersistItemCompleted is {
+      itemId is ItemId
+    } with {
+      briefly as "Apply ItemCompleted to the stored row"
+      described as {
+        |A persistence command, not a domain command: it declares no `yields`
+        |because storing a row records no new entity state.
+      }
+    }
+
+    type ItemsCommand is one of { command PersistItemAdded or command PersistItemCompleted } with {
+      briefly as "Anything this store can be told to do"
+      described as {
+        |One alternation so a single inlet and connector carry them all.
+      }
+    }
+
+    inlet Recorded is type ReactiveSummit.ToDoList.Items.ItemsCommand with {
+      briefly as "Where item persistence commands arrive"
+      described as {
+        |A projector turns each item event into one of these.
       }
     }
     schema Store is flat
@@ -235,8 +262,11 @@ context ToDoList as flow is {
       }
     }
     handler StoreHandler is {
-      on event ToDoItem.ItemAdded {
-        do "store the description carried by the event"
+      on command ReactiveSummit.ToDoList.Items.PersistItemAdded {
+        do "apply what PersistItemAdded carries to the stored row"
+      }
+      on command ReactiveSummit.ToDoList.Items.PersistItemCompleted {
+        do "apply what PersistItemCompleted carries to the stored row"
       }
     } with {
       briefly as "Keeps storage in step with what happened"
@@ -319,8 +349,67 @@ context ToDoList as flow is {
     }
   }
 
+  projector ItemProjection as flow is {
+    inlet Observed is type ReactiveSummit.ToDoList.ItemEvent with {
+      briefly as "Where item events are observed"
+      described as {
+        |The projector sees what was announced.
+      }
+    }
+
+    outlet Persisting is type ReactiveSummit.ToDoList.Items.ItemsCommand with {
+      briefly as "Where persistence commands leave for the store"
+      described as {
+        |Turning each event into a command is the projector's whole job.
+      }
+    }
+
+    updates repository ReactiveSummit.ToDoList.Items
+
+    record Projected is {
+      content is ItemContent
+    } with {
+      briefly as "The shape this projection maintains"
+      described as {
+        |One projected row per item. The store holds exactly this.
+      }
+    }
+
+    handler ItemProjectionHandler is {
+      on itemAdded: event ReactiveSummit.ToDoList.ToDoItem.ItemAdded {
+        tell command ReactiveSummit.ToDoList.Items.PersistItemAdded(
+          content = itemAdded.content
+        ) to repository ReactiveSummit.ToDoList.Items
+      }
+      on itemCompleted: event ReactiveSummit.ToDoList.ToDoItem.ItemCompleted {
+        tell command ReactiveSummit.ToDoList.Items.PersistItemCompleted(
+          itemId = itemCompleted.itemId
+        ) to repository ReactiveSummit.ToDoList.Items
+      }
+    } with {
+      briefly as "Turns item events into persistence commands"
+      described as {
+        |A repository is changed by commands, so something must translate.
+      }
+    }
+  } with {
+    briefly as "Projects item events into the store"
+    described as {
+      |Stands between what was announced and what the store is told.
+    }
+  }
+
+  connector ObservingItemProjection is {
+    from outlet ReactiveSummit.ToDoList.ToDoItem.ItemEvents to inlet ReactiveSummit.ToDoList.ItemProjection.Observed
+  } with {
+    briefly as "Carries item events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector Recording is {
-    from outlet ReactiveSummit.ToDoList.ToDoItem.ItemEvents to inlet Items.Recorded
+    from outlet ReactiveSummit.ToDoList.ItemProjection.Persisting to inlet Items.Recorded
   } with {
     briefly as "Carries item events to storage"
     described as {

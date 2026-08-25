@@ -143,14 +143,26 @@ context Kitchen as flow is {
 
 
   repository OrderViewerStore as sink is {
-    inlet Recorded is event Restaurant.Kitchen.OrderViewer.OrdersShown with {
-      briefly as "Where orderviewer events arrive to be persisted"
+    command PersistOrdersShown is {
+      orderViewerId is Restaurant.Kitchen.OrderViewerId
+    } with {
+      briefly as "Apply OrdersShown to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Kitchen.OrderViewerStore.PersistOrdersShown with {
+      briefly as "Where order viewer persistence commands arrive"
+      described as {
+        |A projector turns each order viewer event into one of these.
       }
     }
     schema OrderViewerSchema is flat
-      of Held as record Restaurant.Kitchen.OrderViewer.OrderViewerFields
+      of Held as record Restaurant.Kitchen.OrderViewerProjection.Projected
     with {
       briefly as "How orderviewers are laid out in storage"
       described as {
@@ -158,8 +170,8 @@ context Kitchen as flow is {
       }
     }
     handler OrderViewerStoreHandler is {
-      on event Restaurant.Kitchen.OrderViewer.OrdersShown {
-        do "store the identifier carried by the event"
+      on command Restaurant.Kitchen.OrderViewerStore.PersistOrdersShown {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps orderviewer storage in step with what happened"
@@ -183,8 +195,63 @@ context Kitchen as flow is {
     }
   }
 
+projector OrderViewerProjection as flow is {
+  inlet Observed is event Restaurant.Kitchen.OrderViewer.OrdersShown with {
+    briefly as "Where order viewer events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Kitchen.OrderViewerStore.PersistOrdersShown with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Kitchen.OrderViewerStore
+
+  record Projected is {
+    orderViewerId is Restaurant.Kitchen.OrderViewerId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per order viewer, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler OrderViewerProjectionHandler is {
+    on ordersShown: event Restaurant.Kitchen.OrderViewer.OrdersShown {
+      tell command Restaurant.Kitchen.OrderViewerStore.PersistOrdersShown(
+        orderViewerId = ordersShown.orderViewerId
+      ) to repository Restaurant.Kitchen.OrderViewerStore
+    }
+  } with {
+    briefly as "Turns order viewer events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects order viewer events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingOrderViewer is {
+    from outlet Restaurant.Kitchen.OrderViewer.OrderViewerEvents to inlet Restaurant.Kitchen.OrderViewerProjection.Observed
+  } with {
+    briefly as "Carries order viewer events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingOrderViewer is {
-    from outlet Restaurant.Kitchen.OrderViewer.OrderViewerEvents to inlet OrderViewerStore.Recorded
+    from outlet Restaurant.Kitchen.OrderViewerProjection.Persisting to inlet OrderViewerStore.Recorded
   } with {
     briefly as "Carries orderviewer events to storage"
     described as {

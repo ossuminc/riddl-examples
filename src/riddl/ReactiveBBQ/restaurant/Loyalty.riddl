@@ -146,14 +146,26 @@ context Loyalty as flow is {
 
 
   repository LoyaltyAccountStore as sink is {
-    inlet Recorded is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
-      briefly as "Where loyaltyaccount events arrive to be persisted"
+    command PersistPointsAccrued is {
+      loyaltyId is Restaurant.Loyalty.LoyaltyId
+    } with {
+      briefly as "Apply PointsAccrued to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Loyalty.LoyaltyAccountStore.PersistPointsAccrued with {
+      briefly as "Where loyalty account persistence commands arrive"
+      described as {
+        |A projector turns each loyalty account event into one of these.
       }
     }
     schema LoyaltyAccountSchema is flat
-      of Held as record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields
+      of Held as record Restaurant.Loyalty.LoyaltyAccountProjection.Projected
     with {
       briefly as "How loyaltyaccounts are laid out in storage"
       described as {
@@ -161,8 +173,8 @@ context Loyalty as flow is {
       }
     }
     handler LoyaltyAccountStoreHandler is {
-      on event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued {
-        do "store the identifier carried by the event"
+      on command Restaurant.Loyalty.LoyaltyAccountStore.PersistPointsAccrued {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps loyaltyaccount storage in step with what happened"
@@ -186,8 +198,63 @@ context Loyalty as flow is {
     }
   }
 
+projector LoyaltyAccountProjection as flow is {
+  inlet Observed is event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued with {
+    briefly as "Where loyalty account events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Loyalty.LoyaltyAccountStore.PersistPointsAccrued with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Loyalty.LoyaltyAccountStore
+
+  record Projected is {
+    loyaltyId is Restaurant.Loyalty.LoyaltyId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per loyalty account, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler LoyaltyAccountProjectionHandler is {
+    on pointsAccrued: event Restaurant.Loyalty.LoyaltyAccount.PointsAccrued {
+      tell command Restaurant.Loyalty.LoyaltyAccountStore.PersistPointsAccrued(
+        loyaltyId = pointsAccrued.loyaltyId
+      ) to repository Restaurant.Loyalty.LoyaltyAccountStore
+    }
+  } with {
+    briefly as "Turns loyalty account events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects loyalty account events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingLoyaltyAccount is {
+    from outlet Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountEvents to inlet Restaurant.Loyalty.LoyaltyAccountProjection.Observed
+  } with {
+    briefly as "Carries loyalty account events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingLoyaltyAccount is {
-    from outlet Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountEvents to inlet LoyaltyAccountStore.Recorded
+    from outlet Restaurant.Loyalty.LoyaltyAccountProjection.Persisting to inlet LoyaltyAccountStore.Recorded
   } with {
     briefly as "Carries loyaltyaccount events to storage"
     described as {

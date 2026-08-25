@@ -143,14 +143,26 @@ context Tables as flow is {
 
 
   repository TableStore as sink is {
-    inlet Recorded is event Restaurant.Tables.Table.TableAdded with {
-      briefly as "Where table events arrive to be persisted"
+    command PersistTableAdded is {
+      tableId is Restaurant.Tables.TableId
+    } with {
+      briefly as "Apply TableAdded to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Tables.TableStore.PersistTableAdded with {
+      briefly as "Where table persistence commands arrive"
+      described as {
+        |A projector turns each table event into one of these.
       }
     }
     schema TableSchema is flat
-      of Held as record Restaurant.Tables.Table.TableFields
+      of Held as record Restaurant.Tables.TableProjection.Projected
     with {
       briefly as "How tables are laid out in storage"
       described as {
@@ -158,8 +170,8 @@ context Tables as flow is {
       }
     }
     handler TableStoreHandler is {
-      on event Restaurant.Tables.Table.TableAdded {
-        do "store the identifier carried by the event"
+      on command Restaurant.Tables.TableStore.PersistTableAdded {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps table storage in step with what happened"
@@ -183,8 +195,63 @@ context Tables as flow is {
     }
   }
 
+projector TableProjection as flow is {
+  inlet Observed is event Restaurant.Tables.Table.TableAdded with {
+    briefly as "Where table events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Tables.TableStore.PersistTableAdded with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Tables.TableStore
+
+  record Projected is {
+    tableId is Restaurant.Tables.TableId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per table, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler TableProjectionHandler is {
+    on tableAdded: event Restaurant.Tables.Table.TableAdded {
+      tell command Restaurant.Tables.TableStore.PersistTableAdded(
+        tableId = tableAdded.tableId
+      ) to repository Restaurant.Tables.TableStore
+    }
+  } with {
+    briefly as "Turns table events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects table events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingTable is {
+    from outlet Restaurant.Tables.Table.TableEvents to inlet Restaurant.Tables.TableProjection.Observed
+  } with {
+    briefly as "Carries table events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingTable is {
-    from outlet Restaurant.Tables.Table.TableEvents to inlet TableStore.Recorded
+    from outlet Restaurant.Tables.TableProjection.Persisting to inlet TableStore.Recorded
   } with {
     briefly as "Carries table events to storage"
     described as {

@@ -29,6 +29,9 @@ context SupplyOrder as flow is {
     on request: command BackOffice.SupplyOrder.Supply.OrderSupply {
       send request to outlet BackOffice.SupplyOrder.SupplyDispatch
     }
+    on other {
+      error "unexpected message at the SupplyOrder boundary"
+    }
   } with {
     briefly as "Routes what arrives at the boundary inward"
     described as {
@@ -155,14 +158,26 @@ context SupplyOrder as flow is {
 
 
   repository SupplyStore as sink is {
-    inlet Recorded is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
-      briefly as "Where supply events arrive to be persisted"
+    command PersistSupplyOrdered is {
+      supplyId is BackOffice.SupplyOrder.SupplyId
+    } with {
+      briefly as "Apply SupplyOrdered to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command BackOffice.SupplyOrder.SupplyStore.PersistSupplyOrdered with {
+      briefly as "Where supply persistence commands arrive"
+      described as {
+        |A projector turns each supply event into one of these.
       }
     }
     schema SupplySchema is flat
-      of Held as record BackOffice.SupplyOrder.Supply.SupplyFields
+      of Held as record BackOffice.SupplyOrder.SupplyProjection.Projected
     with {
       briefly as "How supplys are laid out in storage"
       described as {
@@ -170,8 +185,8 @@ context SupplyOrder as flow is {
       }
     }
     handler SupplyStoreHandler is {
-      on event BackOffice.SupplyOrder.Supply.SupplyOrdered {
-        do "store the identifier carried by the event"
+      on command BackOffice.SupplyOrder.SupplyStore.PersistSupplyOrdered {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps supply storage in step with what happened"
@@ -207,8 +222,63 @@ context SupplyOrder as flow is {
     }
   }
 
+projector SupplyProjection as flow is {
+  inlet Observed is event BackOffice.SupplyOrder.Supply.SupplyOrdered with {
+    briefly as "Where supply events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command BackOffice.SupplyOrder.SupplyStore.PersistSupplyOrdered with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository BackOffice.SupplyOrder.SupplyStore
+
+  record Projected is {
+    supplyId is BackOffice.SupplyOrder.SupplyId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per supply, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler SupplyProjectionHandler is {
+    on supplyOrdered: event BackOffice.SupplyOrder.Supply.SupplyOrdered {
+      tell command BackOffice.SupplyOrder.SupplyStore.PersistSupplyOrdered(
+        supplyId = supplyOrdered.supplyId
+      ) to repository BackOffice.SupplyOrder.SupplyStore
+    }
+  } with {
+    briefly as "Turns supply events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects supply events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingSupply is {
+    from outlet BackOffice.SupplyOrder.Supply.SupplyEvents to inlet BackOffice.SupplyOrder.SupplyProjection.Observed
+  } with {
+    briefly as "Carries supply events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingSupply is {
-    from outlet BackOffice.SupplyOrder.Supply.SupplyEvents to inlet SupplyStore.Recorded
+    from outlet BackOffice.SupplyOrder.SupplyProjection.Persisting to inlet SupplyStore.Recorded
   } with {
     briefly as "Carries supply events to storage"
     described as {

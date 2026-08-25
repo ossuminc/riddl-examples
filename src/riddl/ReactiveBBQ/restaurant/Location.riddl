@@ -143,14 +143,26 @@ context Locations as flow is {
 
 
   repository LocationStore as sink is {
-    inlet Recorded is event Restaurant.Locations.Location.LocationOpened with {
-      briefly as "Where location events arrive to be persisted"
+    command PersistLocationOpened is {
+      locationId is Restaurant.Locations.LocationId
+    } with {
+      briefly as "Apply LocationOpened to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Locations.LocationStore.PersistLocationOpened with {
+      briefly as "Where location persistence commands arrive"
+      described as {
+        |A projector turns each location event into one of these.
       }
     }
     schema LocationSchema is flat
-      of Held as record Restaurant.Locations.Location.LocationFields
+      of Held as record Restaurant.Locations.LocationProjection.Projected
     with {
       briefly as "How locations are laid out in storage"
       described as {
@@ -158,8 +170,8 @@ context Locations as flow is {
       }
     }
     handler LocationStoreHandler is {
-      on event Restaurant.Locations.Location.LocationOpened {
-        do "store the identifier carried by the event"
+      on command Restaurant.Locations.LocationStore.PersistLocationOpened {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps location storage in step with what happened"
@@ -183,8 +195,63 @@ context Locations as flow is {
     }
   }
 
+projector LocationProjection as flow is {
+  inlet Observed is event Restaurant.Locations.Location.LocationOpened with {
+    briefly as "Where location events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Locations.LocationStore.PersistLocationOpened with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Locations.LocationStore
+
+  record Projected is {
+    locationId is Restaurant.Locations.LocationId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per location, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler LocationProjectionHandler is {
+    on locationOpened: event Restaurant.Locations.Location.LocationOpened {
+      tell command Restaurant.Locations.LocationStore.PersistLocationOpened(
+        locationId = locationOpened.locationId
+      ) to repository Restaurant.Locations.LocationStore
+    }
+  } with {
+    briefly as "Turns location events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects location events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingLocation is {
+    from outlet Restaurant.Locations.Location.LocationEvents to inlet Restaurant.Locations.LocationProjection.Observed
+  } with {
+    briefly as "Carries location events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingLocation is {
-    from outlet Restaurant.Locations.Location.LocationEvents to inlet LocationStore.Recorded
+    from outlet Restaurant.Locations.LocationProjection.Persisting to inlet LocationStore.Recorded
   } with {
     briefly as "Carries location events to storage"
     described as {

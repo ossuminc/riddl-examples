@@ -29,6 +29,9 @@ context Marketing as flow is {
     on request: command Corporate.Marketing.Campaign.LaunchCampaign {
       send request to outlet Corporate.Marketing.CampaignDispatch
     }
+    on other {
+      error "unexpected message at the Marketing boundary"
+    }
   } with {
     briefly as "Routes what arrives at the boundary inward"
     described as {
@@ -154,14 +157,26 @@ context Marketing as flow is {
 
 
   repository CampaignStore as sink is {
-    inlet Recorded is event Corporate.Marketing.Campaign.CampaignLaunched with {
-      briefly as "Where campaign events arrive to be persisted"
+    command PersistCampaignLaunched is {
+      campaignId is Corporate.Marketing.CampaignId
+    } with {
+      briefly as "Apply CampaignLaunched to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Corporate.Marketing.CampaignStore.PersistCampaignLaunched with {
+      briefly as "Where campaign persistence commands arrive"
+      described as {
+        |A projector turns each campaign event into one of these.
       }
     }
     schema CampaignSchema is flat
-      of Held as record Corporate.Marketing.Campaign.CampaignFields
+      of Held as record Corporate.Marketing.CampaignProjection.Projected
     with {
       briefly as "How campaigns are laid out in storage"
       described as {
@@ -169,8 +184,8 @@ context Marketing as flow is {
       }
     }
     handler CampaignStoreHandler is {
-      on event Corporate.Marketing.Campaign.CampaignLaunched {
-        do "store the identifier carried by the event"
+      on command Corporate.Marketing.CampaignStore.PersistCampaignLaunched {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps campaign storage in step with what happened"
@@ -206,8 +221,63 @@ context Marketing as flow is {
     }
   }
 
+projector CampaignProjection as flow is {
+  inlet Observed is event Corporate.Marketing.Campaign.CampaignLaunched with {
+    briefly as "Where campaign events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Corporate.Marketing.CampaignStore.PersistCampaignLaunched with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Corporate.Marketing.CampaignStore
+
+  record Projected is {
+    campaignId is Corporate.Marketing.CampaignId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per campaign, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler CampaignProjectionHandler is {
+    on campaignLaunched: event Corporate.Marketing.Campaign.CampaignLaunched {
+      tell command Corporate.Marketing.CampaignStore.PersistCampaignLaunched(
+        campaignId = campaignLaunched.campaignId
+      ) to repository Corporate.Marketing.CampaignStore
+    }
+  } with {
+    briefly as "Turns campaign events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects campaign events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingCampaign is {
+    from outlet Corporate.Marketing.Campaign.CampaignEvents to inlet Corporate.Marketing.CampaignProjection.Observed
+  } with {
+    briefly as "Carries campaign events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingCampaign is {
-    from outlet Corporate.Marketing.Campaign.CampaignEvents to inlet CampaignStore.Recorded
+    from outlet Corporate.Marketing.CampaignProjection.Persisting to inlet CampaignStore.Recorded
   } with {
     briefly as "Carries campaign events to storage"
     described as {

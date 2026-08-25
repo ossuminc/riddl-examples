@@ -173,14 +173,26 @@ context Menus as router is {
 
 
   repository MenuItemStore as sink is {
-    inlet Recorded is event Restaurant.Menus.MenuItem.MenuItemAdded with {
-      briefly as "Where menuitem events arrive to be persisted"
+    command PersistMenuItemAdded is {
+      menuItemId is Restaurant.Menus.MenuItemId
+    } with {
+      briefly as "Apply MenuItemAdded to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Menus.MenuItemStore.PersistMenuItemAdded with {
+      briefly as "Where menu item persistence commands arrive"
+      described as {
+        |A projector turns each menu item event into one of these.
       }
     }
     schema MenuItemSchema is flat
-      of Held as record Restaurant.Menus.MenuItem.MenuItemFields
+      of Held as record Restaurant.Menus.MenuItemProjection.Projected
     with {
       briefly as "How menuitems are laid out in storage"
       described as {
@@ -188,8 +200,8 @@ context Menus as router is {
       }
     }
     handler MenuItemStoreHandler is {
-      on event Restaurant.Menus.MenuItem.MenuItemAdded {
-        do "store the identifier carried by the event"
+      on command Restaurant.Menus.MenuItemStore.PersistMenuItemAdded {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps menuitem storage in step with what happened"
@@ -213,8 +225,63 @@ context Menus as router is {
     }
   }
 
+projector MenuItemProjection as flow is {
+  inlet Observed is event Restaurant.Menus.MenuItem.MenuItemAdded with {
+    briefly as "Where menu item events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Menus.MenuItemStore.PersistMenuItemAdded with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Menus.MenuItemStore
+
+  record Projected is {
+    menuItemId is Restaurant.Menus.MenuItemId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per menu item, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler MenuItemProjectionHandler is {
+    on menuItemAdded: event Restaurant.Menus.MenuItem.MenuItemAdded {
+      tell command Restaurant.Menus.MenuItemStore.PersistMenuItemAdded(
+        menuItemId = menuItemAdded.menuItemId
+      ) to repository Restaurant.Menus.MenuItemStore
+    }
+  } with {
+    briefly as "Turns menu item events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects menu item events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingMenuItem is {
+    from outlet Restaurant.Menus.MenuItem.MenuItemEvents to inlet Restaurant.Menus.MenuItemProjection.Observed
+  } with {
+    briefly as "Carries menu item events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingMenuItem is {
-    from outlet Restaurant.Menus.MenuItem.MenuItemEvents to inlet MenuItemStore.Recorded
+    from outlet Restaurant.Menus.MenuItemProjection.Persisting to inlet MenuItemStore.Recorded
   } with {
     briefly as "Carries menuitem events to storage"
     described as {
@@ -339,14 +406,26 @@ context Menus as router is {
 
 
   repository MenuStore as sink is {
-    inlet Recorded is event Restaurant.Menus.Menu.MenuComposed with {
-      briefly as "Where menu events arrive to be persisted"
+    command PersistMenuComposed is {
+      menuId is Restaurant.Menus.MenuId
+    } with {
+      briefly as "Apply MenuComposed to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Menus.MenuStore.PersistMenuComposed with {
+      briefly as "Where menu persistence commands arrive"
+      described as {
+        |A projector turns each menu event into one of these.
       }
     }
     schema MenuSchema is flat
-      of Held as record Restaurant.Menus.Menu.MenuFields
+      of Held as record Restaurant.Menus.MenuProjection.Projected
     with {
       briefly as "How menus are laid out in storage"
       described as {
@@ -354,8 +433,8 @@ context Menus as router is {
       }
     }
     handler MenuStoreHandler is {
-      on event Restaurant.Menus.Menu.MenuComposed {
-        do "store the identifier carried by the event"
+      on command Restaurant.Menus.MenuStore.PersistMenuComposed {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps menu storage in step with what happened"
@@ -379,8 +458,63 @@ context Menus as router is {
     }
   }
 
+projector MenuProjection as flow is {
+  inlet Observed is event Restaurant.Menus.Menu.MenuComposed with {
+    briefly as "Where menu events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Menus.MenuStore.PersistMenuComposed with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Menus.MenuStore
+
+  record Projected is {
+    menuId is Restaurant.Menus.MenuId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per menu, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler MenuProjectionHandler is {
+    on menuComposed: event Restaurant.Menus.Menu.MenuComposed {
+      tell command Restaurant.Menus.MenuStore.PersistMenuComposed(
+        menuId = menuComposed.menuId
+      ) to repository Restaurant.Menus.MenuStore
+    }
+  } with {
+    briefly as "Turns menu events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects menu events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingMenu is {
+    from outlet Restaurant.Menus.Menu.MenuEvents to inlet Restaurant.Menus.MenuProjection.Observed
+  } with {
+    briefly as "Carries menu events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingMenu is {
-    from outlet Restaurant.Menus.Menu.MenuEvents to inlet MenuStore.Recorded
+    from outlet Restaurant.Menus.MenuProjection.Persisting to inlet MenuStore.Recorded
   } with {
     briefly as "Carries menu events to storage"
     described as {

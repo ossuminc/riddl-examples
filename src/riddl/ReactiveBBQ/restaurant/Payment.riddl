@@ -144,14 +144,26 @@ context Payments as flow is {
 
 
   repository PaymentStore as sink is {
-    inlet Recorded is event Restaurant.Payments.Payment.Paid with {
-      briefly as "Where payment events arrive to be persisted"
+    command PersistPaid is {
+      paymentId is Restaurant.Payments.PaymentId
+    } with {
+      briefly as "Apply Paid to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Payments.PaymentStore.PersistPaid with {
+      briefly as "Where payment persistence commands arrive"
+      described as {
+        |A projector turns each payment event into one of these.
       }
     }
     schema PaymentSchema is flat
-      of Held as record Restaurant.Payments.Payment.PaymentFields
+      of Held as record Restaurant.Payments.PaymentProjection.Projected
     with {
       briefly as "How payments are laid out in storage"
       described as {
@@ -159,8 +171,8 @@ context Payments as flow is {
       }
     }
     handler PaymentStoreHandler is {
-      on event Restaurant.Payments.Payment.Paid {
-        do "store the identifier carried by the event"
+      on command Restaurant.Payments.PaymentStore.PersistPaid {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps payment storage in step with what happened"
@@ -184,8 +196,63 @@ context Payments as flow is {
     }
   }
 
+projector PaymentProjection as flow is {
+  inlet Observed is event Restaurant.Payments.Payment.Paid with {
+    briefly as "Where payment events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Payments.PaymentStore.PersistPaid with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Payments.PaymentStore
+
+  record Projected is {
+    paymentId is Restaurant.Payments.PaymentId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per payment, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler PaymentProjectionHandler is {
+    on paid: event Restaurant.Payments.Payment.Paid {
+      tell command Restaurant.Payments.PaymentStore.PersistPaid(
+        paymentId = paid.paymentId
+      ) to repository Restaurant.Payments.PaymentStore
+    }
+  } with {
+    briefly as "Turns payment events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects payment events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingPayment is {
+    from outlet Restaurant.Payments.Payment.PaymentEvents to inlet Restaurant.Payments.PaymentProjection.Observed
+  } with {
+    briefly as "Carries payment events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingPayment is {
-    from outlet Restaurant.Payments.Payment.PaymentEvents to inlet PaymentStore.Recorded
+    from outlet Restaurant.Payments.PaymentProjection.Persisting to inlet PaymentStore.Recorded
   } with {
     briefly as "Carries payment events to storage"
     described as {

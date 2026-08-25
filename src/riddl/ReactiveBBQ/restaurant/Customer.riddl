@@ -29,6 +29,9 @@ context Customers as flow is {
     on request: command Restaurant.Customers.Customer.RegisterCustomer {
       send request to outlet Restaurant.Customers.CustomerDispatch
     }
+    on other {
+      error "unexpected message at the Customers boundary"
+    }
   } with {
     briefly as "Routes what arrives at the boundary inward"
     described as {
@@ -154,14 +157,26 @@ context Customers as flow is {
 
 
   repository CustomerStore as sink is {
-    inlet Recorded is event Restaurant.Customers.Customer.CustomerRegistered with {
-      briefly as "Where customer events arrive to be persisted"
+    command PersistCustomerRegistered is {
+      customerId is Restaurant.Customers.CustomerId
+    } with {
+      briefly as "Apply CustomerRegistered to the stored row"
       described as {
-        |The repository learns of changes through this inlet.
+        |A persistence command, not a domain command: it declares no
+        |`yields` because storing a row records no new entity state. A
+        |repository is changed by commands and read by queries, never by
+        |events.
+      }
+    }
+
+    inlet Recorded is command Restaurant.Customers.CustomerStore.PersistCustomerRegistered with {
+      briefly as "Where customer persistence commands arrive"
+      described as {
+        |A projector turns each customer event into one of these.
       }
     }
     schema CustomerSchema is flat
-      of Held as record Restaurant.Customers.Customer.CustomerFields
+      of Held as record Restaurant.Customers.CustomerProjection.Projected
     with {
       briefly as "How customers are laid out in storage"
       described as {
@@ -169,8 +184,8 @@ context Customers as flow is {
       }
     }
     handler CustomerStoreHandler is {
-      on event Restaurant.Customers.Customer.CustomerRegistered {
-        do "store the identifier carried by the event"
+      on command Restaurant.Customers.CustomerStore.PersistCustomerRegistered {
+        do "apply what the command carries to the stored row"
       }
     } with {
       briefly as "Keeps customer storage in step with what happened"
@@ -206,8 +221,63 @@ context Customers as flow is {
     }
   }
 
+projector CustomerProjection as flow is {
+  inlet Observed is event Restaurant.Customers.Customer.CustomerRegistered with {
+    briefly as "Where customer events are observed"
+    described as {
+      |The projector sees what the entity announced.
+    }
+  }
+
+  outlet Persisting is command Restaurant.Customers.CustomerStore.PersistCustomerRegistered with {
+    briefly as "Where persistence commands leave for the store"
+    described as {
+      |Turning the event into a command is the projector's whole job.
+    }
+  }
+
+  updates repository Restaurant.Customers.CustomerStore
+
+  record Projected is {
+    customerId is Restaurant.Customers.CustomerId
+  } with {
+    briefly as "The shape this projection maintains"
+    described as {
+      |One projected row per customer, keyed by its identifier. The store holds
+      |exactly this.
+    }
+  }
+
+  handler CustomerProjectionHandler is {
+    on customerRegistered: event Restaurant.Customers.Customer.CustomerRegistered {
+      tell command Restaurant.Customers.CustomerStore.PersistCustomerRegistered(
+        customerId = customerRegistered.customerId
+      ) to repository Restaurant.Customers.CustomerStore
+    }
+  } with {
+    briefly as "Turns customer events into persistence commands"
+    described as {
+      |A repository is changed by commands, so something must translate.
+    }
+  }
+} with {
+  briefly as "Projects customer events into the store"
+  described as {
+    |Stands between what the entity announced and what the store is told.
+  }
+}
+
+  connector ObservingCustomer is {
+    from outlet Restaurant.Customers.Customer.CustomerEvents to inlet Restaurant.Customers.CustomerProjection.Observed
+  } with {
+    briefly as "Carries customer events to the projector"
+    described as {
+      |Intra-context, so it may address the projector's own inlet directly.
+    }
+  }
+
   connector RecordingCustomer is {
-    from outlet Restaurant.Customers.Customer.CustomerEvents to inlet CustomerStore.Recorded
+    from outlet Restaurant.Customers.CustomerProjection.Persisting to inlet CustomerStore.Recorded
   } with {
     briefly as "Carries customer events to storage"
     described as {

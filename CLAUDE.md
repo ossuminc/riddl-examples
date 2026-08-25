@@ -132,6 +132,71 @@ query WhichCompany replies result TheCompany is { companyId is CompanyId }
 Declaring it creates a response obligation, exactly as `yields` does, so the
 handler must then discharge on every path.
 
+**A repository is changed by COMMANDS, read by queries, never by events
+(rc.24+)**. A repository inlet carrying an event is an Error. The corpus uses
+the pattern riddl-models settled on, at 4,032 sites there and 26 here:
+
+```riddl
+projector CompanyProjection as flow is {
+  inlet  Observed   is event CompanyAdded
+  outlet Persisting is command CompanyStore.PersistCompanyAdded
+  updates repository dokn.Companies.CompanyStore
+  record Projected is { companyId is CompanyId }     // REQUIRED: a projector
+  handler H is {                                     // must define a record
+    on added: event CompanyAdded {
+      tell command CompanyStore.PersistCompanyAdded(companyId = added.companyId)
+        to repository dokn.Companies.CompanyStore     // tell, NOT send-to-outlet
+    }
+  }
+}
+```
+
+Three details the compiler insists on: the projector **must define a record**;
+its handler must **`tell … to repository`** (a `send` to an outlet draws
+"does not persist its projection"); and the command alternation, when there
+is more than one Persist, is declared INSIDE the repository, so its path is
+`<Context>.<Repository>.<Alt>`.
+
+**A port carries only what its owner handles or publishes.** An inlet typed
+with a context-wide alternation whose owner handles a fraction of it draws
+"declares no handler clause for N of its M members". Give each entity its own
+alternation. Where an owner handles exactly one message, name that message
+directly rather than wrapping it in a one-member alternation.
+
+**Connectors require an EXACT type match** — a narrower inlet against a wider
+outlet is an Error, not a compatible subset. Narrow both ends together.
+
+**`set` may not follow `morph`** in a handler: the entity is in a different
+state by then. Put the values in the morph's own record constructor.
+
+**A reference's prefix must name what the target was declared as.** An omitted
+prefix means `type`, so `submits type PaymentDetails` is an Error when
+PaymentDetails is a `record`.
+
+**A constructor must supply every field** the type declares.
+
+**An error-sink `Failures` inlet still needs a clause that receives it** —
+`on other { error "..." }` on the context's boundary handler.
+
+### Tooling: prefer `find`/`dump` over regex
+
+`riddlc dump --json` emits a flat projection of every node with `kind`, `path`,
+`parent`, `span` and resolved `type.ref`/`type.carries`. **Use it to inventory
+before editing** — it is how the 26 event-fed repositories and their id fields
+were found, reliably, in one pass.
+
+`riddlc find <file> -- <predicates> -replace <cmd> \;` feeds each matched
+definition's source text to `cmd` on stdin and uses its stdout as the
+replacement, rejecting overlapping spans outright. Predicates include `-type`,
+`-name`, `-path`, `-shape`, `-arity`, `-carries`, `-under-a`, `-unresolved`.
+This lets riddlc do the parsing and span arithmetic instead of a regex.
+
+**When a regex is unavoidable, scope it.** `re.sub(..., count=1)` over a whole
+file takes the FIRST match, not the nearest one; looping that over five
+contexts applies all five edits to context one. This has now caused three
+separate corruptions here, one of which (duplicate field names) riddlc did not
+detect. Slice to the definition's brace span first.
+
 **Discharging a response obligation (rc.19+)**. `yields`/`replies` is declared
 on the MESSAGE, so every handler of a command declaring `yields event E` owes an
 `E`. Only four things discharge it:
@@ -266,7 +331,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 
 - **sbt**: 2.0.6
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.20` — the pin and the staged `../bin/riddlc` must
+- **RIDDL**: `2.0.0-rc.24-5-cb05e374` — the pin and the staged `../bin/riddlc` must
   always be the **same build**. When they drift, the library and the
   binary doing the validating disagree, and the corpus result no longer
   says anything about the pin. This has been a released tag since rc.13;
@@ -277,7 +342,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.20",
+.configure(With.Riddl.library(version = "2.0.0-rc.24-5-cb05e374",
   nonJVMDependency = false))
 ```
 

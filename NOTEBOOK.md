@@ -2,10 +2,12 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-20**, by running the commands, not from memory.
+**Last verified: 2026-08-24**, by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.20`**, a released tag that resolves from GitHub Packages. Check
+**`2.0.0-rc.24-5-cb05e374`**, an unreleased snapshot resolvable only from
+`~/.ivy2/local` — CI cannot resolve it, so move to the released tag that
+carries these commits when one exists. Check
 they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
 projects and has changed under this repo twice now, mid-session both times.
 
@@ -52,6 +54,12 @@ Nothing. `task/` is empty.
   credentials are. Diagnose by curling the pom with sbt's own credential: if
   that returns 302/200, the credential is fine and the cache is the problem.
   `rmdir` the empty version directories and re-run.
+- **Use `riddlc dump --json` to inventory before editing.** It gives every
+  node's kind, path, parent, span and resolved type. Grepping for the same
+  facts is how three separate corruptions started here.
+- **A scoped regex or nothing.** `re.sub(..., count=1)` over a whole file
+  takes the FIRST match; in a loop over N contexts it applies all N edits to
+  context one. Slice to the definition's brace span first.
 - **Do not validate through the `.conf` files** when measuring: their
   `common` blocks can hide the very warnings being driven to zero.
 - **Validate is not enough after a compiler bump.** Round-trip through
@@ -84,16 +92,83 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: August 20, 2026
+**Last Updated**: August 24, 2026
 
 **Status: COMPLETE.** The corpus validates with **zero messages of every
-kind** under `2.0.0-rc.20` on `main`. FooBarSameDomain remains non-zero by
+kind** under `2.0.0-rc.24-5-cb05e374` on `main`. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
 - None outstanding. `task/` is empty.
 - The `show … to …` riddlc bug is filed against riddl; once fixed, restore
   the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-24: rc.24, and persistence becomes command-driven
+
+Four releases of catch-up — 44 errors and 42 completeness findings — and the
+corpus is back to zero on every message kind.
+
+### The structural change
+
+**A repository is changed by commands and read by queries, never by events.**
+All 26 stores took their entity's event straight off a connector. The fix is
+the pattern riddl-models had already settled at 4,032 sites: a
+`Persist<Event>` command per event, and a projector that translates.
+
+Three details, each learned by the compiler rejecting the obvious version:
+a projector must DEFINE a record; its handler must `tell … to repository`
+rather than send to an outlet; and a command alternation declared inside a
+repository has the path `<Context>.<Repository>.<Alt>`, not
+`<Context>.<Alt>` — that one cost five unresolved PathIds.
+
+### The second theme: ports carry only what their owner handles
+
+Most of the completeness tail was one shape — an inlet typed with a
+context-wide alternation whose owner handles a fraction of it. Narrowing to
+per-entity alternations cleared 9 findings at once and is the better model.
+
+**Connectors require an EXACT type match**, so narrowing one end alone is an
+Error rather than a compatible subset. Three type mismatches appeared before
+that landed.
+
+### Better tools, used too late
+
+Reid pointed out that rc.24 brings `dump` and `find -replace`, and that
+`find -replace` lets a script be a straight stdin→stdout transformation while
+riddlc does the parsing, selecting and span arithmetic.
+
+`dump --json` proved its worth immediately: one pass produced every
+repository, its inlet's resolved type, whether that type carries a Command or
+an Event, and the id fields of every event — the inventory that drove the
+whole migration. Grepping for that would have been guesswork.
+
+**I did not take the advice far enough, and paid for it three times**: a
+`count=1` substitution rewrote five `yield` prompts instead of five morph
+constructors; the same bug put five `on other` clauses in one handler and
+retargeted one schema five times; and a delivery-target rewrite caught 20
+`tell command` statements it had no business touching. Each was caught by
+reading the diff or the next validation, each cost a revert.
+
+The rule now in CLAUDE.md: `re.sub(count=1)` over a whole file takes the
+FIRST match, not the nearest one. Slice to the definition's brace span, or
+use `find -replace` and let riddlc choose the span.
+
+### Verified
+
+- `bin/validate-corpus.sh` exits 0; 8/8 at zero on all six kinds
+- prettify round trip: zero messages of ANY kind on all eight; second pass
+  byte-identical
+- every `.conf` exits 0 but FooBarSameDomain's deliberate 7
+- riddl's EBNF validator 9/9
+
+### Note on the pin
+
+`2.0.0-rc.24-5-cb05e374` is unreleased and lives only in `~/.ivy2/local`.
+Pinned because it is the build validated against and pin-vs-binary drift is
+this repo's most expensive recurring trap — but CI cannot resolve it. Move to
+the released tag carrying these commits when one exists.
 
 ---
 

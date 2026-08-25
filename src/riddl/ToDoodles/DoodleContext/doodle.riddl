@@ -29,6 +29,9 @@ context Doodle as flow is {
     on request: command ToDoodles.Doodle.Drawing.CreateDrawing {
       send request to outlet ToDoodles.Doodle.DrawingDispatch
     }
+    on other {
+      error "unexpected message at the Doodle boundary"
+    }
   } with {
     briefly as "Routes what arrives at the boundary inward"
     described as {
@@ -179,7 +182,7 @@ context Doodle as flow is {
       }
     }
     schema Store is flat
-      of Held as record DrawingData
+      of Held as record ToDoodles.Doodle.DrawingProjection.Projected
     with {
       briefly as "How drawings are laid out in storage"
       described as {

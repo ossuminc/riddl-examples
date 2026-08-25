@@ -237,7 +237,7 @@ domain ShopifyCart is {
       }
     }
 
-    outlet CartDispatch is type ShopifyCart.ShopperCommand with {
+    outlet CartDispatch is type ShopifyCart.CartCommand with {
       briefly as "Where entering commands bound for Cart are handed inward"
       described as {
         |One outlet per entity: an outlet may carry exactly one connector, so
@@ -245,7 +245,7 @@ domain ShopifyCart is {
       }
     }
 
-    outlet ProductDispatch is type ShopifyCart.ShopperCommand with {
+    outlet ProductDispatch is type ShopifyCart.ProductCommand with {
       briefly as "Where entering commands bound for Product are handed inward"
       described as {
         |One outlet per entity: an outlet may carry exactly one connector, so
@@ -253,7 +253,7 @@ domain ShopifyCart is {
       }
     }
 
-    outlet CheckoutDispatch is type ShopifyCart.ShopperCommand with {
+    outlet CheckoutDispatch is type ShopifyCart.CheckoutCommand with {
       briefly as "Where entering commands bound for Checkout are handed inward"
       described as {
         |One outlet per entity: an outlet may carry exactly one connector, so
@@ -285,6 +285,9 @@ domain ShopifyCart is {
       }
       on updateProductPrice: command ShopifyCart.UpdateProductPrice {
         send updateProductPrice to outlet ShopifyCart.ShoppingContext.ProductDispatch
+      }
+      on other {
+        error "unexpected message at the ShoppingContext boundary"
       }
     } with {
       briefly as "Routes what arrives at the boundary to the entity that owns it"
@@ -326,14 +329,14 @@ domain ShopifyCart is {
     // Product Entity
     entity Product as flow is {
 
-      inlet ProductCommands is type ShopifyCart.ShopperCommand with {
+      inlet ProductCommands is type ShopifyCart.ProductCommand with {
         briefly as "Where this entity receives its commands"
         described as {
           |A processor receives only through its OWN inlet.
         }
       }
 
-      outlet ProductEvents is type ShoppingEvent with {
+      outlet ProductEvents is type ShopifyCart.ShoppingContext.ProductEvent with {
         briefly as "Where this entity publishes what happened"
         described as {
           |Publishing goes out the entity's own outlet.
@@ -457,9 +460,9 @@ domain ShopifyCart is {
               inventory = prompt("the inventory of the resulting ShoppingContext state")
             )
             // Emit event
-            tell event ProductPriceUpdated(productId = prompt("the productId carried by ProductPriceUpdated"),
+            send event ProductPriceUpdated(productId = prompt("the productId carried by ProductPriceUpdated"),
             oldPrice = prompt("the oldPrice carried by ProductPriceUpdated"),
-            newPrice = prompt("the newPrice carried by ProductPriceUpdated")) to entity Product
+            newPrice = prompt("the newPrice carried by ProductPriceUpdated")) to outlet ShopifyCart.ShoppingContext.Product.ProductEvents
           else
             error "Price must be greater than zero"
           end
@@ -478,17 +481,17 @@ domain ShopifyCart is {
             inventory = prompt("the inventory of the resulting ShoppingContext state")
           )
           // Emit event
-          tell event InventoryUpdated(productId = prompt("the productId carried by InventoryUpdated"),
+          send event InventoryUpdated(productId = prompt("the productId carried by InventoryUpdated"),
             oldQuantity = prompt("the oldQuantity carried by InventoryUpdated"),
             newQuantity = prompt("the newQuantity carried by InventoryUpdated"),
-            newStatus = prompt("the newStatus carried by InventoryUpdated")) to entity Product
+            newStatus = prompt("the newStatus carried by InventoryUpdated")) to outlet ShopifyCart.ShoppingContext.Product.ProductEvents
         }
 
         on command CreateProduct is {
           // A creation command either records the new product or refuses it.
           // Both outcomes are covered, so every path discharges.
           when prompt("the sku is well formed and not already in the catalogue") then
-            tell event ProductCreated(productId = prompt("the productId carried by ProductCreated")) to entity Product
+            send event ProductCreated(productId = prompt("the productId carried by ProductCreated")) to outlet ShopifyCart.ShoppingContext.Product.ProductEvents
           else
             error "Cannot create product"
           end
@@ -551,14 +554,14 @@ domain ShopifyCart is {
     // Cart Entity
     entity Cart as flow is {
 
-      inlet CartCommands is type ShopifyCart.ShopperCommand with {
+      inlet CartCommands is type ShopifyCart.CartCommand with {
         briefly as "Where this entity receives its commands"
         described as {
           |A processor receives only through its OWN inlet.
         }
       }
 
-      outlet CartEvents is type ShoppingEvent with {
+      outlet CartEvents is type ShopifyCart.ShoppingContext.CartEvent with {
         briefly as "Where this entity publishes what happened"
         described as {
           |Publishing goes out the entity's own outlet.
@@ -1067,7 +1070,7 @@ domain ShopifyCart is {
           )
 
           // Emit event
-          tell event CartCreated(cartId = prompt("the cartId carried by CartCreated")) to entity Cart
+          send event CartCreated(cartId = prompt("the cartId carried by CartCreated")) to outlet ShopifyCart.ShoppingContext.Cart.CartEvents
         }
 
         on command AddToCart is {
@@ -1106,11 +1109,11 @@ domain ShopifyCart is {
               total = prompt("the total of the resulting ShoppingContext state")
             )
             // Emit event
-            tell event ItemAddedToCart(cartId = prompt("the cartId carried by ItemAddedToCart"),
+            send event ItemAddedToCart(cartId = prompt("the cartId carried by ItemAddedToCart"),
             productId = prompt("the productId carried by ItemAddedToCart"),
             quantity = prompt("the quantity carried by ItemAddedToCart"),
             name = prompt("the name carried by ItemAddedToCart"),
-            price = prompt("the price carried by ItemAddedToCart")) to entity Cart
+            price = prompt("the price carried by ItemAddedToCart")) to outlet ShopifyCart.ShoppingContext.Cart.CartEvents
           else
             error "Product is not available"
           end
@@ -1140,8 +1143,8 @@ domain ShopifyCart is {
             total = prompt("the total of the resulting ShoppingContext state")
           )
           // Emit event
-          tell event ItemRemovedFromCart(cartId = prompt("the cartId carried by ItemRemovedFromCart"),
-            productId = prompt("the productId carried by ItemRemovedFromCart")) to entity Cart
+          send event ItemRemovedFromCart(cartId = prompt("the cartId carried by ItemRemovedFromCart"),
+            productId = prompt("the productId carried by ItemRemovedFromCart")) to outlet ShopifyCart.ShoppingContext.Cart.CartEvents
         }
 
         // FIXED: Ambiguous reference by using fully qualified path
@@ -1176,10 +1179,10 @@ domain ShopifyCart is {
               total = prompt("the total of the resulting ShoppingContext state")
             )
             // Emit event
-            tell event CartQuantityUpdated(cartId = prompt("the cartId carried by CartQuantityUpdated"),
+            send event CartQuantityUpdated(cartId = prompt("the cartId carried by CartQuantityUpdated"),
             productId = prompt("the productId carried by CartQuantityUpdated"),
             oldQuantity = prompt("the oldQuantity carried by CartQuantityUpdated"),
-            newQuantity = prompt("the newQuantity carried by CartQuantityUpdated")) to entity Cart
+            newQuantity = prompt("the newQuantity carried by CartQuantityUpdated")) to outlet ShopifyCart.ShoppingContext.Cart.CartEvents
           else
             when prompt("command.quantity == 0") then
               // Quantity zero means the item leaves the cart. Record the
@@ -1195,8 +1198,8 @@ domain ShopifyCart is {
                 discount = prompt("the discount of the resulting ShoppingContext state"),
                 total = prompt("the total of the resulting ShoppingContext state")
               )
-              tell event ItemRemovedFromCart(cartId = prompt("the cartId carried by ItemRemovedFromCart"),
-            productId = prompt("the productId carried by ItemRemovedFromCart")) to entity Cart
+              send event ItemRemovedFromCart(cartId = prompt("the cartId carried by ItemRemovedFromCart"),
+            productId = prompt("the productId carried by ItemRemovedFromCart")) to outlet ShopifyCart.ShoppingContext.Cart.CartEvents
             else
               error "Quantity must be zero or positive"
             end
@@ -1217,9 +1220,9 @@ domain ShopifyCart is {
               total = prompt("the total of the resulting ShoppingContext state")
             )
             // Emit event
-            tell event DiscountApplied(cartId = prompt("the cartId carried by DiscountApplied"),
+            send event DiscountApplied(cartId = prompt("the cartId carried by DiscountApplied"),
             discountCode = prompt("the discountCode carried by DiscountApplied"),
-            discountAmount = prompt("the discountAmount carried by DiscountApplied")) to entity Cart
+            discountAmount = prompt("the discountAmount carried by DiscountApplied")) to outlet ShopifyCart.ShoppingContext.Cart.CartEvents
           else
             error "Invalid discount code"
           end
@@ -1289,14 +1292,14 @@ domain ShopifyCart is {
     // Checkout Process
     entity Checkout as flow is {
 
-      inlet CheckoutCommands is type ShopifyCart.ShopperCommand with {
+      inlet CheckoutCommands is type ShopifyCart.CheckoutCommand with {
         briefly as "Where this entity receives its commands"
         described as {
           |A processor receives only through its OWN inlet.
         }
       }
 
-      outlet CheckoutEvents is type ShoppingEvent with {
+      outlet CheckoutEvents is type ShopifyCart.ShoppingContext.CheckoutEvent with {
         briefly as "Where this entity publishes what happened"
         described as {
           |Publishing goes out the entity's own outlet.
@@ -1432,11 +1435,11 @@ domain ShopifyCart is {
 
           // Emit event
           // FIXED: Ambiguous reference by using fully qualified path
-          tell event CheckoutInitiated(
+          send event CheckoutInitiated(
             checkoutId = prompt("the checkoutId carried by CheckoutInitiated"),
             cartId = prompt("the cartId carried by CheckoutInitiated"),
             customerEmail = prompt("the customerEmail carried by CheckoutInitiated")
-          ) to entity ShopifyCart.ShoppingContext.Checkout
+          ) to outlet ShopifyCart.ShoppingContext.Checkout.CheckoutEvents
         }
 
         on command SelectPaymentMethod is {
@@ -1450,11 +1453,11 @@ domain ShopifyCart is {
 
           // Emit event
           // FIXED: Ambiguous reference by using fully qualified path
-          tell event PaymentMethodSelected(
+          send event PaymentMethodSelected(
             checkoutId = prompt("the checkoutId carried by PaymentMethodSelected"),
             cartId = prompt("the cartId carried by PaymentMethodSelected"),
             paymentType = prompt("the paymentType carried by PaymentMethodSelected")
-          ) to entity ShopifyCart.ShoppingContext.Checkout
+          ) to outlet ShopifyCart.ShoppingContext.Checkout.CheckoutEvents
         }
 
         on command CompleteCheckout is {
@@ -1462,11 +1465,11 @@ domain ShopifyCart is {
           when prompt("isValidCart(command.cartId) && hasPaymentMethod()") then
             // Process payment, Create order, Clear cart
             // Emit event with new order ID
-            tell event CheckoutCompleted(
+            send event CheckoutCompleted(
               checkoutId = prompt("the checkoutId carried by CheckoutCompleted"),
               cartId = prompt("the cartId carried by CheckoutCompleted"),
               orderId = prompt("the orderId carried by CheckoutCompleted")
-            ) to entity ShopifyCart.ShoppingContext.Checkout
+            ) to outlet ShopifyCart.ShoppingContext.Checkout.CheckoutEvents
           else
             error "Cannot complete checkout"
           end
@@ -1476,11 +1479,11 @@ domain ShopifyCart is {
           // Abandoning is still processing: the handler records the outcome
           // or refuses, so every path discharges.
           when prompt("the checkout is still open") then
-            tell event CheckoutCancelled(
+            send event CheckoutCancelled(
               checkoutId = prompt("the checkoutId carried by CheckoutCancelled"),
               cartId = prompt("the cartId carried by CheckoutCancelled"),
               reason = prompt("the reason carried by CheckoutCancelled")
-            ) to entity ShopifyCart.ShoppingContext.Checkout
+            ) to outlet ShopifyCart.ShoppingContext.Checkout.CheckoutEvents
           else
             error "Cannot cancel a checkout that has already completed"
           end
@@ -1527,7 +1530,7 @@ domain ShopifyCart is {
       }
 
       schema CartData is relational of
-        cart as record CartRecord
+        cart as record ShopifyCart.ShoppingContext.CartProjection.Projected
         link cartItems as field Cart.items.id to field Product.id
       with {
         briefly as "How carts are laid out in storage"
@@ -1581,7 +1584,7 @@ domain ShopifyCart is {
       }
 
       schema ProductData is flat of
-        product as record ProductRecord
+        product as record ShopifyCart.ShoppingContext.ProductProjection.Projected
       with {
         briefly as "How products are laid out in storage"
         described as {
@@ -1641,7 +1644,7 @@ domain ShopifyCart is {
 
       step ValidateCart is {
         tell command ShopifyCart.RemoveFromCart(cartId = prompt("the cartId carried by RemoveFromCart"),
-            productId = prompt("the productId carried by RemoveFromCart")) to entity Cart
+            productId = prompt("the productId carried by RemoveFromCart")) to entity ShopifyCart.ShoppingContext.Cart
         // Check if cart exists and has items
         when prompt("cartRepository.exists(cartId) && cartRepository.hasItems(cartId)") then
           do "Continue to next step after cart validation"
@@ -1655,7 +1658,7 @@ domain ShopifyCart is {
             cartId = prompt("the cart being restored"),
             productId = prompt("the product to put back"),
             quantity = prompt("the quantity to put back")
-          ) to entity Cart
+          ) to entity ShopifyCart.ShoppingContext.Cart
       }
       with {
         briefly as "Validates cart exists and contains items"
@@ -1667,7 +1670,7 @@ domain ShopifyCart is {
 
       step ValidateInventory is {
         tell command ShopifyCart.UpdateInventory(productId = prompt("the productId carried by UpdateInventory"),
-            newQuantity = prompt("the newQuantity carried by UpdateInventory")) to entity Product
+            newQuantity = prompt("the newQuantity carried by UpdateInventory")) to entity ShopifyCart.ShoppingContext.Product
         // Check inventory for all items in cart
         when prompt("allItemsHaveInventory(Cart.items)") then
           do "Inventory validated for all items"
@@ -1680,7 +1683,7 @@ domain ShopifyCart is {
           tell command ShopifyCart.UpdateInventory(
             productId = prompt("the product whose inventory is restored"),
             newQuantity = prompt("the quantity held before this step ran")
-          ) to entity Product
+          ) to entity ShopifyCart.ShoppingContext.Product
       }
       with {
         briefly as "Confirms sufficient inventory for all items"
@@ -1750,14 +1753,14 @@ domain ShopifyCart is {
 
       step UpdateInventoryLevels is {
         tell command ShopifyCart.UpdateInventory(productId = prompt("the productId carried by UpdateInventory"),
-            newQuantity = prompt("the newQuantity carried by UpdateInventory")) to entity Product
+            newQuantity = prompt("the newQuantity carried by UpdateInventory")) to entity ShopifyCart.ShoppingContext.Product
         do "Reduce inventory for all purchased items via inventoryService"
       } reverted by {
         do "Restore inventory levels for all items via inventoryService"
           tell command ShopifyCart.UpdateInventory(
             productId = prompt("the product whose inventory is restored"),
             newQuantity = prompt("the quantity held before this step ran")
-          ) to entity Product
+          ) to entity ShopifyCart.ShoppingContext.Product
       } with {
         briefly as "Reduces inventory levels for purchased items"
         described by {
@@ -1818,32 +1821,59 @@ domain ShopifyCart is {
       }
     }
 
-    type ShoppingEvent is one of {
-      event ShopifyCart.ShoppingContext.Cart.CartCreated or event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated
+    type ProductEvent is one of {
+      event ShopifyCart.ShoppingContext.Product.ProductCreated or
+      event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated or
+      event ShopifyCart.ShoppingContext.Product.InventoryUpdated
     } with {
-      briefly as "Anything ShoppingContext announces"
+      briefly as "Anything Product announces"
       described as {
-        |The alternation of the events this context publishes so one outlet
-        |can carry them all.
+        |A port carries only what its owner publishes.
       }
     }
 
+    type CartEvent is one of {
+      event ShopifyCart.ShoppingContext.Cart.CartCreated or
+      event ShopifyCart.ShoppingContext.Cart.ItemAddedToCart or
+      event ShopifyCart.ShoppingContext.Cart.ItemRemovedFromCart or
+      event ShopifyCart.ShoppingContext.Cart.CartQuantityUpdated or
+      event ShopifyCart.ShoppingContext.Cart.DiscountApplied
+    } with {
+      briefly as "Anything Cart announces"
+      described as {
+        |A port carries only what its owner publishes.
+      }
+    }
+
+    type CheckoutEvent is one of {
+      event ShopifyCart.ShoppingContext.Checkout.CheckoutInitiated or
+      event ShopifyCart.ShoppingContext.Checkout.PaymentMethodSelected or
+      event ShopifyCart.ShoppingContext.Checkout.CheckoutCompleted or
+      event ShopifyCart.ShoppingContext.Checkout.CheckoutCancelled
+    } with {
+      briefly as "Anything Checkout announces"
+      described as {
+        |A port carries only what its owner publishes.
+      }
+    }
+
+
     processor ShoppingAnnouncer as router is {
-      inlet FromProduct is type ShoppingEvent with {
+      inlet FromProduct is type ShopifyCart.ShoppingContext.ProductEvent with {
         briefly as "Events arriving from Product"
         described as {
           |Each entity publishes on its own outlet; this merges the three.
         }
       }
 
-      inlet FromCart is type ShoppingEvent with {
+      inlet FromCart is type ShopifyCart.ShoppingContext.CartEvent with {
         briefly as "Events arriving from Cart"
         described as {
           |Each entity publishes on its own outlet; this merges the three.
         }
       }
 
-      inlet FromCheckout is type ShoppingEvent with {
+      inlet FromCheckout is type ShopifyCart.ShoppingContext.CheckoutEvent with {
         briefly as "Events arriving from Checkout"
         described as {
           |Each entity publishes on its own outlet; this merges the three.
@@ -2095,6 +2125,39 @@ domain ShopifyCart is {
     }
   }
 
+  type CartCommand is one of {
+    command ShopifyCart.AddToCart or
+    command ShopifyCart.RemoveFromCart or
+    command ShopifyCart.UpdateQuantity
+  } with {
+    briefly as "What the Cart entity can be asked to do from outside"
+    described as {
+      |A port carries only what its owner handles, so each entity has its own
+      |alternation rather than sharing the context-wide ShopperCommand.
+    }
+  }
+
+  type ProductCommand is one of {
+    command ShopifyCart.UpdateInventory or
+    command ShopifyCart.UpdateProductPrice
+  } with {
+    briefly as "What the Product entity can be asked to do from outside"
+    described as {
+      |See CartCommand.
+    }
+  }
+
+  type CheckoutCommand is one of {
+    command ShopifyCart.InitiateCheckout or
+    command ShopifyCart.SelectPaymentMethod or
+    command ShopifyCart.CompleteCheckout
+  } with {
+    briefly as "What the Checkout entity can be asked to do from outside"
+    described as {
+      |See CartCommand.
+    }
+  }
+
   type ShopperCommand is one of {
     command ShopifyCart.AddToCart or
     command ShopifyCart.RemoveFromCart or
@@ -2223,16 +2286,16 @@ domain ShopifyCart is {
       on command ShopifyCart.AddToCart {
         tell command ShopifyCart.AddToCart(cartId = prompt("the cartId carried by AddToCart"),
             productId = prompt("the productId carried by AddToCart"),
-            quantity = prompt("the quantity carried by AddToCart")) to entity Cart
+            quantity = prompt("the quantity carried by AddToCart")) to entity ShopifyCart.ShoppingContext.Cart
       }
       on command ShopifyCart.RemoveFromCart {
         tell command ShopifyCart.RemoveFromCart(cartId = prompt("the cartId carried by RemoveFromCart"),
-            productId = prompt("the productId carried by RemoveFromCart")) to entity Cart
+            productId = prompt("the productId carried by RemoveFromCart")) to entity ShopifyCart.ShoppingContext.Cart
       }
       on command ShopifyCart.UpdateQuantity {
         tell command ShopifyCart.UpdateQuantity(cartId = prompt("the cartId carried by UpdateQuantity"),
             productId = prompt("the productId carried by UpdateQuantity"),
-            quantity = prompt("the quantity carried by UpdateQuantity")) to entity Cart
+            quantity = prompt("the quantity carried by UpdateQuantity")) to entity ShopifyCart.ShoppingContext.Cart
       }
       on command ShopifyCart.InitiateCheckout {
         tell command ShopifyCart.InitiateCheckout(
@@ -2260,11 +2323,11 @@ domain ShopifyCart is {
       }
       on command ShopifyCart.UpdateProductPrice {
         tell command ShopifyCart.UpdateProductPrice(productId = prompt("the productId carried by UpdateProductPrice"),
-            newPrice = prompt("the newPrice carried by UpdateProductPrice")) to entity Product
+            newPrice = prompt("the newPrice carried by UpdateProductPrice")) to entity ShopifyCart.ShoppingContext.Product
       }
       on command ShopifyCart.UpdateInventory {
         tell command ShopifyCart.UpdateInventory(productId = prompt("the productId carried by UpdateInventory"),
-            newQuantity = prompt("the newQuantity carried by UpdateInventory")) to entity Product
+            newQuantity = prompt("the newQuantity carried by UpdateInventory")) to entity ShopifyCart.ShoppingContext.Product
       }
     } with {
       briefly as "Carries what the shopper does on a page into the domain"

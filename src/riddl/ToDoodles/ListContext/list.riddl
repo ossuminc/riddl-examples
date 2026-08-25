@@ -231,7 +231,7 @@ context List as flow is {
       }
     }
     schema Store is flat
-      of Held as record DoodleListData
+      of Held as record ToDoodles.List.ListProjection.Projected
     with {
       briefly as "How lists are laid out in storage"
       described as {

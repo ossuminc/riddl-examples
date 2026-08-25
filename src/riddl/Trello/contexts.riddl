@@ -51,6 +51,9 @@ context UserManagement as split is {
     on markAllAsRead: command Trello.UserManagement.Notification.MarkAllAsRead {
       send markAllAsRead to outlet Trello.UserManagement.NotificationDispatch
     }
+    on other {
+      error "unexpected message at the UserManagement boundary"
+    }
   } with {
     briefly as "Routes what arrives at the boundary to the entity that owns it"
     described as {
@@ -468,7 +471,7 @@ context UserManagement as split is {
       }
     }
     schema UserManagementSchema is flat
-      of Held as record Trello.UserManagement.Account.AccountFields
+      of Held as record Trello.UserManagement.UserManagementProjection.Projected
     with {
       briefly as "How UserManagement records are laid out in storage"
       described as {
@@ -877,7 +880,7 @@ context WorkspaceManagement as flow is {
       }
     }
     schema WorkspaceManagementSchema is flat
-      of Held as record Trello.WorkspaceManagement.Workspace.WorkspaceFields
+      of Held as record Trello.WorkspaceManagement.WorkspaceManagementProjection.Projected
     with {
       briefly as "How WorkspaceManagement records are laid out in storage"
       described as {
@@ -1835,7 +1838,7 @@ context BoardManagement as split is {
       }
     }
     schema BoardManagementSchema is flat
-      of Held as record Trello.BoardManagement.Board.BoardFields
+      of Held as record Trello.BoardManagement.BoardManagementProjection.Projected
     with {
       briefly as "How BoardManagement records are laid out in storage"
       described as {

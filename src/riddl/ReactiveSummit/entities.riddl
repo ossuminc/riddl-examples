@@ -29,6 +29,9 @@ context ToDoList as flow is {
     on request: command ToDoItem.AddItem {
       send request to outlet ReactiveSummit.ToDoList.ItemDispatch
     }
+    on other {
+      error "unexpected message at the ToDoList boundary"
+    }
   } with {
     briefly as "Routes what arrives at the boundary inward"
     described as {
@@ -254,7 +257,7 @@ context ToDoList as flow is {
       }
     }
     schema Store is flat
-      of Held as record ItemContent
+      of Held as record ReactiveSummit.ToDoList.ItemProjection.Projected
     with {
       briefly as "How items are laid out in storage"
       described as {

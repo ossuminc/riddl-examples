@@ -2197,7 +2197,7 @@ domain ShopifyCart is {
 
     page Payment is {
       // FIXED: Added missing form - matches the reference in epics
-      form PaymentDetailsEntry submits type PaymentDetails with {
+      form PaymentDetailsEntry submits record PaymentDetails with {
         briefly as "Form for entering payment information"
         described by {
           | Collects payment method and details from the customer.
@@ -2223,14 +2223,14 @@ domain ShopifyCart is {
     }
 
     page ProductManagement is {
-      form InventoryQuantity submits type InventoryUpdateDetails with {
+      form InventoryQuantity submits record InventoryUpdateDetails with {
         briefly as "Form for updating product inventory"
         described by {
           | Allows store administrators to update the quantity of products in inventory.
           | Automatically updates the inventory status based on the new quantity.
         }
       }
-      item ProductPrice submits type ProductPriceDetails with {
+      item ProductPrice submits record ProductPriceDetails with {
         briefly as "Form field for updating product price"
         described by {
           | Allows store administrators to modify the price of products.

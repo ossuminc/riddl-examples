@@ -48,6 +48,9 @@ domain dokn is {
       on request: command dokn.Companies.Company.AddCompany {
         forward request to outlet dokn.Companies.CompanyDispatch
       }
+      on other {
+        error "unexpected message at the Companies boundary"
+      }
     } with {
       briefly as "Routes what arrives at the boundary inward"
       described as {
@@ -184,7 +187,6 @@ domain dokn is {
             primaryContactPhone = prompt("the primaryContactPhone of the resulting Company state"),
             primaryContactEmail = prompt("the primaryContactEmail of the resulting Company state")
           )
-          set field dokn.Companies.Company.Fields.companyId to "the identifier carried by the event"
         }
         on query WhichCompany {
           reply result TheCompany(
@@ -209,14 +211,26 @@ domain dokn is {
 
 
     repository CompanyStore as sink is {
-      inlet Recorded is event dokn.Companies.Company.CompanyAdded with {
-        briefly as "Where company events arrive to be persisted"
+      command PersistCompanyAdded is {
+        companyId is dokn.Companies.CompanyId
+      } with {
+        briefly as "Apply CompanyAdded to the stored row"
         described as {
-          |The repository learns of changes through this inlet.
+          |A persistence command, not a domain command: it declares no
+          |`yields` because storing a row records no new entity state. A
+          |repository is changed by commands and read by queries, never by
+          |events.
+        }
+      }
+
+      inlet Recorded is command dokn.Companies.CompanyStore.PersistCompanyAdded with {
+        briefly as "Where company persistence commands arrive"
+        described as {
+          |A projector turns each company event into one of these.
         }
       }
       schema Store is flat
-        of Held as record dokn.Companies.Company.Fields
+        of Held as record dokn.Companies.CompanyProjection.Projected
       with {
         briefly as "How companys are laid out in storage"
         described as {
@@ -224,8 +238,8 @@ domain dokn is {
         }
       }
       handler CompanyStoreHandler is {
-        on event dokn.Companies.Company.CompanyAdded {
-          do "store the identifier carried by the event"
+        on command dokn.Companies.CompanyStore.PersistCompanyAdded {
+          do "apply what the command carries to the stored row"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -263,8 +277,63 @@ domain dokn is {
       }
     }
 
+    projector CompanyProjection as flow is {
+      inlet Observed is event dokn.Companies.Company.CompanyAdded with {
+        briefly as "Where company events are observed"
+        described as {
+          |The projector sees what the entity announced.
+        }
+      }
+
+      outlet Persisting is command dokn.Companies.CompanyStore.PersistCompanyAdded with {
+        briefly as "Where persistence commands leave for the store"
+        described as {
+          |Turning the event into a command is the projector's whole job.
+        }
+      }
+
+      updates repository dokn.Companies.CompanyStore
+
+      record Projected is {
+        companyId is dokn.Companies.CompanyId
+      } with {
+        briefly as "The shape this projection maintains"
+        described as {
+          |One projected row per company, keyed by its identifier. The store holds
+          |exactly this.
+        }
+      }
+
+      handler CompanyProjectionHandler is {
+        on companyAdded: event dokn.Companies.Company.CompanyAdded {
+          tell command dokn.Companies.CompanyStore.PersistCompanyAdded(
+            companyId = companyAdded.companyId
+          ) to repository dokn.Companies.CompanyStore
+        }
+      } with {
+        briefly as "Turns company events into persistence commands"
+        described as {
+          |A repository is changed by commands, so something must translate.
+        }
+      }
+    } with {
+      briefly as "Projects company events into the store"
+      described as {
+        |Stands between what the entity announced and what the store is told.
+      }
+    }
+
+    connector ObservingCompany is {
+      from outlet dokn.Companies.Company.CompanyEvents to inlet dokn.Companies.CompanyProjection.Observed
+    } with {
+      briefly as "Carries company events to the projector"
+      described as {
+        |Intra-context, so it may address the projector's own inlet directly.
+      }
+    }
+
     connector RecordingCompany is {
-      from outlet dokn.Companies.Company.CompanyEvents to inlet CompanyStore.Recorded
+      from outlet dokn.Companies.CompanyProjection.Persisting to inlet CompanyStore.Recorded
     } with {
       briefly as "Carries company events to storage"
       described as {
@@ -300,6 +369,9 @@ domain dokn is {
     handler DriversBoundary is {
       on request: command dokn.Drivers.Driver.AddDriverToCompany {
         forward request to outlet dokn.Drivers.DriverDispatch
+      }
+      on other {
+        error "unexpected message at the Drivers boundary"
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -411,7 +483,6 @@ domain dokn is {
             mobile = prompt("the mobile of the resulting Driver state"),
             onDutyTime = prompt("the onDutyTime of the resulting Driver state")
           )
-          set field dokn.Drivers.Driver.Fields.driverId to "the identifier carried by the event"
         }
         on query WhichDriver {
           reply result TheDriver(
@@ -436,14 +507,26 @@ domain dokn is {
 
 
     repository DriverStore as sink is {
-      inlet Recorded is event dokn.Drivers.Driver.DriverAddedToCompany with {
-        briefly as "Where driver events arrive to be persisted"
+      command PersistDriverAddedToCompany is {
+        driverId is dokn.Drivers.DriverId
+      } with {
+        briefly as "Apply DriverAddedToCompany to the stored row"
         described as {
-          |The repository learns of changes through this inlet.
+          |A persistence command, not a domain command: it declares no
+          |`yields` because storing a row records no new entity state. A
+          |repository is changed by commands and read by queries, never by
+          |events.
+        }
+      }
+
+      inlet Recorded is command dokn.Drivers.DriverStore.PersistDriverAddedToCompany with {
+        briefly as "Where driver persistence commands arrive"
+        described as {
+          |A projector turns each driver event into one of these.
         }
       }
       schema Store is flat
-        of Held as record dokn.Drivers.Driver.Fields
+        of Held as record dokn.Drivers.DriverProjection.Projected
       with {
         briefly as "How drivers are laid out in storage"
         described as {
@@ -451,8 +534,8 @@ domain dokn is {
         }
       }
       handler DriverStoreHandler is {
-        on event dokn.Drivers.Driver.DriverAddedToCompany {
-          do "store the identifier carried by the event"
+        on command dokn.Drivers.DriverStore.PersistDriverAddedToCompany {
+          do "apply what the command carries to the stored row"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -476,8 +559,63 @@ domain dokn is {
       }
     }
 
+    projector DriverProjection as flow is {
+      inlet Observed is event dokn.Drivers.Driver.DriverAddedToCompany with {
+        briefly as "Where driver events are observed"
+        described as {
+          |The projector sees what the entity announced.
+        }
+      }
+
+      outlet Persisting is command dokn.Drivers.DriverStore.PersistDriverAddedToCompany with {
+        briefly as "Where persistence commands leave for the store"
+        described as {
+          |Turning the event into a command is the projector's whole job.
+        }
+      }
+
+      updates repository dokn.Drivers.DriverStore
+
+      record Projected is {
+        driverId is dokn.Drivers.DriverId
+      } with {
+        briefly as "The shape this projection maintains"
+        described as {
+          |One projected row per driver, keyed by its identifier. The store holds
+          |exactly this.
+        }
+      }
+
+      handler DriverProjectionHandler is {
+        on driverAddedToCompany: event dokn.Drivers.Driver.DriverAddedToCompany {
+          tell command dokn.Drivers.DriverStore.PersistDriverAddedToCompany(
+            driverId = driverAddedToCompany.driverId
+          ) to repository dokn.Drivers.DriverStore
+        }
+      } with {
+        briefly as "Turns driver events into persistence commands"
+        described as {
+          |A repository is changed by commands, so something must translate.
+        }
+      }
+    } with {
+      briefly as "Projects driver events into the store"
+      described as {
+        |Stands between what the entity announced and what the store is told.
+      }
+    }
+
+    connector ObservingDriver is {
+      from outlet dokn.Drivers.Driver.DriverEvents to inlet dokn.Drivers.DriverProjection.Observed
+    } with {
+      briefly as "Carries driver events to the projector"
+      described as {
+        |Intra-context, so it may address the projector's own inlet directly.
+      }
+    }
+
     connector RecordingDriver is {
-      from outlet dokn.Drivers.Driver.DriverEvents to inlet DriverStore.Recorded
+      from outlet dokn.Drivers.DriverProjection.Persisting to inlet DriverStore.Recorded
     } with {
       briefly as "Carries driver events to storage"
       described as {
@@ -513,6 +651,9 @@ domain dokn is {
     handler NotesBoundary is {
       on request: command dokn.Notes.Note.CaptureNote {
         forward request to outlet dokn.Notes.NoteDispatch
+      }
+      on other {
+        error "unexpected message at the Notes boundary"
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -620,7 +761,6 @@ domain dokn is {
             downvoteCount = prompt("the downvoteCount of the resulting Note state"),
             approved = prompt("the approved of the resulting Note state")
           )
-          set field dokn.Notes.Note.Fields.noteId to "the identifier carried by the event"
         }
         on query WhichNote {
           reply result TheNote(
@@ -645,14 +785,26 @@ domain dokn is {
 
 
     repository NoteStore as sink is {
-      inlet Recorded is event dokn.Notes.Note.NoteCaptured with {
-        briefly as "Where note events arrive to be persisted"
+      command PersistNoteCaptured is {
+        noteId is dokn.Notes.NoteId
+      } with {
+        briefly as "Apply NoteCaptured to the stored row"
         described as {
-          |The repository learns of changes through this inlet.
+          |A persistence command, not a domain command: it declares no
+          |`yields` because storing a row records no new entity state. A
+          |repository is changed by commands and read by queries, never by
+          |events.
+        }
+      }
+
+      inlet Recorded is command dokn.Notes.NoteStore.PersistNoteCaptured with {
+        briefly as "Where note persistence commands arrive"
+        described as {
+          |A projector turns each note event into one of these.
         }
       }
       schema Store is flat
-        of Held as record dokn.Notes.Note.Fields
+        of Held as record dokn.Notes.NoteProjection.Projected
       with {
         briefly as "How notes are laid out in storage"
         described as {
@@ -660,8 +812,8 @@ domain dokn is {
         }
       }
       handler NoteStoreHandler is {
-        on event dokn.Notes.Note.NoteCaptured {
-          do "store the identifier carried by the event"
+        on command dokn.Notes.NoteStore.PersistNoteCaptured {
+          do "apply what the command carries to the stored row"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -685,8 +837,63 @@ domain dokn is {
       }
     }
 
+    projector NoteProjection as flow is {
+      inlet Observed is event dokn.Notes.Note.NoteCaptured with {
+        briefly as "Where note events are observed"
+        described as {
+          |The projector sees what the entity announced.
+        }
+      }
+
+      outlet Persisting is command dokn.Notes.NoteStore.PersistNoteCaptured with {
+        briefly as "Where persistence commands leave for the store"
+        described as {
+          |Turning the event into a command is the projector's whole job.
+        }
+      }
+
+      updates repository dokn.Notes.NoteStore
+
+      record Projected is {
+        noteId is dokn.Notes.NoteId
+      } with {
+        briefly as "The shape this projection maintains"
+        described as {
+          |One projected row per note, keyed by its identifier. The store holds
+          |exactly this.
+        }
+      }
+
+      handler NoteProjectionHandler is {
+        on noteCaptured: event dokn.Notes.Note.NoteCaptured {
+          tell command dokn.Notes.NoteStore.PersistNoteCaptured(
+            noteId = noteCaptured.noteId
+          ) to repository dokn.Notes.NoteStore
+        }
+      } with {
+        briefly as "Turns note events into persistence commands"
+        described as {
+          |A repository is changed by commands, so something must translate.
+        }
+      }
+    } with {
+      briefly as "Projects note events into the store"
+      described as {
+        |Stands between what the entity announced and what the store is told.
+      }
+    }
+
+    connector ObservingNote is {
+      from outlet dokn.Notes.Note.NoteEvents to inlet dokn.Notes.NoteProjection.Observed
+    } with {
+      briefly as "Carries note events to the projector"
+      described as {
+        |Intra-context, so it may address the projector's own inlet directly.
+      }
+    }
+
     connector RecordingNote is {
-      from outlet dokn.Notes.Note.NoteEvents to inlet NoteStore.Recorded
+      from outlet dokn.Notes.NoteProjection.Persisting to inlet NoteStore.Recorded
     } with {
       briefly as "Carries note events to storage"
       described as {
@@ -722,6 +929,9 @@ domain dokn is {
     handler MediaBoundary is {
       on request: command dokn.Media.Medium.StoreMedium {
         forward request to outlet dokn.Media.MediumDispatch
+      }
+      on other {
+        error "unexpected message at the Media boundary"
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -820,7 +1030,6 @@ domain dokn is {
             mediaId = prompt("the mediaId of the resulting Medium state"),
             path = prompt("the path of the resulting Medium state")
           )
-          set field dokn.Media.Medium.Fields.mediaId to "the identifier carried by the event"
         }
         on query WhichMedium {
           reply result TheMedium(
@@ -845,14 +1054,26 @@ domain dokn is {
 
 
     repository MediumStore as sink is {
-      inlet Recorded is event dokn.Media.Medium.MediumStored with {
-        briefly as "Where medium events arrive to be persisted"
+      command PersistMediumStored is {
+        mediaId is dokn.Media.MediaId
+      } with {
+        briefly as "Apply MediumStored to the stored row"
         described as {
-          |The repository learns of changes through this inlet.
+          |A persistence command, not a domain command: it declares no
+          |`yields` because storing a row records no new entity state. A
+          |repository is changed by commands and read by queries, never by
+          |events.
+        }
+      }
+
+      inlet Recorded is command dokn.Media.MediumStore.PersistMediumStored with {
+        briefly as "Where medium persistence commands arrive"
+        described as {
+          |A projector turns each medium event into one of these.
         }
       }
       schema Store is flat
-        of Held as record dokn.Media.Medium.Fields
+        of Held as record dokn.Media.MediumProjection.Projected
       with {
         briefly as "How mediums are laid out in storage"
         described as {
@@ -860,8 +1081,8 @@ domain dokn is {
         }
       }
       handler MediumStoreHandler is {
-        on event dokn.Media.Medium.MediumStored {
-          do "store the identifier carried by the event"
+        on command dokn.Media.MediumStore.PersistMediumStored {
+          do "apply what the command carries to the stored row"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -885,8 +1106,63 @@ domain dokn is {
       }
     }
 
+    projector MediumProjection as flow is {
+      inlet Observed is event dokn.Media.Medium.MediumStored with {
+        briefly as "Where medium events are observed"
+        described as {
+          |The projector sees what the entity announced.
+        }
+      }
+
+      outlet Persisting is command dokn.Media.MediumStore.PersistMediumStored with {
+        briefly as "Where persistence commands leave for the store"
+        described as {
+          |Turning the event into a command is the projector's whole job.
+        }
+      }
+
+      updates repository dokn.Media.MediumStore
+
+      record Projected is {
+        mediaId is dokn.Media.MediaId
+      } with {
+        briefly as "The shape this projection maintains"
+        described as {
+          |One projected row per medium, keyed by its identifier. The store holds
+          |exactly this.
+        }
+      }
+
+      handler MediumProjectionHandler is {
+        on mediumStored: event dokn.Media.Medium.MediumStored {
+          tell command dokn.Media.MediumStore.PersistMediumStored(
+            mediaId = mediumStored.mediaId
+          ) to repository dokn.Media.MediumStore
+        }
+      } with {
+        briefly as "Turns medium events into persistence commands"
+        described as {
+          |A repository is changed by commands, so something must translate.
+        }
+      }
+    } with {
+      briefly as "Projects medium events into the store"
+      described as {
+        |Stands between what the entity announced and what the store is told.
+      }
+    }
+
+    connector ObservingMedium is {
+      from outlet dokn.Media.Medium.MediumEvents to inlet dokn.Media.MediumProjection.Observed
+    } with {
+      briefly as "Carries medium events to the projector"
+      described as {
+        |Intra-context, so it may address the projector's own inlet directly.
+      }
+    }
+
     connector RecordingMedium is {
-      from outlet dokn.Media.Medium.MediumEvents to inlet MediumStore.Recorded
+      from outlet dokn.Media.MediumProjection.Persisting to inlet MediumStore.Recorded
     } with {
       briefly as "Carries medium events to storage"
       described as {
@@ -922,6 +1198,9 @@ domain dokn is {
     handler LocationsBoundary is {
       on request: command dokn.Locations.Location.AddDeliveryLocation {
         forward request to outlet dokn.Locations.LocationDispatch
+      }
+      on other {
+        error "unexpected message at the Locations boundary"
       }
     } with {
       briefly as "Routes what arrives at the boundary inward"
@@ -1050,7 +1329,6 @@ domain dokn is {
             ticketCount = prompt("the ticketCount of the resulting Location state"),
             loadingMethod = prompt("the loadingMethod of the resulting Location state")
           )
-          set field dokn.Locations.Location.Fields.locationId to "the identifier carried by the event"
         }
         on query WhichLocation {
           reply result TheLocation(
@@ -1075,14 +1353,26 @@ domain dokn is {
 
 
     repository LocationStore as sink is {
-      inlet Recorded is event dokn.Locations.Location.DeliveryLocationAdded with {
-        briefly as "Where location events arrive to be persisted"
+      command PersistDeliveryLocationAdded is {
+        locationId is dokn.Locations.LocationId
+      } with {
+        briefly as "Apply DeliveryLocationAdded to the stored row"
         described as {
-          |The repository learns of changes through this inlet.
+          |A persistence command, not a domain command: it declares no
+          |`yields` because storing a row records no new entity state. A
+          |repository is changed by commands and read by queries, never by
+          |events.
+        }
+      }
+
+      inlet Recorded is command dokn.Locations.LocationStore.PersistDeliveryLocationAdded with {
+        briefly as "Where location persistence commands arrive"
+        described as {
+          |A projector turns each location event into one of these.
         }
       }
       schema Store is flat
-        of Held as record dokn.Locations.Location.Fields
+        of Held as record dokn.Locations.LocationProjection.Projected
       with {
         briefly as "How locations are laid out in storage"
         described as {
@@ -1090,8 +1380,8 @@ domain dokn is {
         }
       }
       handler LocationStoreHandler is {
-        on event dokn.Locations.Location.DeliveryLocationAdded {
-          do "store the identifier carried by the event"
+        on command dokn.Locations.LocationStore.PersistDeliveryLocationAdded {
+          do "apply what the command carries to the stored row"
         }
       } with {
         briefly as "Keeps storage in step with what happened"
@@ -1115,8 +1405,63 @@ domain dokn is {
       }
     }
 
+    projector LocationProjection as flow is {
+      inlet Observed is event dokn.Locations.Location.DeliveryLocationAdded with {
+        briefly as "Where location events are observed"
+        described as {
+          |The projector sees what the entity announced.
+        }
+      }
+
+      outlet Persisting is command dokn.Locations.LocationStore.PersistDeliveryLocationAdded with {
+        briefly as "Where persistence commands leave for the store"
+        described as {
+          |Turning the event into a command is the projector's whole job.
+        }
+      }
+
+      updates repository dokn.Locations.LocationStore
+
+      record Projected is {
+        locationId is dokn.Locations.LocationId
+      } with {
+        briefly as "The shape this projection maintains"
+        described as {
+          |One projected row per location, keyed by its identifier. The store holds
+          |exactly this.
+        }
+      }
+
+      handler LocationProjectionHandler is {
+        on deliveryLocationAdded: event dokn.Locations.Location.DeliveryLocationAdded {
+          tell command dokn.Locations.LocationStore.PersistDeliveryLocationAdded(
+            locationId = deliveryLocationAdded.locationId
+          ) to repository dokn.Locations.LocationStore
+        }
+      } with {
+        briefly as "Turns location events into persistence commands"
+        described as {
+          |A repository is changed by commands, so something must translate.
+        }
+      }
+    } with {
+      briefly as "Projects location events into the store"
+      described as {
+        |Stands between what the entity announced and what the store is told.
+      }
+    }
+
+    connector ObservingLocation is {
+      from outlet dokn.Locations.Location.LocationEvents to inlet dokn.Locations.LocationProjection.Observed
+    } with {
+      briefly as "Carries location events to the projector"
+      described as {
+        |Intra-context, so it may address the projector's own inlet directly.
+      }
+    }
+
     connector RecordingLocation is {
-      from outlet dokn.Locations.Location.LocationEvents to inlet LocationStore.Recorded
+      from outlet dokn.Locations.LocationProjection.Persisting to inlet LocationStore.Recorded
     } with {
       briefly as "Carries location events to storage"
       described as {

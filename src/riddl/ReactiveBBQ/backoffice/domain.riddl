@@ -51,7 +51,8 @@ domain BackOffice is {
           send command BackOffice.SupplyOrder.Supply.OrderSupply(
             supplyId = prompt("the supplyId carried by OrderSupply"),
             item = prompt("the item carried by OrderSupply"),
-            quantity = prompt("the quantity carried by OrderSupply")
+            quantity = prompt("the quantity carried by OrderSupply"),
+            plannedAs = prompt("the plant schedule line this order fulfils")
           ) to outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.Staged
         }
         on other {

@@ -1509,10 +1509,20 @@ domain ShopifyCart is {
     // Repository for Cart data
     repository CartRepository as sink is {
 
-      inlet Recorded is type ShoppingEvent with {
-        briefly as "Where shopping events arrive to be persisted"
+      command PersistCartCreated is {
+        cartId is Id(Cart)
+      } with {
+        briefly as "Apply CartCreated to the stored row"
         described as {
-          |The repository learns of changes through this inlet.
+          |A persistence command, not a domain command: it declares no `yields`
+          |because storing a row records no new entity state.
+        }
+      }
+
+      inlet Recorded is command ShopifyCart.ShoppingContext.CartRepository.PersistCartCreated with {
+        briefly as "Where cart persistence commands arrive"
+        described as {
+          |A projector turns each cart event into one of these.
         }
       }
 
@@ -1529,24 +1539,8 @@ domain ShopifyCart is {
 
       // Message handlers
       handler CartRepositoryHandler is {
-        on event CartCreated is {
-          do "Create new cart record in Cart repository"
-        }
-
-        on event ItemAddedToCart is {
-          do "Add item to cart in Cart repository"
-        }
-
-        on event ItemRemovedFromCart is {
-          do "Remove item from cart in Cart repository"
-        }
-
-        on event CartQuantityUpdated is {
-          do "Update item quantity in Cart repository"
-        }
-
-        on event DiscountApplied is {
-          do "Apply discount to cart in Cart repository"
+        on command ShopifyCart.ShoppingContext.CartRepository.PersistCartCreated {
+          do "apply what PersistCartCreated carries to the stored row"
         }
       }
       with {
@@ -1569,10 +1563,20 @@ domain ShopifyCart is {
     // Repository for Product data
     repository ProductRepository as sink is {
 
-      inlet Recorded is type ShoppingEvent with {
-        briefly as "Where product events arrive to be persisted"
+      command PersistProductPriceUpdated is {
+        productId is Id(Product)
+      } with {
+        briefly as "Apply ProductPriceUpdated to the stored row"
         described as {
-          |The repository learns of product changes through this inlet.
+          |A persistence command, not a domain command: it declares no `yields`
+          |because storing a row records no new entity state.
+        }
+      }
+
+      inlet Recorded is command ShopifyCart.ShoppingContext.ProductRepository.PersistProductPriceUpdated with {
+        briefly as "Where product persistence commands arrive"
+        described as {
+          |A projector turns each product event into one of these.
         }
       }
 
@@ -1586,12 +1590,8 @@ domain ShopifyCart is {
       }
 
       handler ProductRepositoryHandler is {
-        on event ProductPriceUpdated is {
-          do "Update product price in Product repository"
-        }
-
-        on event InventoryUpdated is {
-          do "Update product inventory in Product repository"
+        on command ShopifyCart.ShoppingContext.ProductRepository.PersistProductPriceUpdated {
+          do "apply what PersistProductPriceUpdated carries to the stored row"
         }
       }
       with {
@@ -1850,7 +1850,7 @@ domain ShopifyCart is {
         }
       }
 
-      outlet PublishedProduct is type ShoppingEvent with {
+      outlet PublishedProduct is event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated with {
         briefly as "Where product events go to be stored"
         described as {
           |An outlet carries exactly one connector, so a second store needs a
@@ -1858,7 +1858,7 @@ domain ShopifyCart is {
         }
       }
 
-      outlet Published is type ShoppingEvent with {
+      outlet Published is event ShopifyCart.ShoppingContext.Cart.CartCreated with {
         briefly as "Where ShoppingContext publishes what happened"
         described as {
           |Events leave this context through this outlet.
@@ -1870,6 +1870,13 @@ domain ShopifyCart is {
         }
         on other {
           do "ignore anything that is not a shopping event"
+        }
+        on event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated {
+          send event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated(
+            productId = prompt("the productId carried by ProductPriceUpdated"),
+            oldPrice = prompt("the price before the change"),
+            newPrice = prompt("the price after the change")
+          ) to outlet ShoppingAnnouncer.PublishedProduct
         }
       } with {
         briefly as "Publishes shopping events"
@@ -1950,8 +1957,62 @@ domain ShopifyCart is {
       }
     }
 
+    projector ProductProjection as flow is {
+      inlet Observed is event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated with {
+        briefly as "Where product events are observed"
+        described as {
+          |The projector sees what was announced.
+        }
+      }
+
+      outlet Persisting is command ShopifyCart.ShoppingContext.ProductRepository.PersistProductPriceUpdated with {
+        briefly as "Where persistence commands leave for the store"
+        described as {
+          |Turning each event into a command is the projector's whole job.
+        }
+      }
+
+      updates repository ShopifyCart.ShoppingContext.ProductRepository
+
+      record Projected is {
+        productId is Id(Product)
+      } with {
+        briefly as "The shape this projection maintains"
+        described as {
+          |One projected row per product. The store holds exactly this.
+        }
+      }
+
+      handler ProductProjectionHandler is {
+        on productPriceUpdated: event ShopifyCart.ShoppingContext.Product.ProductPriceUpdated {
+          tell command ShopifyCart.ShoppingContext.ProductRepository.PersistProductPriceUpdated(
+            productId = productPriceUpdated.productId
+          ) to repository ShopifyCart.ShoppingContext.ProductRepository
+        }
+      } with {
+        briefly as "Turns product events into persistence commands"
+        described as {
+          |A repository is changed by commands, so something must translate.
+        }
+      }
+    } with {
+      briefly as "Projects product events into the store"
+      described as {
+        |Stands between what was announced and what the store is told.
+      }
+    }
+
+    connector ObservingProductProjection is {
+      from outlet ShopifyCart.ShoppingContext.ShoppingAnnouncer.PublishedProduct to inlet ShopifyCart.ShoppingContext.ProductProjection.Observed
+    } with {
+      briefly as "Carries product events to the projector"
+      described as {
+        |Intra-context, so it may address the projector's own inlet directly.
+      }
+    }
+
     connector RecordingProduct is {
-      from outlet ShopifyCart.ShoppingContext.ShoppingAnnouncer.PublishedProduct to inlet ShopifyCart.ShoppingContext.ProductRepository.Recorded
+      from outlet ShopifyCart.ShoppingContext.ProductProjection.Persisting to inlet ShopifyCart.ShoppingContext.ProductRepository.Recorded
     } with {
       briefly as "Carries product events to the product store"
       described as {
@@ -1959,8 +2020,62 @@ domain ShopifyCart is {
       }
     }
 
+    projector CartProjection as flow is {
+      inlet Observed is event ShopifyCart.ShoppingContext.Cart.CartCreated with {
+        briefly as "Where cart events are observed"
+        described as {
+          |The projector sees what was announced.
+        }
+      }
+
+      outlet Persisting is command ShopifyCart.ShoppingContext.CartRepository.PersistCartCreated with {
+        briefly as "Where persistence commands leave for the store"
+        described as {
+          |Turning each event into a command is the projector's whole job.
+        }
+      }
+
+      updates repository ShopifyCart.ShoppingContext.CartRepository
+
+      record Projected is {
+        cartId is Id(Cart)
+      } with {
+        briefly as "The shape this projection maintains"
+        described as {
+          |One projected row per cart. The store holds exactly this.
+        }
+      }
+
+      handler CartProjectionHandler is {
+        on cartCreated: event ShopifyCart.ShoppingContext.Cart.CartCreated {
+          tell command ShopifyCart.ShoppingContext.CartRepository.PersistCartCreated(
+            cartId = cartCreated.cartId
+          ) to repository ShopifyCart.ShoppingContext.CartRepository
+        }
+      } with {
+        briefly as "Turns cart events into persistence commands"
+        described as {
+          |A repository is changed by commands, so something must translate.
+        }
+      }
+    } with {
+      briefly as "Projects cart events into the store"
+      described as {
+        |Stands between what was announced and what the store is told.
+      }
+    }
+
+    connector ObservingCartProjection is {
+      from outlet ShoppingAnnouncer.Published to inlet ShopifyCart.ShoppingContext.CartProjection.Observed
+    } with {
+      briefly as "Carries cart events to the projector"
+      described as {
+        |Intra-context, so it may address the projector's own inlet directly.
+      }
+    }
+
     connector Announcing is {
-      from outlet ShoppingAnnouncer.Published to inlet CartRepository.Recorded
+      from outlet ShopifyCart.ShoppingContext.CartProjection.Persisting to inlet CartRepository.Recorded
     } with {
       briefly as "Carries shopping events to the cart store"
       described as {

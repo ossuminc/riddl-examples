@@ -113,7 +113,7 @@ application context ToDoodlesApp as router is {
   handler StudioHandler is {
     on command ToDoodles.Doodle.Drawing.CreateDrawing {
       put get from form StartDoodle to list Confirmation
-      put "the artist's doodles, newest first" to list Gallery
+      put prompt("the artist's doodles, newest first") to list Gallery
     }
   } with {
     briefly as "Reads what the artist typed and refreshes what they see"

@@ -113,12 +113,6 @@ context Loyalty as flow is {
         set field Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields.loyaltyId to "a freshly minted identifier"
       }
       on command AccruePoints {
-        morph entity LoyaltyAccount to state LoyaltyAccountState with record Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountFields(
-          loyaltyId = prompt("the loyaltyId of the resulting LoyaltyAccount state"),
-          points = prompt("the points of the resulting LoyaltyAccount state"),
-          accrualRate = prompt("the accrualRate of the resulting LoyaltyAccount state"),
-          redemptionRate = prompt("the redemptionRate of the resulting LoyaltyAccount state")
-        )
         send event PointsAccrued(
           loyaltyId = prompt("the loyaltyId carried by PointsAccrued")
         ) to outlet Restaurant.Loyalty.LoyaltyAccount.LoyaltyAccountEvents

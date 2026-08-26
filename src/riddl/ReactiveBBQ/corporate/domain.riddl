@@ -19,7 +19,7 @@ domain Corporate is {
     }
 
     connector StagingCampaign is {
-      from outlet Corporate.CorporateFrontEnd.CampaignRequests.Staged to inlet Corporate.CorporateFrontEnd.CampaignStaged
+      from outlet Corporate.CorporateFrontEnd.CampaignGateway.Staged to inlet Corporate.CorporateFrontEnd.CampaignStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -38,20 +38,20 @@ domain Corporate is {
       }
     }
 
-    processor CampaignRequests as source is {
+    processor CampaignGateway as source is {
       outlet Staged is command Corporate.Marketing.Campaign.LaunchCampaign with {
         briefly as "Where campaign requests leave the front end"
         described as {
           |Requests reach the Marketing context over a domain-scoped connector.
         }
       }
-      handler CampaignRequestsHandler is {
+      handler CampaignGatewayHandler is {
         on command Corporate.Marketing.Campaign.LaunchCampaign {
           send command Corporate.Marketing.Campaign.LaunchCampaign(
             campaignId = prompt("the campaignId carried by LaunchCampaign"),
             title = prompt("the title carried by LaunchCampaign"),
             budget = prompt("the budget carried by LaunchCampaign")
-          ) to outlet Corporate.CorporateFrontEnd.CampaignRequests.Staged
+          ) to outlet Corporate.CorporateFrontEnd.CampaignGateway.Staged
         }
         on other {
           do "ignore requests that are not about campaigns"

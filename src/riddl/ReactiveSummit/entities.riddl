@@ -223,6 +223,16 @@ context ToDoList as flow is {
 
 
   repository Items as sink is {
+    command RecordView is {
+      view is ItemView
+    } with {
+      briefly as "Hand a refreshed row to the repository"
+      described as {
+        |Carries the projected view so it can be persisted. This also gives
+        |ItemView a use as a field type rather than only as a path.
+      }
+    }
+
     command PersistItemAdded is {
       content is ItemContent
     } with {
@@ -298,15 +308,6 @@ context ToDoList as flow is {
       described as {
         |What a list needs in order to draw a row: the text, and whether it
         |has been ticked off.
-      }
-    }
-    command RecordView is {
-      view is ItemView
-    } with {
-      briefly as "Hand a refreshed row to the repository"
-      described as {
-        |Carries the projected view so it can be persisted. This also gives
-        |ItemView a use as a field type rather than only as a path.
       }
     }
     handler ProjectionHandler is {

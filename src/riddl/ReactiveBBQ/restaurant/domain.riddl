@@ -168,7 +168,7 @@ domain Restaurant is {
     }
 
     connector StagingCustomer is {
-      from outlet Restaurant.RestaurantFrontEnd.CustomerRequests.Staged to inlet Restaurant.RestaurantFrontEnd.CustomerStaged
+      from outlet Restaurant.RestaurantFrontEnd.CustomerGateway.Staged to inlet Restaurant.RestaurantFrontEnd.CustomerStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -177,7 +177,7 @@ domain Restaurant is {
     }
 
     connector StagingTable is {
-      from outlet Restaurant.RestaurantFrontEnd.TableRequests.Staged to inlet Restaurant.RestaurantFrontEnd.TableStaged
+      from outlet Restaurant.RestaurantFrontEnd.TableGateway.Staged to inlet Restaurant.RestaurantFrontEnd.TableStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -186,7 +186,7 @@ domain Restaurant is {
     }
 
     connector StagingServer is {
-      from outlet Restaurant.RestaurantFrontEnd.ServerRequests.Staged to inlet Restaurant.RestaurantFrontEnd.ServerStaged
+      from outlet Restaurant.RestaurantFrontEnd.ServerGateway.Staged to inlet Restaurant.RestaurantFrontEnd.ServerStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -195,7 +195,7 @@ domain Restaurant is {
     }
 
     connector StagingLocation is {
-      from outlet Restaurant.RestaurantFrontEnd.LocationRequests.Staged to inlet Restaurant.RestaurantFrontEnd.LocationStaged
+      from outlet Restaurant.RestaurantFrontEnd.LocationGateway.Staged to inlet Restaurant.RestaurantFrontEnd.LocationStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -204,7 +204,7 @@ domain Restaurant is {
     }
 
     connector StagingOrder is {
-      from outlet Restaurant.RestaurantFrontEnd.OrderRequests.Staged to inlet Restaurant.RestaurantFrontEnd.OrderStaged
+      from outlet Restaurant.RestaurantFrontEnd.OrderGateway.Staged to inlet Restaurant.RestaurantFrontEnd.OrderStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -213,7 +213,7 @@ domain Restaurant is {
     }
 
     connector StagingPayment is {
-      from outlet Restaurant.RestaurantFrontEnd.PaymentRequests.Staged to inlet Restaurant.RestaurantFrontEnd.PaymentStaged
+      from outlet Restaurant.RestaurantFrontEnd.PaymentGateway.Staged to inlet Restaurant.RestaurantFrontEnd.PaymentStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -222,7 +222,7 @@ domain Restaurant is {
     }
 
     connector StagingReservation is {
-      from outlet Restaurant.RestaurantFrontEnd.ReservationRequests.Staged to inlet Restaurant.RestaurantFrontEnd.ReservationStaged
+      from outlet Restaurant.RestaurantFrontEnd.ReservationGateway.Staged to inlet Restaurant.RestaurantFrontEnd.ReservationStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -231,7 +231,7 @@ domain Restaurant is {
     }
 
     connector StagingOrderViewer is {
-      from outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.Staged to inlet Restaurant.RestaurantFrontEnd.OrderViewerStaged
+      from outlet Restaurant.RestaurantFrontEnd.OrderViewerGateway.Staged to inlet Restaurant.RestaurantFrontEnd.OrderViewerStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -240,7 +240,7 @@ domain Restaurant is {
     }
 
     connector StagingMenuItem is {
-      from outlet Restaurant.RestaurantFrontEnd.MenuItemRequests.Staged to inlet Restaurant.RestaurantFrontEnd.MenuItemStaged
+      from outlet Restaurant.RestaurantFrontEnd.MenuItemGateway.Staged to inlet Restaurant.RestaurantFrontEnd.MenuItemStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -249,7 +249,7 @@ domain Restaurant is {
     }
 
     connector StagingMenu is {
-      from outlet Restaurant.RestaurantFrontEnd.MenuRequests.Staged to inlet Restaurant.RestaurantFrontEnd.MenuStaged
+      from outlet Restaurant.RestaurantFrontEnd.MenuGateway.Staged to inlet Restaurant.RestaurantFrontEnd.MenuStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -258,7 +258,7 @@ domain Restaurant is {
     }
 
     connector StagingLoyaltyAccount is {
-      from outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountRequests.Staged to inlet Restaurant.RestaurantFrontEnd.LoyaltyAccountStaged
+      from outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountGateway.Staged to inlet Restaurant.RestaurantFrontEnd.LoyaltyAccountStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -307,20 +307,20 @@ domain Restaurant is {
       }
     }
 
-    processor CustomerRequests as source is {
+    processor CustomerGateway as source is {
       outlet Staged is command Restaurant.Customers.Customer.RegisterCustomer with {
         briefly as "Where customer requests leave the front end"
         described as {
           |Requests reach the Customers context over a domain-scoped connector.
         }
       }
-      handler CustomerRequestsHandler is {
+      handler CustomerGatewayHandler is {
         on command Restaurant.Customers.Customer.RegisterCustomer {
           send command Restaurant.Customers.Customer.RegisterCustomer(
             customerId = prompt("the customerId carried by RegisterCustomer"),
             name = prompt("the name carried by RegisterCustomer"),
             phone = prompt("the phone carried by RegisterCustomer")
-          ) to outlet Restaurant.RestaurantFrontEnd.CustomerRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.CustomerGateway.Staged
         }
         on other {
           do "ignore requests that are not about customers"
@@ -338,20 +338,20 @@ domain Restaurant is {
       }
     }
 
-    processor TableRequests as source is {
+    processor TableGateway as source is {
       outlet Staged is command Restaurant.Tables.Table.AddTable with {
         briefly as "Where table requests leave the front end"
         described as {
           |Requests reach the Tables context over a domain-scoped connector.
         }
       }
-      handler TableRequestsHandler is {
+      handler TableGatewayHandler is {
         on command Restaurant.Tables.Table.AddTable {
           send command Restaurant.Tables.Table.AddTable(
             tableId = prompt("the tableId carried by AddTable"),
             seats = prompt("the seats carried by AddTable"),
             section = prompt("the section carried by AddTable")
-          ) to outlet Restaurant.RestaurantFrontEnd.TableRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.TableGateway.Staged
         }
         on other {
           do "ignore requests that are not about tables"
@@ -369,20 +369,20 @@ domain Restaurant is {
       }
     }
 
-    processor ServerRequests as source is {
+    processor ServerGateway as source is {
       outlet Staged is command Restaurant.Servers.Server.AddServer with {
         briefly as "Where server requests leave the front end"
         described as {
           |Requests reach the Servers context over a domain-scoped connector.
         }
       }
-      handler ServerRequestsHandler is {
+      handler ServerGatewayHandler is {
         on command Restaurant.Servers.Server.AddServer {
           send command Restaurant.Servers.Server.AddServer(
             serverId = prompt("the serverId carried by AddServer"),
             name = prompt("the name carried by AddServer"),
             section = prompt("the section carried by AddServer")
-          ) to outlet Restaurant.RestaurantFrontEnd.ServerRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.ServerGateway.Staged
         }
         on other {
           do "ignore requests that are not about servers"
@@ -400,20 +400,20 @@ domain Restaurant is {
       }
     }
 
-    processor LocationRequests as source is {
+    processor LocationGateway as source is {
       outlet Staged is command Restaurant.Locations.Location.OpenLocation with {
         briefly as "Where location requests leave the front end"
         described as {
           |Requests reach the Locations context over a domain-scoped connector.
         }
       }
-      handler LocationRequestsHandler is {
+      handler LocationGatewayHandler is {
         on command Restaurant.Locations.Location.OpenLocation {
           send command Restaurant.Locations.Location.OpenLocation(
             locationId = prompt("the locationId carried by OpenLocation"),
             name = prompt("the name carried by OpenLocation"),
             city = prompt("the city carried by OpenLocation")
-          ) to outlet Restaurant.RestaurantFrontEnd.LocationRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.LocationGateway.Staged
         }
         on other {
           do "ignore requests that are not about locations"
@@ -431,20 +431,20 @@ domain Restaurant is {
       }
     }
 
-    processor OrderRequests as source is {
+    processor OrderGateway as source is {
       outlet Staged is command Restaurant.Orders.Order.PlaceOrder with {
         briefly as "Where order requests leave the front end"
         described as {
           |Requests reach the Orders context over a domain-scoped connector.
         }
       }
-      handler OrderRequestsHandler is {
+      handler OrderGatewayHandler is {
         on command Restaurant.Orders.Order.PlaceOrder {
           send command Restaurant.Orders.Order.PlaceOrder(
             orderId = prompt("the orderId carried by PlaceOrder"),
             customerName = prompt("the customerName carried by PlaceOrder"),
             total = prompt("the total carried by PlaceOrder")
-          ) to outlet Restaurant.RestaurantFrontEnd.OrderRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.OrderGateway.Staged
         }
         on other {
           do "ignore requests that are not about orders"
@@ -462,21 +462,21 @@ domain Restaurant is {
       }
     }
 
-    processor PaymentRequests as source is {
+    processor PaymentGateway as source is {
       outlet Staged is command Restaurant.Payments.Payment.Pay with {
         briefly as "Where payment requests leave the front end"
         described as {
           |Requests reach the Payments context over a domain-scoped connector.
         }
       }
-      handler PaymentRequestsHandler is {
+      handler PaymentGatewayHandler is {
         on command Restaurant.Payments.Payment.Pay {
           send command Restaurant.Payments.Payment.Pay(
             paymentId = prompt("the paymentId carried by Pay"),
             orderAmount = prompt("the orderAmount carried by Pay"),
             tipAmount = prompt("the tipAmount carried by Pay"),
             cardToken = prompt("the cardToken carried by Pay")
-          ) to outlet Restaurant.RestaurantFrontEnd.PaymentRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.PaymentGateway.Staged
         }
         on other {
           do "ignore requests that are not about payments"
@@ -494,14 +494,14 @@ domain Restaurant is {
       }
     }
 
-    processor ReservationRequests as source is {
+    processor ReservationGateway as source is {
       outlet Staged is command Restaurant.Reservations.Reservation.BookTable with {
         briefly as "Where reservation requests leave the front end"
         described as {
           |Requests reach the Reservations context over a domain-scoped connector.
         }
       }
-      handler ReservationRequestsHandler is {
+      handler ReservationGatewayHandler is {
         on command Restaurant.Reservations.Reservation.BookTable {
           send command Restaurant.Reservations.Reservation.BookTable(
             reservationId = prompt("the reservationId carried by BookTable"),
@@ -509,7 +509,7 @@ domain Restaurant is {
             phoneNumber = prompt("the phoneNumber carried by BookTable"),
             time = prompt("the time carried by BookTable"),
             date = prompt("the date carried by BookTable")
-          ) to outlet Restaurant.RestaurantFrontEnd.ReservationRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.ReservationGateway.Staged
         }
         on other {
           do "ignore requests that are not about reservations"
@@ -527,20 +527,20 @@ domain Restaurant is {
       }
     }
 
-    processor OrderViewerRequests as source is {
+    processor OrderViewerGateway as source is {
       outlet Staged is command Restaurant.Kitchen.OrderViewer.ShowOrders with {
         briefly as "Where orderviewer requests leave the front end"
         described as {
           |Requests reach the Kitchen context over a domain-scoped connector.
         }
       }
-      handler OrderViewerRequestsHandler is {
+      handler OrderViewerGatewayHandler is {
         on command Restaurant.Kitchen.OrderViewer.ShowOrders {
           send command Restaurant.Kitchen.OrderViewer.ShowOrders(
             orderViewerId = prompt("the orderViewerId carried by ShowOrders"),
             viewType = prompt("the viewType carried by ShowOrders"),
             station = prompt("the station carried by ShowOrders")
-          ) to outlet Restaurant.RestaurantFrontEnd.OrderViewerRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.OrderViewerGateway.Staged
         }
         on other {
           do "ignore requests that are not about orderviewers"
@@ -558,21 +558,21 @@ domain Restaurant is {
       }
     }
 
-    processor MenuItemRequests as source is {
+    processor MenuItemGateway as source is {
       outlet Staged is command Restaurant.Menus.MenuItem.AddMenuItem with {
         briefly as "Where menuitem requests leave the front end"
         described as {
           |Requests reach the Menus context over a domain-scoped connector.
         }
       }
-      handler MenuItemRequestsHandler is {
+      handler MenuItemGatewayHandler is {
         on command Restaurant.Menus.MenuItem.AddMenuItem {
           send command Restaurant.Menus.MenuItem.AddMenuItem(
             menuItemId = prompt("the menuItemId carried by AddMenuItem"),
             name = prompt("the name carried by AddMenuItem"),
             description = prompt("the description carried by AddMenuItem"),
             price = prompt("the price carried by AddMenuItem")
-          ) to outlet Restaurant.RestaurantFrontEnd.MenuItemRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.MenuItemGateway.Staged
         }
         on other {
           do "ignore requests that are not about menuitems"
@@ -590,20 +590,20 @@ domain Restaurant is {
       }
     }
 
-    processor MenuRequests as source is {
+    processor MenuGateway as source is {
       outlet Staged is command Restaurant.Menus.Menu.ComposeMenu with {
         briefly as "Where menu requests leave the front end"
         described as {
           |Requests reach the Menus context over a domain-scoped connector.
         }
       }
-      handler MenuRequestsHandler is {
+      handler MenuGatewayHandler is {
         on command Restaurant.Menus.Menu.ComposeMenu {
           send command Restaurant.Menus.Menu.ComposeMenu(
             menuId = prompt("the menuId carried by ComposeMenu"),
             title = prompt("the title carried by ComposeMenu"),
             season = prompt("the season carried by ComposeMenu")
-          ) to outlet Restaurant.RestaurantFrontEnd.MenuRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.MenuGateway.Staged
         }
         on other {
           do "ignore requests that are not about menus"
@@ -621,21 +621,21 @@ domain Restaurant is {
       }
     }
 
-    processor LoyaltyAccountRequests as source is {
+    processor LoyaltyAccountGateway as source is {
       outlet Staged is command Restaurant.Loyalty.LoyaltyAccount.AccruePoints with {
         briefly as "Where loyaltyaccount requests leave the front end"
         described as {
           |Requests reach the Loyalty context over a domain-scoped connector.
         }
       }
-      handler LoyaltyAccountRequestsHandler is {
+      handler LoyaltyAccountGatewayHandler is {
         on command Restaurant.Loyalty.LoyaltyAccount.AccruePoints {
           send command Restaurant.Loyalty.LoyaltyAccount.AccruePoints(
             loyaltyAccountId = prompt("the loyaltyAccountId carried by AccruePoints"),
             points = prompt("the points carried by AccruePoints"),
             accrualRate = prompt("the accrualRate carried by AccruePoints"),
             redemptionRate = prompt("the redemptionRate carried by AccruePoints")
-          ) to outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountRequests.Staged
+          ) to outlet Restaurant.RestaurantFrontEnd.LoyaltyAccountGateway.Staged
         }
         on other {
           do "ignore requests that are not about loyaltyaccounts"

@@ -180,13 +180,7 @@ domain dokn is {
           ) to outlet dokn.Companies.Company.CompanyEvents
         }
         on event CompanyAdded {
-          morph entity Company to state CompanyBase with record dokn.Companies.Company.Fields(
-            companyId = prompt("the companyId of the resulting Company state"),
-            mailingAddress = prompt("the mailingAddress of the resulting Company state"),
-            primaryContactName = prompt("the primaryContactName of the resulting Company state"),
-            primaryContactPhone = prompt("the primaryContactPhone of the resulting Company state"),
-            primaryContactEmail = prompt("the primaryContactEmail of the resulting Company state")
-          )
+          do "update the Company's fields; it has one state, so nothing transitions"
         }
         on query WhichCompany {
           reply result TheCompany(
@@ -477,12 +471,7 @@ domain dokn is {
           ) to outlet dokn.Drivers.Driver.DriverEvents
         }
         on event DriverAddedToCompany {
-          morph entity Driver to state DriverBase with record dokn.Drivers.Driver.Fields(
-            driverId = prompt("the driverId of the resulting Driver state"),
-            name = prompt("the name of the resulting Driver state"),
-            mobile = prompt("the mobile of the resulting Driver state"),
-            onDutyTime = prompt("the onDutyTime of the resulting Driver state")
-          )
+          do "update the Driver's fields; it has one state, so nothing transitions"
         }
         on query WhichDriver {
           reply result TheDriver(
@@ -754,13 +743,7 @@ domain dokn is {
           ) to outlet dokn.Notes.Note.NoteEvents
         }
         on event NoteCaptured {
-          morph entity Note to state NoteBase with record dokn.Notes.Note.Fields(
-            noteId = prompt("the noteId of the resulting Note state"),
-            text = prompt("the text of the resulting Note state"),
-            upvoteCount = prompt("the upvoteCount of the resulting Note state"),
-            downvoteCount = prompt("the downvoteCount of the resulting Note state"),
-            approved = prompt("the approved of the resulting Note state")
-          )
+          do "update the Note's fields; it has one state, so nothing transitions"
         }
         on query WhichNote {
           reply result TheNote(
@@ -1026,10 +1009,7 @@ domain dokn is {
           ) to outlet dokn.Media.Medium.MediumEvents
         }
         on event MediumStored {
-          morph entity Medium to state MediumBase with record dokn.Media.Medium.Fields(
-            mediaId = prompt("the mediaId of the resulting Medium state"),
-            path = prompt("the path of the resulting Medium state")
-          )
+          do "update the Medium's fields; it has one state, so nothing transitions"
         }
         on query WhichMedium {
           reply result TheMedium(
@@ -1322,13 +1302,7 @@ domain dokn is {
           ) to outlet dokn.Locations.Location.LocationEvents
         }
         on event DeliveryLocationAdded {
-          morph entity Location to state LocationBase with record dokn.Locations.Location.Fields(
-            locationId = prompt("the locationId of the resulting Location state"),
-            label = prompt("the label of the resulting Location state"),
-            address = prompt("the address of the resulting Location state"),
-            ticketCount = prompt("the ticketCount of the resulting Location state"),
-            loadingMethod = prompt("the loadingMethod of the resulting Location state")
-          )
+          do "update the Location's fields; it has one state, so nothing transitions"
         }
         on query WhichLocation {
           reply result TheLocation(
@@ -1509,7 +1483,7 @@ domain dokn is {
     }
 
     connector StagingDriver is {
-      from outlet dokn.Intake.DriverRequests.Staged to inlet dokn.Intake.DriverStaged
+      from outlet dokn.Intake.DriverGateway.Staged to inlet dokn.Intake.DriverStaged
     } with {
       briefly as "Carries gateway requests to the context boundary"
       described as {
@@ -1532,7 +1506,7 @@ domain dokn is {
     }
 
     connector StagingNote is {
-      from outlet dokn.Intake.NoteRequests.Staged to inlet dokn.Intake.NoteStaged
+      from outlet dokn.Intake.NoteGateway.Staged to inlet dokn.Intake.NoteStaged
     } with {
       briefly as "Carries gateway requests to the context boundary"
       described as {
@@ -1555,7 +1529,7 @@ domain dokn is {
     }
 
     connector StagingMedium is {
-      from outlet dokn.Intake.MediumRequests.Staged to inlet dokn.Intake.MediumStaged
+      from outlet dokn.Intake.MediumGateway.Staged to inlet dokn.Intake.MediumStaged
     } with {
       briefly as "Carries gateway requests to the context boundary"
       described as {
@@ -1578,7 +1552,7 @@ domain dokn is {
     }
 
     connector StagingLocation is {
-      from outlet dokn.Intake.LocationRequests.Staged to inlet dokn.Intake.LocationStaged
+      from outlet dokn.Intake.LocationGateway.Staged to inlet dokn.Intake.LocationStaged
     } with {
       briefly as "Carries gateway requests to the context boundary"
       described as {
@@ -1609,14 +1583,14 @@ domain dokn is {
       }
     }
 
-    processor CompanyRequests as source is {
+    processor CompanyGateway as source is {
       outlet Staged is command dokn.Companies.Company.AddCompany with {
         briefly as "Where company requests leave the gateway"
         described as {
           |Requests reach the Companies context over a domain-scoped connector.
         }
       }
-      handler CompanyRequestsHandler is {
+      handler CompanyGatewayHandler is {
         on command dokn.Companies.Company.AddCompany {
           send command dokn.Companies.Company.AddCompany(
             companyId = prompt("the companyId carried by AddCompany"),
@@ -1624,7 +1598,7 @@ domain dokn is {
             primaryContactName = prompt("the primaryContactName carried by AddCompany"),
             primaryContactPhone = prompt("the primaryContactPhone carried by AddCompany"),
             primaryContactEmail = prompt("the primaryContactEmail carried by AddCompany")
-          ) to outlet dokn.Intake.CompanyRequests.Staged
+          ) to outlet dokn.Intake.CompanyGateway.Staged
         }
         on other {
           do "ignore requests that are not about companys"
@@ -1643,7 +1617,7 @@ domain dokn is {
     }
 
     connector StagingCompany is {
-      from outlet dokn.Intake.CompanyRequests.Staged to inlet dokn.Intake.CompanyStaged
+      from outlet dokn.Intake.CompanyGateway.Staged to inlet dokn.Intake.CompanyStaged
     } with {
       briefly as "Carries gateway requests to the context boundary"
       described as {
@@ -1651,21 +1625,21 @@ domain dokn is {
       }
     }
 
-    processor DriverRequests as source is {
+    processor DriverGateway as source is {
       outlet Staged is command dokn.Drivers.Driver.AddDriverToCompany with {
         briefly as "Where driver requests leave the gateway"
         described as {
           |Requests reach the Drivers context over a domain-scoped connector.
         }
       }
-      handler DriverRequestsHandler is {
+      handler DriverGatewayHandler is {
         on command dokn.Drivers.Driver.AddDriverToCompany {
           send command dokn.Drivers.Driver.AddDriverToCompany(
             driverId = prompt("the driverId carried by AddDriverToCompany"),
             name = prompt("the name carried by AddDriverToCompany"),
             mobile = prompt("the mobile carried by AddDriverToCompany"),
             onDutyTime = prompt("the onDutyTime carried by AddDriverToCompany")
-          ) to outlet dokn.Intake.DriverRequests.Staged
+          ) to outlet dokn.Intake.DriverGateway.Staged
         }
         on other {
           do "ignore requests that are not about drivers"
@@ -1683,14 +1657,14 @@ domain dokn is {
       }
     }
 
-    processor NoteRequests as source is {
+    processor NoteGateway as source is {
       outlet Staged is command dokn.Notes.Note.CaptureNote with {
         briefly as "Where note requests leave the gateway"
         described as {
           |Requests reach the Notes context over a domain-scoped connector.
         }
       }
-      handler NoteRequestsHandler is {
+      handler NoteGatewayHandler is {
         on command dokn.Notes.Note.CaptureNote {
           send command dokn.Notes.Note.CaptureNote(
             noteId = prompt("the noteId carried by CaptureNote"),
@@ -1698,7 +1672,7 @@ domain dokn is {
             upvoteCount = prompt("the upvoteCount carried by CaptureNote"),
             downvoteCount = prompt("the downvoteCount carried by CaptureNote"),
             approved = prompt("the approved carried by CaptureNote")
-          ) to outlet dokn.Intake.NoteRequests.Staged
+          ) to outlet dokn.Intake.NoteGateway.Staged
         }
         on other {
           do "ignore requests that are not about notes"
@@ -1716,19 +1690,19 @@ domain dokn is {
       }
     }
 
-    processor MediumRequests as source is {
+    processor MediumGateway as source is {
       outlet Staged is command dokn.Media.Medium.StoreMedium with {
         briefly as "Where medium requests leave the gateway"
         described as {
           |Requests reach the Media context over a domain-scoped connector.
         }
       }
-      handler MediumRequestsHandler is {
+      handler MediumGatewayHandler is {
         on command dokn.Media.Medium.StoreMedium {
           send command dokn.Media.Medium.StoreMedium(
             mediumId = prompt("the mediumId carried by StoreMedium"),
             path = prompt("the path carried by StoreMedium")
-          ) to outlet dokn.Intake.MediumRequests.Staged
+          ) to outlet dokn.Intake.MediumGateway.Staged
         }
         on other {
           do "ignore requests that are not about mediums"
@@ -1746,14 +1720,14 @@ domain dokn is {
       }
     }
 
-    processor LocationRequests as source is {
+    processor LocationGateway as source is {
       outlet Staged is command dokn.Locations.Location.AddDeliveryLocation with {
         briefly as "Where location requests leave the gateway"
         described as {
           |Requests reach the Locations context over a domain-scoped connector.
         }
       }
-      handler LocationRequestsHandler is {
+      handler LocationGatewayHandler is {
         on command dokn.Locations.Location.AddDeliveryLocation {
           send command dokn.Locations.Location.AddDeliveryLocation(
             locationId = prompt("the locationId carried by AddDeliveryLocation"),
@@ -1761,7 +1735,7 @@ domain dokn is {
             address = prompt("the address carried by AddDeliveryLocation"),
             ticketCount = prompt("the ticketCount carried by AddDeliveryLocation"),
             loadingMethod = prompt("the loadingMethod carried by AddDeliveryLocation")
-          ) to outlet dokn.Intake.LocationRequests.Staged
+          ) to outlet dokn.Intake.LocationGateway.Staged
         }
         on other {
           do "ignore requests that are not about locations"
@@ -1809,7 +1783,7 @@ domain dokn is {
       user Dispatcher wants to "record a new delivery company"
         so that "drivers have an employer to be attached to"
       step send command dokn.Companies.Company.AddCompany
-        from source dokn.Intake.CompanyRequests
+        from source dokn.Intake.CompanyGateway
         to context dokn.Companies
     } with {
       briefly as "A company request crossing the gateway into Companies"
@@ -1827,7 +1801,7 @@ domain dokn is {
       user Dispatcher wants to "attach a driver to a registered company"
         so that "the driver's notes are recorded against the right employer"
       step send command dokn.Drivers.Driver.AddDriverToCompany
-        from source dokn.Intake.DriverRequests
+        from source dokn.Intake.DriverGateway
         to context dokn.Drivers
     } with {
       briefly as "A driver request crossing the gateway into Drivers"

@@ -14,9 +14,9 @@ author Reid is {
 domain Foo is {
   include "Foo/foo"
 
-  type Foo is {
+  type FooEntry is {
     info: Root.Foo.Info,
-    peer: Root.Bar.Bar
+    peer: Root.Bar.BarEntry
   } with {
     briefly as "A type that reaches Foo's Info by a root-qualified path"
     described as {
@@ -38,9 +38,9 @@ domain Foo is {
 domain Bar is {
   include "Bar/bar"
 
-  type Bar is {
+  type BarEntry is {
     info: Root.Bar.Info,
-    peer: Root.Foo.Foo
+    peer: Root.Foo.FooEntry
   } with {
     briefly as "A type that reaches Bar's Info by a root-qualified path"
     described as {

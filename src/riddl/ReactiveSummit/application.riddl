@@ -27,7 +27,7 @@ application context ToDoListUI as flow is {
   }
 
   connector StagingItems is {
-    from outlet ReactiveSummit.ToDoListUI.ItemRequests.Staged
+    from outlet ReactiveSummit.ToDoListUI.ItemGateway.Staged
     to inlet ReactiveSummit.ToDoListUI.ItemStaged
   } with {
     briefly as "Carries application requests to the context boundary"
@@ -101,7 +101,7 @@ application context ToDoListUI as flow is {
     }
   }
 
-  processor ItemRequests as source is {
+  processor ItemGateway as source is {
     outlet Staged is command ReactiveSummit.ToDoList.ToDoItem.AddItem with {
       briefly as "Where the application sends work into the domain"
       described as {
@@ -109,12 +109,12 @@ application context ToDoListUI as flow is {
         |over a domain-scoped connector.
       }
     }
-    handler ItemRequestsHandler is {
+    handler ItemGatewayHandler is {
       on command ReactiveSummit.ToDoList.ToDoItem.AddItem {
         send command ReactiveSummit.ToDoList.ToDoItem.AddItem(
           toDoItemId = prompt("the toDoItemId carried by AddItem"),
           content = prompt("the content carried by AddItem")
-        ) to outlet ReactiveSummit.ToDoListUI.ItemRequests.Staged
+        ) to outlet ReactiveSummit.ToDoListUI.ItemGateway.Staged
       }
       on other {
         do "ignore interactions that do not add an item"

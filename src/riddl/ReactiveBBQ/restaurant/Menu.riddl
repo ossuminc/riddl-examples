@@ -140,12 +140,6 @@ context Menus as router is {
         set field Restaurant.Menus.MenuItem.MenuItemFields.menuItemId to "a freshly minted identifier"
       }
       on command AddMenuItem {
-        morph entity MenuItem to state MenuItemState with record Restaurant.Menus.MenuItem.MenuItemFields(
-          menuItemId = prompt("the menuItemId of the resulting MenuItem state"),
-          name = prompt("the name of the resulting MenuItem state"),
-          description = prompt("the description of the resulting MenuItem state"),
-          price = prompt("the price of the resulting MenuItem state")
-        )
         send event MenuItemAdded(
           menuItemId = prompt("the menuItemId carried by MenuItemAdded")
         ) to outlet Restaurant.Menus.MenuItem.MenuItemEvents
@@ -374,11 +368,6 @@ projector MenuItemProjection as flow is {
         set field Restaurant.Menus.Menu.MenuFields.menuId to "a freshly minted identifier"
       }
       on command ComposeMenu {
-        morph entity Menu to state MenuState with record Restaurant.Menus.Menu.MenuFields(
-          menuId = prompt("the menuId of the resulting Menu state"),
-          title = prompt("the title of the resulting Menu state"),
-          season = prompt("the season of the resulting Menu state")
-        )
         send event MenuComposed(
           menuId = prompt("the menuId carried by MenuComposed")
         ) to outlet Restaurant.Menus.Menu.MenuEvents

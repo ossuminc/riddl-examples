@@ -165,31 +165,16 @@ context UserManagement as split is {
         set field Trello.UserManagement.Account.AccountFields.accountId to "a freshly minted identifier"
       }
       on command CreateAccount {
-        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields(
-          accountId = prompt("the accountId of the resulting Account state"),
-          username = prompt("the username of the resulting Account state"),
-          email = prompt("the email of the resulting Account state")
-        )
         send event AccountCreated(
           accountId = prompt("the accountId carried by AccountCreated")
         ) to outlet UserManagementAnnouncer.Published
       }
       on command UpdateProfile {
-        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields(
-          accountId = prompt("the accountId of the resulting Account state"),
-          username = prompt("the username of the resulting Account state"),
-          email = prompt("the email of the resulting Account state")
-        )
         send event AccountCreated(
           accountId = prompt("the accountId carried by AccountCreated")
         ) to outlet UserManagementAnnouncer.Published
       }
       on command UpdateSettings {
-        morph entity Account to state AccountState with record Trello.UserManagement.Account.AccountFields(
-          accountId = prompt("the accountId of the resulting Account state"),
-          username = prompt("the username of the resulting Account state"),
-          email = prompt("the email of the resulting Account state")
-        )
         send event AccountCreated(
           accountId = prompt("the accountId carried by AccountCreated")
         ) to outlet UserManagementAnnouncer.Published
@@ -317,31 +302,16 @@ context UserManagement as split is {
         set field Trello.UserManagement.Notification.NotificationFields.notificationId to "a freshly minted identifier"
       }
       on command CreateNotification {
-        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields(
-          notificationId = prompt("the notificationId of the resulting Notification state"),
-          text = prompt("the text of the resulting Notification state"),
-          read = prompt("the read of the resulting Notification state")
-        )
         send event NotificationCreated(
           notificationId = prompt("the notificationId carried by NotificationCreated")
         ) to outlet UserManagementAnnouncer.Published
       }
       on command MarkAsRead {
-        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields(
-          notificationId = prompt("the notificationId of the resulting Notification state"),
-          text = prompt("the text of the resulting Notification state"),
-          read = prompt("the read of the resulting Notification state")
-        )
         send event NotificationCreated(
           notificationId = prompt("the notificationId carried by NotificationCreated")
         ) to outlet UserManagementAnnouncer.Published
       }
       on command MarkAllAsRead {
-        morph entity Notification to state NotificationState with record Trello.UserManagement.Notification.NotificationFields(
-          notificationId = prompt("the notificationId of the resulting Notification state"),
-          text = prompt("the text of the resulting Notification state"),
-          read = prompt("the read of the resulting Notification state")
-        )
         send event NotificationCreated(
           notificationId = prompt("the notificationId carried by NotificationCreated")
         ) to outlet UserManagementAnnouncer.Published
@@ -793,31 +763,16 @@ context WorkspaceManagement as flow is {
         set field Trello.WorkspaceManagement.Workspace.WorkspaceFields.workspaceId to "a freshly minted identifier"
       }
       on command CreateWorkspace {
-        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
-          workspaceId = prompt("the workspaceId of the resulting Workspace state"),
-          name = prompt("the name of the resulting Workspace state"),
-          visibility = prompt("the visibility of the resulting Workspace state")
-        )
         send event WorkspaceCreated(
           workspaceId = prompt("the workspaceId carried by WorkspaceCreated")
         ) to outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents
       }
       on command AddWorkspaceMember {
-        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
-          workspaceId = prompt("the workspaceId of the resulting Workspace state"),
-          name = prompt("the name of the resulting Workspace state"),
-          visibility = prompt("the visibility of the resulting Workspace state")
-        )
         send event WorkspaceMemberAdded(
           workspaceId = prompt("the workspaceId carried by WorkspaceMemberAdded")
         ) to outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents
       }
       on command UpdateWorkspaceSettings {
-        morph entity Workspace to state WorkspaceState with record Trello.WorkspaceManagement.Workspace.WorkspaceFields(
-          workspaceId = prompt("the workspaceId of the resulting Workspace state"),
-          name = prompt("the name of the resulting Workspace state"),
-          visibility = prompt("the visibility of the resulting Workspace state")
-        )
         send event WorkspaceCreated(
           workspaceId = prompt("the workspaceId carried by WorkspaceCreated")
         ) to outlet Trello.WorkspaceManagement.Workspace.WorkspaceEvents
@@ -1190,21 +1145,11 @@ context BoardManagement as split is {
         set field Trello.BoardManagement.Board.BoardFields.boardId to "a freshly minted identifier"
       }
       on command CreateBoard {
-        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields(
-          boardId = prompt("the boardId of the resulting Board state"),
-          title = prompt("the title of the resulting Board state"),
-          visibility = prompt("the visibility of the resulting Board state")
-        )
         send event BoardCreated(
           boardId = prompt("the boardId carried by BoardCreated")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command AddBoardMember {
-        morph entity Board to state BoardState with record Trello.BoardManagement.Board.BoardFields(
-          boardId = prompt("the boardId of the resulting Board state"),
-          title = prompt("the title of the resulting Board state"),
-          visibility = prompt("the visibility of the resulting Board state")
-        )
         send event BoardCreated(
           boardId = prompt("the boardId carried by BoardCreated")
         ) to outlet BoardManagementAnnouncer.Published
@@ -1323,21 +1268,11 @@ context BoardManagement as split is {
         set field Trello.BoardManagement.CardList.CardListFields.cardListId to "a freshly minted identifier"
       }
       on command AddList {
-        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields(
-          cardListId = prompt("the cardListId of the resulting CardList state"),
-          title = prompt("the title of the resulting CardList state"),
-          position = prompt("the position of the resulting CardList state")
-        )
         send event ListAdded(
           cardListId = prompt("the cardListId carried by ListAdded")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command MoveList {
-        morph entity CardList to state CardListState with record Trello.BoardManagement.CardList.CardListFields(
-          cardListId = prompt("the cardListId of the resulting CardList state"),
-          title = prompt("the title of the resulting CardList state"),
-          position = prompt("the position of the resulting CardList state")
-        )
         send event ListAdded(
           cardListId = prompt("the cardListId carried by ListAdded")
         ) to outlet BoardManagementAnnouncer.Published
@@ -1503,78 +1438,36 @@ context BoardManagement as split is {
         set field Trello.BoardManagement.Card.CardFields.cardId to "a freshly minted identifier"
       }
       on command AddCard {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
-          cardId = prompt("the cardId of the resulting Card state"),
-          title = prompt("the title of the resulting Card state"),
-          description = prompt("the description of the resulting Card state"),
-          dueDate = prompt("the dueDate of the resulting Card state")
-        )
         send event CardAdded(
           cardId = prompt("the cardId carried by CardAdded")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command EditCard {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
-          cardId = prompt("the cardId of the resulting Card state"),
-          title = prompt("the title of the resulting Card state"),
-          description = prompt("the description of the resulting Card state"),
-          dueDate = prompt("the dueDate of the resulting Card state")
-        )
         send event CardAdded(
           cardId = prompt("the cardId carried by CardAdded")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command MoveCard {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
-          cardId = prompt("the cardId of the resulting Card state"),
-          title = prompt("the title of the resulting Card state"),
-          description = prompt("the description of the resulting Card state"),
-          dueDate = prompt("the dueDate of the resulting Card state")
-        )
         send event CardAdded(
           cardId = prompt("the cardId carried by CardAdded")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command AssignMember {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
-          cardId = prompt("the cardId of the resulting Card state"),
-          title = prompt("the title of the resulting Card state"),
-          description = prompt("the description of the resulting Card state"),
-          dueDate = prompt("the dueDate of the resulting Card state")
-        )
         send event CardAdded(
           cardId = prompt("the cardId carried by CardAdded")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command AddComment {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
-          cardId = prompt("the cardId of the resulting Card state"),
-          title = prompt("the title of the resulting Card state"),
-          description = prompt("the description of the resulting Card state"),
-          dueDate = prompt("the dueDate of the resulting Card state")
-        )
         send event CardAdded(
           cardId = prompt("the cardId carried by CardAdded")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command AddChecklist {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
-          cardId = prompt("the cardId of the resulting Card state"),
-          title = prompt("the title of the resulting Card state"),
-          description = prompt("the description of the resulting Card state"),
-          dueDate = prompt("the dueDate of the resulting Card state")
-        )
         send event CardAdded(
           cardId = prompt("the cardId carried by CardAdded")
         ) to outlet BoardManagementAnnouncer.Published
       }
       on command SetDueDate {
-        morph entity Card to state CardState with record Trello.BoardManagement.Card.CardFields(
-          cardId = prompt("the cardId of the resulting Card state"),
-          title = prompt("the title of the resulting Card state"),
-          description = prompt("the description of the resulting Card state"),
-          dueDate = prompt("the dueDate of the resulting Card state")
-        )
         send event CardAdded(
           cardId = prompt("the cardId carried by CardAdded")
         ) to outlet BoardManagementAnnouncer.Published
@@ -1684,11 +1577,6 @@ context BoardManagement as split is {
         set field Trello.BoardManagement.Activity.ActivityFields.activityId to "a freshly minted identifier"
       }
       on command RecordActivity {
-        morph entity Activity to state ActivityState with record Trello.BoardManagement.Activity.ActivityFields(
-          activityId = prompt("the activityId of the resulting Activity state"),
-          summary = prompt("the summary of the resulting Activity state"),
-          occurredAt = prompt("the occurredAt of the resulting Activity state")
-        )
         send event ActivityRecorded(
           activityId = prompt("the activityId carried by ActivityRecorded")
         ) to outlet BoardManagementAnnouncer.Published

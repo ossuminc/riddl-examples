@@ -111,11 +111,6 @@ context Locations as flow is {
         set field Restaurant.Locations.Location.LocationFields.locationId to "a freshly minted identifier"
       }
       on command OpenLocation {
-        morph entity Location to state LocationState with record Restaurant.Locations.Location.LocationFields(
-          locationId = prompt("the locationId of the resulting Location state"),
-          name = prompt("the name of the resulting Location state"),
-          city = prompt("the city of the resulting Location state")
-        )
         send event LocationOpened(
           locationId = prompt("the locationId carried by LocationOpened")
         ) to outlet Restaurant.Locations.Location.LocationEvents

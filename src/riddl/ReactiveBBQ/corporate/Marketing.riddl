@@ -125,11 +125,6 @@ context Marketing as flow is {
         set field Corporate.Marketing.Campaign.CampaignFields.campaignId to "a freshly minted identifier"
       }
       on command LaunchCampaign {
-        morph entity Campaign to state CampaignState with record Corporate.Marketing.Campaign.CampaignFields(
-          campaignId = prompt("the campaignId of the resulting Campaign state"),
-          title = prompt("the title of the resulting Campaign state"),
-          budget = prompt("the budget of the resulting Campaign state")
-        )
         send event CampaignLaunched(
           campaignId = prompt("the campaignId carried by CampaignLaunched")
         ) to outlet Corporate.Marketing.Campaign.CampaignEvents

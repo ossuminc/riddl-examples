@@ -111,11 +111,6 @@ context Kitchen as flow is {
         set field Restaurant.Kitchen.OrderViewer.OrderViewerFields.orderViewerId to "a freshly minted identifier"
       }
       on command ShowOrders {
-        morph entity OrderViewer to state OrderViewerState with record Restaurant.Kitchen.OrderViewer.OrderViewerFields(
-          orderViewerId = prompt("the orderViewerId of the resulting OrderViewer state"),
-          viewType = prompt("the viewType of the resulting OrderViewer state"),
-          station = prompt("the station of the resulting OrderViewer state")
-        )
         send event OrdersShown(
           orderViewerId = prompt("the orderViewerId carried by OrdersShown")
         ) to outlet Restaurant.Kitchen.OrderViewer.OrderViewerEvents

@@ -126,11 +126,6 @@ context SupplyOrder as flow is {
         set field BackOffice.SupplyOrder.Supply.SupplyFields.supplyId to "a freshly minted identifier"
       }
       on command OrderSupply {
-        morph entity Supply to state SupplyState with record BackOffice.SupplyOrder.Supply.SupplyFields(
-          supplyId = prompt("the supplyId of the resulting Supply state"),
-          item = prompt("the item of the resulting Supply state"),
-          quantity = prompt("the quantity of the resulting Supply state")
-        )
         send event SupplyOrdered(
           supplyId = prompt("the supplyId carried by SupplyOrdered")
         ) to outlet BackOffice.SupplyOrder.Supply.SupplyEvents

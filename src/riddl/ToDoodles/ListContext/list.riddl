@@ -147,11 +147,6 @@ context List as flow is {
         set field DoodleListData.name to "untitled"
       }
       on command CreateList {
-        morph entity DoodleList to state DoodleListState with record DoodleListData(
-          listId = prompt("the listId of the resulting List state"),
-          name = prompt("the name of the resulting List state"),
-          entries = prompt("the entries of the resulting List state")
-        )
         send event ListCreated(
           listId = prompt("the listId carried by ListCreated"),
           name = prompt("the name carried by ListCreated")

@@ -111,11 +111,6 @@ context Orders as flow is {
         set field Restaurant.Orders.Order.OrderFields.orderId to "a freshly minted identifier"
       }
       on command PlaceOrder {
-        morph entity Order to state OrderState with record Restaurant.Orders.Order.OrderFields(
-          orderId = prompt("the orderId of the resulting Order state"),
-          customerName = prompt("the customerName of the resulting Order state"),
-          total = prompt("the total of the resulting Order state")
-        )
         send event OrderPlaced(
           orderId = prompt("the orderId carried by OrderPlaced")
         ) to outlet Restaurant.Orders.Order.OrderEvents

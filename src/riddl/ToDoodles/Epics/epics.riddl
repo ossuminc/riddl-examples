@@ -18,7 +18,7 @@ epic MakeAndFileADoodle is {
     step focus user Artist on group Studio
     step take form StartDoodle from user Artist
     step send command ToDoodles.Doodle.Drawing.CreateDrawing
-      from source ToDoodles.ToDoodlesApp.DrawingRequests to context ToDoodles.Doodle
+      from source ToDoodles.ToDoodlesApp.DrawingGateway to context ToDoodles.Doodle
     step show list Gallery to user Artist
   } with {
     briefly as "Starting a doodle from the studio screen"

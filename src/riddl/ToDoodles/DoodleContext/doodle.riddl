@@ -130,11 +130,6 @@ context Doodle as flow is {
         set field DrawingState.strokes to "0"
       }
       on command CreateDrawing {
-        morph entity Drawing to state DrawingState with record DrawingData(
-          doodleId = prompt("the doodleId of the resulting Doodle state"),
-          title = prompt("the title of the resulting Doodle state"),
-          strokes = prompt("the strokes of the resulting Doodle state")
-        )
         send event DrawingCreated(
           doodleId = prompt("the doodleId carried by DrawingCreated"),
           title = prompt("the title carried by DrawingCreated")

@@ -17,7 +17,7 @@ epic Stories is {
     step focus user Attendee on group MainPage
     step take form EnterToDoItem from user Attendee
     step send command ReactiveSummit.ToDoList.ToDoItem.AddItem
-      from source ReactiveSummit.ToDoListUI.ItemRequests
+      from source ReactiveSummit.ToDoListUI.ItemGateway
       to context ReactiveSummit.ToDoList
   } with {
     briefly as "Adding a task from the main screen"

@@ -115,13 +115,6 @@ context Reservations as flow is {
         set field Restaurant.Reservations.Reservation.ReservationFields.reservationId to "a freshly minted identifier"
       }
       on command BookTable {
-        morph entity Reservation to state ReservationState with record Restaurant.Reservations.Reservation.ReservationFields(
-          reservationId = prompt("the reservationId of the resulting Reservation state"),
-          partyName = prompt("the partyName of the resulting Reservation state"),
-          phoneNumber = prompt("the phoneNumber of the resulting Reservation state"),
-          time = prompt("the time of the resulting Reservation state"),
-          date = prompt("the date of the resulting Reservation state")
-        )
         send event TableBooked(
           reservationId = prompt("the reservationId carried by TableBooked")
         ) to outlet Restaurant.Reservations.Reservation.ReservationEvents

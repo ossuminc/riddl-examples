@@ -20,7 +20,7 @@ domain BackOffice is {
     }
 
     connector StagingSupply is {
-      from outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.Staged to inlet BackOffice.BackOfficeFrontEnd.SupplyStaged
+      from outlet BackOffice.BackOfficeFrontEnd.SupplyGateway.Staged to inlet BackOffice.BackOfficeFrontEnd.SupplyStaged
     } with {
       briefly as "Carries front-end requests to the context boundary"
       described as {
@@ -39,21 +39,21 @@ domain BackOffice is {
       }
     }
 
-    processor SupplyRequests as source is {
+    processor SupplyGateway as source is {
       outlet Staged is command BackOffice.SupplyOrder.Supply.OrderSupply with {
         briefly as "Where supply requests leave the front end"
         described as {
           |Requests reach the SupplyOrder context over a domain-scoped connector.
         }
       }
-      handler SupplyRequestsHandler is {
+      handler SupplyGatewayHandler is {
         on command BackOffice.SupplyOrder.Supply.OrderSupply {
           send command BackOffice.SupplyOrder.Supply.OrderSupply(
             supplyId = prompt("the supplyId carried by OrderSupply"),
             item = prompt("the item carried by OrderSupply"),
             quantity = prompt("the quantity carried by OrderSupply"),
             plannedAs = prompt("the plant schedule line this order fulfils")
-          ) to outlet BackOffice.BackOfficeFrontEnd.SupplyRequests.Staged
+          ) to outlet BackOffice.BackOfficeFrontEnd.SupplyGateway.Staged
         }
         on other {
           do "ignore requests that are not about supplys"

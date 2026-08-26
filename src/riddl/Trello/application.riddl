@@ -15,7 +15,7 @@ application context TrelloUI as router is {
   }
 
   connector StagingUserManagement is {
-    from outlet Trello.TrelloUI.UserManagementRequests.Staged
+    from outlet Trello.TrelloUI.UserManagementGateway.Staged
     to inlet Trello.TrelloUI.UserManagementStaged
   } with {
     briefly as "Carries application requests to the context boundary"
@@ -39,7 +39,7 @@ application context TrelloUI as router is {
   }
 
   connector StagingWorkspaceManagement is {
-    from outlet Trello.TrelloUI.WorkspaceManagementRequests.Staged
+    from outlet Trello.TrelloUI.WorkspaceManagementGateway.Staged
     to inlet Trello.TrelloUI.WorkspaceManagementStaged
   } with {
     briefly as "Carries application requests to the context boundary"
@@ -63,7 +63,7 @@ application context TrelloUI as router is {
   }
 
   connector StagingBoardManagement is {
-    from outlet Trello.TrelloUI.BoardManagementRequests.Staged
+    from outlet Trello.TrelloUI.BoardManagementGateway.Staged
     to inlet Trello.TrelloUI.BoardManagementStaged
   } with {
     briefly as "Carries application requests to the context boundary"
@@ -146,20 +146,20 @@ application context TrelloUI as router is {
     }
   }
 
-    processor UserManagementRequests as source is {
+    processor UserManagementGateway as source is {
       outlet Staged is command Trello.UserManagement.Account.CreateAccount with {
         briefly as "Where UserManagement requests leave the application"
         described as {
           |Requests reach the UserManagement context over a domain-scoped connector.
         }
       }
-      handler UserManagementRequestsHandler is {
+      handler UserManagementGatewayHandler is {
         on command Trello.UserManagement.Account.CreateAccount {
           send command Trello.UserManagement.Account.CreateAccount(
             accountId = prompt("the accountId carried by CreateAccount"),
             username = prompt("the username carried by CreateAccount"),
             email = prompt("the email carried by CreateAccount")
-          ) to outlet Trello.TrelloUI.UserManagementRequests.Staged
+          ) to outlet Trello.TrelloUI.UserManagementGateway.Staged
         }
         on other {
           do "forward whatever else the member asked of UserManagement"
@@ -177,20 +177,20 @@ application context TrelloUI as router is {
       }
     }
 
-    processor WorkspaceManagementRequests as source is {
+    processor WorkspaceManagementGateway as source is {
       outlet Staged is command Trello.WorkspaceManagement.Workspace.CreateWorkspace with {
         briefly as "Where WorkspaceManagement requests leave the application"
         described as {
           |Requests reach the WorkspaceManagement context over a domain-scoped connector.
         }
       }
-      handler WorkspaceManagementRequestsHandler is {
+      handler WorkspaceManagementGatewayHandler is {
         on command Trello.WorkspaceManagement.Workspace.CreateWorkspace {
           send command Trello.WorkspaceManagement.Workspace.CreateWorkspace(
             workspaceId = prompt("the workspaceId carried by CreateWorkspace"),
             name = prompt("the name carried by CreateWorkspace"),
             visibility = prompt("the visibility carried by CreateWorkspace")
-          ) to outlet Trello.TrelloUI.WorkspaceManagementRequests.Staged
+          ) to outlet Trello.TrelloUI.WorkspaceManagementGateway.Staged
         }
         on other {
           do "forward whatever else the member asked of WorkspaceManagement"
@@ -208,20 +208,20 @@ application context TrelloUI as router is {
       }
     }
 
-    processor BoardManagementRequests as source is {
+    processor BoardManagementGateway as source is {
       outlet Staged is command Trello.BoardManagement.Board.CreateBoard with {
         briefly as "Where BoardManagement requests leave the application"
         described as {
           |Requests reach the BoardManagement context over a domain-scoped connector.
         }
       }
-      handler BoardManagementRequestsHandler is {
+      handler BoardManagementGatewayHandler is {
         on command Trello.BoardManagement.Board.CreateBoard {
           send command Trello.BoardManagement.Board.CreateBoard(
             boardId = prompt("the boardId carried by CreateBoard"),
             title = prompt("the title carried by CreateBoard"),
             visibility = prompt("the visibility carried by CreateBoard")
-          ) to outlet Trello.TrelloUI.BoardManagementRequests.Staged
+          ) to outlet Trello.TrelloUI.BoardManagementGateway.Staged
         }
         on other {
           do "forward whatever else the member asked of BoardManagement"

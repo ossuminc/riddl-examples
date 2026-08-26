@@ -125,11 +125,6 @@ context Customers as flow is {
         set field Restaurant.Customers.Customer.CustomerFields.customerId to "a freshly minted identifier"
       }
       on command RegisterCustomer {
-        morph entity Customer to state CustomerState with record Restaurant.Customers.Customer.CustomerFields(
-          customerId = prompt("the customerId of the resulting Customer state"),
-          name = prompt("the name of the resulting Customer state"),
-          phone = prompt("the phone of the resulting Customer state")
-        )
         send event CustomerRegistered(
           customerId = prompt("the customerId carried by CustomerRegistered")
         ) to outlet Restaurant.Customers.Customer.CustomerEvents

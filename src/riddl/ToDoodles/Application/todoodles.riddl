@@ -15,7 +15,7 @@ application context ToDoodlesApp as router is {
   }
 
   connector StagingDrawing is {
-    from outlet ToDoodles.ToDoodlesApp.DrawingRequests.Staged
+    from outlet ToDoodles.ToDoodlesApp.DrawingGateway.Staged
     to inlet ToDoodles.ToDoodlesApp.DrawingStaged
   } with {
     briefly as "Carries application requests to the context boundary"
@@ -39,7 +39,7 @@ application context ToDoodlesApp as router is {
   }
 
   connector StagingList is {
-    from outlet ToDoodles.ToDoodlesApp.ListRequests.Staged
+    from outlet ToDoodles.ToDoodlesApp.ListGateway.Staged
     to inlet ToDoodles.ToDoodlesApp.ListStaged
   } with {
     briefly as "Carries application requests to the context boundary"
@@ -124,7 +124,7 @@ application context ToDoodlesApp as router is {
     }
   }
 
-  processor DrawingRequests as source is {
+  processor DrawingGateway as source is {
     outlet Staged is command ToDoodles.Doodle.Drawing.CreateDrawing with {
       briefly as "Where the application asks for a drawing to be made"
       described as {
@@ -132,12 +132,12 @@ application context ToDoodlesApp as router is {
         |over a domain-scoped connector.
       }
     }
-    handler DrawingRequestsHandler is {
+    handler DrawingGatewayHandler is {
       on command ToDoodles.Doodle.Drawing.CreateDrawing {
         send command ToDoodles.Doodle.Drawing.CreateDrawing(
           drawingId = prompt("the drawingId carried by CreateDrawing"),
           title = prompt("the title carried by CreateDrawing")
-        ) to outlet ToDoodles.ToDoodlesApp.DrawingRequests.Staged
+        ) to outlet ToDoodles.ToDoodlesApp.DrawingGateway.Staged
       }
       on other {
         do "ignore interactions that do not start a drawing"
@@ -156,7 +156,7 @@ application context ToDoodlesApp as router is {
     }
   }
 
-  processor ListRequests as source is {
+  processor ListGateway as source is {
     outlet Staged is command ToDoodles.List.DoodleList.CreateList with {
       briefly as "Where the application asks for a list to be made"
       described as {
@@ -164,12 +164,12 @@ application context ToDoodlesApp as router is {
         |a domain-scoped connector.
       }
     }
-    handler ListRequestsHandler is {
+    handler ListGatewayHandler is {
       on command ToDoodles.List.DoodleList.CreateList {
         send command ToDoodles.List.DoodleList.CreateList(
           doodleListId = prompt("the doodleListId carried by CreateList"),
           name = prompt("the name carried by CreateList")
-        ) to outlet ToDoodles.ToDoodlesApp.ListRequests.Staged
+        ) to outlet ToDoodles.ToDoodlesApp.ListGateway.Staged
       }
       on other {
         do "ignore interactions that do not start a list"

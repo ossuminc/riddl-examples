@@ -111,11 +111,6 @@ context Servers as flow is {
         set field Restaurant.Servers.Server.ServerFields.serverId to "a freshly minted identifier"
       }
       on command AddServer {
-        morph entity Server to state ServerState with record Restaurant.Servers.Server.ServerFields(
-          serverId = prompt("the serverId of the resulting Server state"),
-          name = prompt("the name of the resulting Server state"),
-          section = prompt("the section of the resulting Server state")
-        )
         send event ServerAdded(
           serverId = prompt("the serverId carried by ServerAdded")
         ) to outlet Restaurant.Servers.Server.ServerEvents

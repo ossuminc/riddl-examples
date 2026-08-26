@@ -111,11 +111,6 @@ context Tables as flow is {
         set field Restaurant.Tables.Table.TableFields.tableId to "a freshly minted identifier"
       }
       on command AddTable {
-        morph entity Table to state TableState with record Restaurant.Tables.Table.TableFields(
-          tableId = prompt("the tableId of the resulting Table state"),
-          seats = prompt("the seats of the resulting Table state"),
-          section = prompt("the section of the resulting Table state")
-        )
         send event TableAdded(
           tableId = prompt("the tableId carried by TableAdded")
         ) to outlet Restaurant.Tables.Table.TableEvents

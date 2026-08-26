@@ -2,77 +2,71 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-26** (rc.26), by running the commands, not from memory.
+**Verified 2026-08-26 by running the commands, not from memory.**
 
-**Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.26`** — a released tag, published to GitHub Packages, and the
-staged binary reports exactly that with no snapshot suffix. Pin, binary and
-CI resolvability all agree for the first time in a while. Check
-they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
-projects and has changed under this repo twice now, mid-session both times.
+**Toolchain.** Pin (`build.sbt:21`) and staged `../bin/riddlc` are both
+**`2.0.0-rc.26`** — a released tag, published to GitHub Packages, so CI can
+resolve it. `../bin/riddlc` is shared with every other `ossuminc/` project and
+has changed under this repo mid-session more than once: **run
+`../bin/riddlc version` and compare it to the pin before trusting any result.**
 
-**Corpus: ZERO messages of every kind.** All eight in-scope examples report
-0 errors, 0 deprecations, 0 missing, 0 completeness, 0 style and 0 usage.
-`bin/validate-corpus.sh` exits 0. Every `.conf` entry point exits 0 except
-`FooBarSameDomain`, which exits 7 by design and is untouched. prettify
-round-trips to zero messages and is idempotent on all eight. riddl's EBNF
-validator passes 9/9.
+**Corpus: zero diagnostics of every severity.** Not just the four goal kinds —
+`riddlc validate --json` returns 0 messages for all eight in-scope models, and
+0 with a null rule id. `validate --corpus .` is 8 ok / 1 failed, the failure
+being `FooBarSameDomain`, which is the fixture working as designed.
 
 ### In flight
 
-Nothing. `task/` is empty.
+Nothing. `task/` holds only `done/`.
 
 ### Traps
 
-- **The pin and the staged binary drift silently, and it has happened
-  repeatedly.** Run `../bin/riddlc version` and compare with `build.sbt:21`
-  before believing any corpus result. During this session the staged binary
-  moved rc.16-19 -> rc.17 while work was in progress, invalidating an
-  earlier measurement.
-- **A corpus regression is not evidence about the release you just
-  installed.** rc.14-164 and rc.15 gave byte-identical results once; the
-  breakage predated both. Measure the OLD binary too before blaming a bump.
-- **`$?` after a command substitution is the substitution's status.**
-  `cmd; printf "%s" "$(basename x)" "$?"` reports basename's 0, not cmd's.
-  This produced a table of nine passing `.conf` entry points when one was
-  failing. Capture `rc=$?` on its own line, immediately.
-- **riddlc does not detect duplicate field names in an aggregation.** A
-  rename that collides produces two identically-named fields and validates
-  clean. Audit renames by parsing the result, not by trusting a green run.
-- **riddlc is the test suite, not sbt.** `sbt test` reports "No tests to
-  run" and that is correct. Run `bin/validate-corpus.sh`.
-- **`sbt compile` cannot verify a version bump** — no sources means it
-  succeeds against a stale classpath. Use
-  `sbt "show Compile/dependencyClasspath"`. Note ivy-local jars are named
-  `riddl-lib_3.jar` with no version in the filename, so grep the PATH.
-  A first resolution attempt failing `unauthorized` against GitHub Packages
-  has been transient twice; retry before diagnosing.
-- **An EMPTY Coursier cache directory blocks resolution forever.** A failed
-  fetch can leave `~/Library/Caches/Coursier/v1/https/maven.pkg.github.com/
-  ossuminc/_/com/ossuminc/<mod>/<version>/` created but empty, and every
-  later attempt then reports `unauthorized` no matter how good the
-  credentials are. Diagnose by curling the pom with sbt's own credential: if
-  that returns 302/200, the credential is fine and the cache is the problem.
-  `rmdir` the empty version directories and re-run.
-- **Use `riddlc dump --json` to inventory before editing.** It gives every
-  node's kind, path, parent, span and resolved type. Grepping for the same
-  facts is how three separate corruptions started here.
-- **A scoped regex or nothing.** `re.sub(..., count=1)` over a whole file
-  takes the FIRST match; in a loop over N contexts it applies all N edits to
-  context one. Slice to the definition's brace span first.
-- **Do not validate through the `.conf` files** when measuring: their
-  `common` blocks can hide the very warnings being driven to zero.
-- **Validate is not enough after a compiler bump.** Round-trip through
-  `riddlc prettify -s true` and re-validate. prettify writes
-  **`prettify-output.riddl`**, not the input basename.
+- **The harness under-checks what this repo claims.**
+  `bin/validate-corpus.sh` gates only error/deprecation/missing/completeness,
+  so style and usage drift will not fail it. The zero claimed above comes from
+  `riddlc validate --json` and `--corpus`. See BACKLOG #3.
+- **Take a census from `--json`, never from grep.** A hand-built list of
+  `stmt-morph-single-state` sites missed 21 of 51 on 2026-08-25. Every
+  diagnostic now carries a stable rule id.
+- **Scope every regex to a definition's span.** `re.sub(..., count=1)` over a
+  whole file takes the FIRST match, not the nearest; looping it over N
+  contexts applies all N edits to context one. This caused three corruptions
+  here, one of which riddlc could not then detect. Prefer
+  `riddlc dump --json` to inventory and `riddlc find … -replace` to edit.
+- **`sbt compile` cannot verify a version bump** — no Scala sources here, so
+  it succeeds against a stale classpath. Use
+  `sbt "show Compile/dependencyClasspath"`, and note ivy-local jars carry no
+  version in the filename. A resolution that reports `~/.ivy2/local` does not
+  prove the version is published; check the registry if CI matters.
+- **An EMPTY Coursier cache directory blocks resolution forever**, reporting
+  `unauthorized` no matter how good the credentials. Curl the pom with sbt's
+  own credential: a 302/200 means the cache is at fault, not the token.
+  `rmdir` the empty version directories.
+- **riddlc is the test suite, not sbt.** `sbt test` reporting "No tests to
+  run" is correct.
+- **Validate is not enough after a bump.** Round-trip through
+  `riddlc prettify -s true` and re-validate; two writer defects were only ever
+  visible that way. prettify writes `prettify-output.riddl`, not the input
+  basename.
+
+### Certainty
+
+Verified this session: git state, `riddlc version`, artifact resolution, the
+per-model `--json` census, `--corpus`, prettify round-trip and idempotency,
+every `.conf` exit code, and riddl's EBNF validator (9/9).
+
+Corrected this session: NOTEBOOK previously listed the `show … to …` riddlc
+bug as outstanding work. It is **not** — the step was restored in `0115025`,
+`step show list Gallery to user Artist` is present in ToDoodles' epic and
+validates, and `list Confirmation` was never shown by any step. Nothing is
+missing.
 
 ### Pointers
 
-- **BACKLOG.md** — all open work.
-- **CLAUDE.md** — the 2.0 streaming rules, shape-ascription arity table,
-  and identity-field naming, all of which the corpus now depends on.
-- **NOTEBOOK.md § Session 2026-08-18c** — how the boundary migration was
-  derived and what it cost.
+- **BACKLOG.md** — all open work, with evidence already gathered.
+- **CLAUDE.md** — durable facts: the 2.0 streaming and persistence rules,
+  the shape-ascription arity table, identity naming, and the `dump`/`find`
+  tooling.
 
 **Run `/ossuminc-skills:check-tasks` in the new session.**
 
@@ -100,9 +94,8 @@ just the harness. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
-- None outstanding. `task/` is empty.
-- The `show … to …` riddlc bug is filed against riddl; once fixed, restore
-  the step ToDoodles' epic had to drop.
+- None outstanding. `task/` is empty. (The `show … to …` item that stood here
+  for months was verified resolved on 2026-08-26 — see HANDOFF § Certainty.)
 
 ---
 

@@ -2,10 +2,10 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-24**, by running the commands, not from memory.
+**Last verified: 2026-08-25**, by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.24-5-cb05e374`**, an unreleased snapshot resolvable only from
+**`2.0.0-rc.24-33-f4076e2c`**, an unreleased snapshot resolvable only from
 `~/.ivy2/local` — CI cannot resolve it, so move to the released tag that
 carries these commits when one exists. Check
 they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
@@ -94,14 +94,56 @@ to the task file and note completion in this notebook.
 
 **Last Updated**: August 24, 2026
 
-**Status: COMPLETE.** The corpus validates with **zero messages of every
-kind** under `2.0.0-rc.24-5-cb05e374` on `main`. FooBarSameDomain remains non-zero by
+**Status: COMPLETE.** The corpus reports **zero diagnostics of any kind**
+under `2.0.0-rc.24-33-f4076e2c` on `main` — verified with
+`riddlc validate --json`, not just the harness. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
 - None outstanding. `task/` is empty.
 - The `show … to …` riddlc bug is filed against riddl; once fixed, restore
   the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-25: rc.24-33, and diagnostics become data
+
+Corpus is at **zero diagnostics of any kind** — the first time that has been
+measured rather than inferred, because `validate --json` now emits every
+diagnostic with a stable rule id.
+
+### The census caught what a hand-built list missed
+
+The incoming task listed 30 `stmt-morph-single-state` sites in 4 models. The
+JSON census found **51 in 5** — Trello's 21 were missing entirely. Reported
+back, with a note to re-check riddl-models' own count of 51 if the same query
+produced both.
+
+**Take the census from `--json`.** This is the third distinct way grep has
+under-reported here.
+
+### The ruling was a modelling decision, and stayed one
+
+`morph` in a single-state entity moves nothing. Every affected entity here
+genuinely has one state — dokn says so in its own text — so all 51 were
+deleted, not answered with an invented second state. Five were the only
+statement in their clause and became a `do`, since an empty clause will not
+parse.
+
+`--fix` ran and changed nothing for this rule, which is correct: rules whose
+remedy is a judgement call carry no codemod.
+
+### Going past the task to zero
+
+The task's bar was errors-only. Reaching zero diagnostics also meant a saga
+timeout, two messages that could not name their instance, 27 name collisions
+(24 gateway sources shared a name with the connector carrying their output),
+and a `RecordView` that populated a repository it was not defined in.
+
+The last 8 had **no rule id at all** — a cross-context reference check that
+predates the id threading. Filed back. It earned its keep: it found a
+leftover `InteractionRouter` telling commands straight into ShoppingContext
+entities, bypassing the staging path the UI already had.
 
 ---
 

@@ -132,6 +132,40 @@ query WhichCompany replies result TheCompany is { companyId is CompanyId }
 Declaring it creates a response obligation, exactly as `yields` does, so the
 handler must then discharge on every path.
 
+**`morph` needs somewhere to go (rc.24-33+)**. An entity declaring exactly one
+state cannot `morph` — the statement reads as a transition while moving
+nothing. Either delete it (the entity really has one state; its fields change
+but its kind does not) or declare the state it should move to. **Never add a
+second state just to silence the check.** Deleting the only statement in an
+on-clause leaves it empty, which will not parse, so put a `do` in its place.
+
+**A message an entity handles must be able to name its instance**: it needs a
+field typed `Id(<Entity>)`. A business identifier of a different type does not
+satisfy it.
+
+**A saga states its own `timeout`** — `with { option timeout("PT30M") }`. The
+bound decides when compensation fires, so leaving it to the generator is a gap.
+
+**A name may not be used for two kinds** (`type-overloaded`): a Source and a
+Connector both called `CompanyRequests`, or `type Foo` inside `domain Foo`.
+
+### Diagnostics are data (rc.24-33+)
+
+Every diagnostic carries a stable **rule id** — `[error] [stmt-morph-single-state] …`
+— and `--no-msg-ids` restores the old output for scripts that parse it.
+
+```bash
+riddlc validate --json <model>.riddl   # diagnostics as JSON, with rule ids
+riddlc validate --corpus .             # one process over every .conf
+riddlc validate --fix                  # apply the codemod a rule carries
+riddlc validate --fail-on warning      # exit non-zero at a chosen severity
+```
+
+**Take the census from `--json`, never from grep.** A hand-built list of
+`stmt-morph-single-state` sites missed 21 of 51 on 2026-08-25; the JSON found
+all of them. Not every rule has a `--fix`: rules whose remedy is a modelling
+decision deliberately carry none.
+
 **A repository is changed by COMMANDS, read by queries, never by events
 (rc.24+)**. A repository inlet carrying an event is an Error. The corpus uses
 the pattern riddl-models settled on, at 4,032 sites there and 26 here:
@@ -331,7 +365,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 
 - **sbt**: 2.0.6
 - **sbt-ossuminc**: 3.1.0
-- **RIDDL**: `2.0.0-rc.24-5-cb05e374` — the pin and the staged `../bin/riddlc` must
+- **RIDDL**: `2.0.0-rc.24-33-f4076e2c` — the pin and the staged `../bin/riddlc` must
   always be the **same build**. When they drift, the library and the
   binary doing the validating disagree, and the corpus result no longer
   says anything about the pin. This has been a released tag since rc.13;
@@ -342,7 +376,7 @@ duplicate field names in an aggregation**, so that must be audited by hand.
 Configured in `build.sbt` as:
 
 ```scala
-.configure(With.Riddl.library(version = "2.0.0-rc.24-5-cb05e374",
+.configure(With.Riddl.library(version = "2.0.0-rc.24-33-f4076e2c",
   nonJVMDependency = false))
 ```
 

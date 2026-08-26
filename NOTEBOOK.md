@@ -2,13 +2,12 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-26** (rc.25-11), by running the commands, not from memory.
+**Last verified: 2026-08-26** (rc.26), by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.25-11-5e09d98c`**, an unreleased snapshot in `~/.ivy2/local`.
-Pinned deliberately: unlike `rc.25-1` (docs-only, so the tag was equivalent),
-this build carries real compiler changes, and pin-vs-binary agreement beats
-CI resolvability. Move to the next RC when it lands. Check
+**`2.0.0-rc.26`** — a released tag, published to GitHub Packages, and the
+staged binary reports exactly that with no snapshot suffix. Pin, binary and
+CI resolvability all agree for the first time in a while. Check
 they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
 projects and has changed under this repo twice now, mid-session both times.
 
@@ -96,14 +95,32 @@ to the task file and note completion in this notebook.
 **Last Updated**: August 24, 2026
 
 **Status: COMPLETE.** The corpus reports **zero diagnostics of any kind**
-under `2.0.0-rc.25-11-5e09d98c` on `main` — verified with `riddlc validate
---json`, not just the harness. FooBarSameDomain remains non-zero by
+under `2.0.0-rc.26` on `main` — verified with `riddlc validate --json`, not
+just the harness. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
 - None outstanding. `task/` is empty.
 - The `show … to …` riddlc bug is filed against riddl; once fixed, restore
   the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-26c: rc.26 needed nothing
+
+Pinned the released **`2.0.0-rc.26`**. No corpus changes: it is one commit
+past rc.25-11, raising floors and recording a rename trap, with **no Scala
+changes at all**. Yesterday's `put` fix was the last thing this RC wanted.
+
+The staged binary reports exactly `2.0.0-rc.26` — no snapshot suffix — so for
+once the tag, the binary and CI resolvability all agree. rc.26 is published to
+GitHub Packages; it resolved from `~/.ivy2/local` here only because a local
+publish also exists.
+
+Verified: every model 0 diagnostics via `validate --json`, and zero of them
+carrying a null rule id; `validate --corpus .` 8 ok / 1 failed
+(FooBarSameDomain, by design); prettify round-trips to 0 and is idempotent on
+all eight; every `.conf` exits 0 but the fixture's 7; EBNF validator 9/9.
 
 ---
 

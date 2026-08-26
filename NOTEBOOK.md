@@ -2,13 +2,13 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-26**, by running the commands, not from memory.
+**Last verified: 2026-08-26** (rc.25-11), by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.25`**, a released tag that resolves from GitHub Packages — the
-first time since rc.20 that the pin is publishable. The staged binary reports
-`rc.25-1-76cb9eab`, one commit past the tag, but that commit touches only
-floors and docs: the compiler is identical. Check
+**`2.0.0-rc.25-11-5e09d98c`**, an unreleased snapshot in `~/.ivy2/local`.
+Pinned deliberately: unlike `rc.25-1` (docs-only, so the tag was equivalent),
+this build carries real compiler changes, and pin-vs-binary agreement beats
+CI resolvability. Move to the next RC when it lands. Check
 they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
 projects and has changed under this repo twice now, mid-session both times.
 
@@ -96,14 +96,34 @@ to the task file and note completion in this notebook.
 **Last Updated**: August 24, 2026
 
 **Status: COMPLETE.** The corpus reports **zero diagnostics of any kind**
-under `2.0.0-rc.25` on `main` — verified with `riddlc validate --json`, not
-just the harness. FooBarSameDomain remains non-zero by
+under `2.0.0-rc.25-11-5e09d98c` on `main` — verified with `riddlc validate
+--json`, not just the harness. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
 - None outstanding. `task/` is empty.
 - The `show … to …` riddlc bug is filed against riddl; once fixed, restore
   the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-26b: rc.25-11, and the rule-id gap closes
+
+One error corpus-wide, exactly as the incoming task predicted: literals now
+carry a type, so a `put` handing a bare string to a list that shows a record
+was finally comparable. Fixed with `prompt(...)`, the typed hole the task
+prescribed — the value genuinely is not known at model time.
+
+**The `"rule": null` gap we filed yesterday is confirmed closed.** A census
+across all eight models returns zero null rule ids, where the repro produced
+12 of 26. Filing it with a repro and a root cause (`check()` bypassing the
+`addMissing`/`addWarning` path) got it fixed inside a day.
+
+Pin note: we pinned the SNAPSHOT this time, not the released tag. rc.25-1 was
+docs-only so the tag was equivalent; rc.25-11 carries 31 files of compiler
+change, so pinning `2.0.0-rc.25` would have put the pin and the validating
+binary out of agreement — the single most expensive recurring trap here. CI
+resolvability is the lesser loss.
 
 ---
 

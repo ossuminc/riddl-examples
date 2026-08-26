@@ -2,12 +2,13 @@
 
 ## HANDOFF
 
-**Last verified: 2026-08-25**, by running the commands, not from memory.
+**Last verified: 2026-08-26**, by running the commands, not from memory.
 
 **Toolchain.** The `build.sbt:21` pin and the staged `../bin/riddlc` are both
-**`2.0.0-rc.24-33-f4076e2c`**, an unreleased snapshot resolvable only from
-`~/.ivy2/local` — CI cannot resolve it, so move to the released tag that
-carries these commits when one exists. Check
+**`2.0.0-rc.25`**, a released tag that resolves from GitHub Packages — the
+first time since rc.20 that the pin is publishable. The staged binary reports
+`rc.25-1-76cb9eab`, one commit past the tag, but that commit touches only
+floors and docs: the compiler is identical. Check
 they still agree — `../bin/riddlc` is shared with the other `ossuminc/`
 projects and has changed under this repo twice now, mid-session both times.
 
@@ -95,14 +96,34 @@ to the task file and note completion in this notebook.
 **Last Updated**: August 24, 2026
 
 **Status: COMPLETE.** The corpus reports **zero diagnostics of any kind**
-under `2.0.0-rc.24-33-f4076e2c` on `main` — verified with
-`riddlc validate --json`, not just the harness. FooBarSameDomain remains non-zero by
+under `2.0.0-rc.25` on `main` — verified with `riddlc validate --json`, not
+just the harness. FooBarSameDomain remains non-zero by
 design.
 
 Remaining work:
 - None outstanding. `task/` is empty.
 - The `show … to …` riddlc bug is filed against riddl; once fixed, restore
   the step ToDoodles' epic had to drop.
+
+---
+
+## Session 2026-08-26: rc.25 released, and the pin is publishable again
+
+Pinned the **released `2.0.0-rc.25`**. The corpus needed no changes — it was
+already at zero diagnostics of any kind, which is the point: yesterday's
+migration was done specifically so this RC could go out green, and it did.
+
+The staged binary reports `rc.25-1-76cb9eab`, one commit past the tag. That
+commit raises floors and records ordering — **no Scala changes at all**
+(`git diff --stat 2.0.0-rc.25 76cb9eab -- '*.scala'` is empty), so pinning the
+tag rather than the snapshot keeps pin and compiler in agreement while making
+the pin resolvable by CI for the first time since rc.20.
+
+Verified: all four artifacts resolve at rc.25 from GitHub Packages; every
+model reports 0 diagnostics via `validate --json`; `validate --corpus .` is
+8 ok / 1 failed (FooBarSameDomain, by design); prettify round-trips to 0
+diagnostics and is idempotent on all eight; every `.conf` exits 0 but the
+fixture's 7; EBNF validator 9/9.
 
 ---
 
